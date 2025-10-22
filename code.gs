@@ -1,6 +1,7 @@
 /**********************
  * CONFIG
  **********************/
+const SPREADSHEET_ID = '';       // optional: set to force a specific spreadsheet
 const SHEET_NAME = 'Licenses';
 const HEADER = [
   'id',
@@ -25,7 +26,23 @@ function doGet() {
  * HELPERS
  **********************/
 function getSheet_() {
-  const ss = SpreadsheetApp.getActive();
+  const configuredId = typeof SPREADSHEET_ID === 'string' ? SPREADSHEET_ID.trim() : '';
+  let ss = null;
+
+  if (configuredId) {
+    try {
+      ss = SpreadsheetApp.openById(configuredId);
+    } catch (err) {
+      throw new Error(`Unable to open spreadsheet with configured ID (${configuredId}). ${err && err.message ? err.message : err}`);
+    }
+  } else {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+
+  if (!ss) {
+    throw new Error('Unable to locate target spreadsheet. Set SPREADSHEET_ID or bind the script to a spreadsheet.');
+  }
+
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
   const first = sh.getRange(1,1,1,HEADER.length).getValues()[0];
