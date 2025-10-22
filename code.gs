@@ -88,6 +88,7 @@ function getHistorySheet_() {
   if (first.length !== LICENSE_HISTORY_HEADER.length || LICENSE_HISTORY_HEADER.some((h, i) => first[i] !== h)) {
     history.getRange(1, 1, 1, LICENSE_HISTORY_HEADER.length).setValues([LICENSE_HISTORY_HEADER]);
   }
+  migrateLegacyHistoryRows_(history);
   return history;
 }
 function sanitizeString_(value) {
@@ -113,6 +114,68 @@ function formatTimestamp_(value) {
   if (isNaN(date)) return '';
   const tz = Session.getScriptTimeZone();
   return Utilities.formatDate(date, tz, "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
+
+function isDateLike_(value) {
+  if (!value) return false;
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return !isNaN(value);
+  }
+  const str = String(value);
+  return /^\d{4}-\d{2}-\d{2}/.test(str);
+}
+
+function normalizeHistoryRow_(row) {
+  const width = LICENSE_HISTORY_HEADER.length;
+  const values = new Array(width).fill('');
+  for (let i = 0; i < width && i < row.length; i++) {
+    values[i] = row[i];
+  }
+
+  const newFileUrl = sanitizeUrl_(values[13]);
+  const legacyFileUrl = sanitizeUrl_(row[6]);
+  const labelArLooksDate = isDateLike_(row[4]);
+  const exp1DateLooksWrong = !isDateLike_(row[5]) && !!row[5];
+  const legacyDetected = ((!newFileUrl && !!legacyFileUrl) || (labelArLooksDate && exp1DateLooksWrong));
+
+  if (legacyDetected) {
+    values[3] = sanitizeString_(row[3]);
+    values[4] = '';
+    values[5] = row[4] || '';
+    values[6] = sanitizeString_(row[5]);
+    values[7] = '';
+    values[8] = '';
+    values[9] = '';
+    values[10] = '';
+    values[11] = sanitizeString_(row[5]);
+    values[12] = '';
+    values[13] = legacyFileUrl;
+    values[14] = sanitizeString_(row[7]);
+    return { values, migrated: true };
+  }
+
+  return { values, migrated: false };
+}
+
+function migrateLegacyHistoryRows_(sheet) {
+  const last = sheet.getLastRow();
+  if (last < 2) {
+    return;
+  }
+  const width = LICENSE_HISTORY_HEADER.length;
+  const range = sheet.getRange(2, 1, last - 1, width);
+  const existing = range.getValues();
+  let mutated = false;
+  const upgraded = existing.map(row => {
+    const normalized = normalizeHistoryRow_(row);
+    if (normalized.migrated) {
+      mutated = true;
+    }
+    return normalized.values;
+  });
+  if (mutated) {
+    range.setValues(upgraded);
+  }
 }
 function daysUntil_(iso) {
   if (!iso) return null;
@@ -755,24 +818,25 @@ function getLicenseHistory(id) {
     return db.getTime() - da.getTime();
   });
   return filtered.map(row => {
-    const fileUrl = sanitizeUrl_(row[13]);
+    const normalized = normalizeHistoryRow_(row).values;
+    const fileUrl = sanitizeUrl_(normalized[13]);
     return {
       id: target,
-      timestamp: formatTimestamp_(row[1]),
-      action: sanitizeString_(row[2] || ''),
-      prevExp1Label: sanitizeString_(row[3]),
-      prevExp1LabelAr: sanitizeString_(row[4]),
-      prevExp1Date: toIso_(row[5]),
-      prevExp1Status: sanitizeString_(row[6]),
-      prevExp2Label: sanitizeString_(row[7]),
-      prevExp2LabelAr: sanitizeString_(row[8]),
-      prevExp2Date: toIso_(row[9]),
-      prevExp2Status: sanitizeString_(row[10]),
-      prevStatus: sanitizeString_(row[11]),
-      prevStatusType: sanitizeString_(row[12]),
+      timestamp: formatTimestamp_(normalized[1]),
+      action: sanitizeString_(normalized[2] || ''),
+      prevExp1Label: sanitizeString_(normalized[3]),
+      prevExp1LabelAr: sanitizeString_(normalized[4]),
+      prevExp1Date: toIso_(normalized[5]),
+      prevExp1Status: sanitizeString_(normalized[6]),
+      prevExp2Label: sanitizeString_(normalized[7]),
+      prevExp2LabelAr: sanitizeString_(normalized[8]),
+      prevExp2Date: toIso_(normalized[9]),
+      prevExp2Status: sanitizeString_(normalized[10]),
+      prevStatus: sanitizeString_(normalized[11]),
+      prevStatusType: sanitizeString_(normalized[12]),
       prevFileUrl: fileUrl,
       prevFilePreviewUrl: makePreviewUrl_(fileUrl),
-      prevFileName: sanitizeString_(row[14])
+      prevFileName: sanitizeString_(normalized[14])
     };
   });
 }
