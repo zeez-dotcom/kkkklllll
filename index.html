@@ -534,6 +534,14 @@
       box-shadow: 0 10px 22px rgba(148, 163, 184, 0.2);
     }
 
+    .record-action-button[disabled],
+    .record-action-button[disabled]:hover {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
     .record-action-button:focus-visible {
       outline: 3px solid rgba(37, 99, 235, 0.3);
       outline-offset: 2px;
@@ -1636,7 +1644,7 @@
             ? format(hist.errorWithMessage, { message: String(message || '') })
             : (hist.error || String(message || ''));
           renderHistoryEntries();
-        }).getDocumentHistory(recordId);
+        }).getLicenseHistory(recordId);
       } catch (err) {
         historyState.loading = false;
         const hist = getHistoryStrings();
@@ -1993,11 +2001,14 @@
         const actionEditTooltip = t('rowActions.editTooltip');
         const actionRenewTooltip = t('rowActions.renewTooltip');
         const actionHistoryTooltip = t('rowActions.historyTooltip');
+        const historyButton = r.hasHistory
+          ? `<button type="button" class="record-action-button history" data-action="history" data-id="${escapeAttr(rowId)}" title="${escapeAttr(actionHistoryTooltip)}">${escapeHtml(actionHistoryLabel)}</button>`
+          : `<button type="button" class="record-action-button history" data-action="history" data-id="${escapeAttr(rowId)}" title="${escapeAttr(actionHistoryTooltip)}" disabled aria-disabled="true">${escapeHtml(actionHistoryLabel)}</button>`;
         const actionsCell = `
           <div class="record-actions" data-id="${escapeAttr(rowId)}">
             <button type="button" class="record-action-button edit" data-action="edit" data-id="${escapeAttr(rowId)}" title="${escapeAttr(actionEditTooltip)}">${escapeHtml(actionEditLabel)}</button>
             <button type="button" class="record-action-button renew" data-action="renew" data-id="${escapeAttr(rowId)}" title="${escapeAttr(actionRenewTooltip)}">${escapeHtml(actionRenewLabel)}</button>
-            <button type="button" class="record-action-button history" data-action="history" data-id="${escapeAttr(rowId)}" title="${escapeAttr(actionHistoryTooltip)}">${escapeHtml(actionHistoryLabel)}</button>
+            ${historyButton}
           </div>
         `;
         return `
@@ -2022,6 +2033,7 @@
       });
       tbody.querySelectorAll('.record-action-button').forEach(btn => {
         btn.addEventListener('click', () => {
+          if (btn.disabled) return;
           const action = btn.getAttribute('data-action');
           const id = btn.getAttribute('data-id');
           handleRecordAction(action, id);
@@ -2242,8 +2254,10 @@
 
         if (currentMode === 'create') {
           runner.uploadDocument(obj);
+        } else if (currentMode === 'renew') {
+          runner.renewLicense(obj);
         } else {
-          runner.updateDocument(obj);
+          runner.updateLicense(obj);
         }
       } catch (err) {
         setLoading(btnUpload, false);
