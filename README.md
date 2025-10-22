@@ -17,3 +17,17 @@ If the ID is missing and the script is not bound to a spreadsheet, calls to `get
 ## Deployment notes
 
 When deploying as a web app, ensure the published script has access to the configured spreadsheet and, if necessary, update the Drive folder permissions for uploaded files.
+
+## Regression check
+
+To confirm the dashboard tallies mixed status rows correctly, add a record whose first expiry date is already past while the second expiry date is still active. For example:
+
+| Field | Sample value |
+| --- | --- |
+| `name` | `Mixed status regression` |
+| `exp1Label` | `Primary expiry` |
+| `exp1Date` | `2023-01-01` |
+| `exp2Label` | `Secondary expiry` |
+| `exp2Date` | `2099-01-01` |
+
+Leave the status columns blank so the script recomputes them. After refreshing the dashboard, the Expired card increases by two (expired primary date and overall status) while the Active card increases by one (secondary expiry), demonstrating that a single row contributes to every applicable bucket.

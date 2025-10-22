@@ -384,60 +384,61 @@ function getDashboardData(q) {
       .some(s => s.includes(query));
   });
 
-  const statusTypeOf = r => {
-    const candidates = [];
-    const considerStatus = (statusObj, label) => {
-      if (statusObj && statusObj.type) {
-        candidates.push({
-          type: statusObj.type,
-          daysUntil: statusObj.daysUntil
-        });
-      } else if (label) {
-        const inferred = inferStatusType_(label);
-        if (inferred) {
-          candidates.push({ type: inferred, daysUntil: null });
-        }
+  const stats = arr => {
+    const makeBucket = () => ({ total: 0, exp1: 0, exp2: 0, overall: 0 });
+    const counts = {
+      total: arr.length,
+      expired: makeBucket(),
+      upcoming: makeBucket(),
+      active: makeBucket()
+    };
+
+    const bucketKeyForType = type => {
+      if (type === 'Expired') return 'expired';
+      if (type === 'Upcoming') return 'upcoming';
+      if (type === 'Active') return 'active';
+      return '';
+    };
+
+    const normalizeType = value => {
+      if (!value) return '';
+      const inferred = inferStatusType_(value);
+      if (inferred) return inferred;
+      const sanitized = sanitizeString_(value);
+      if (!sanitized) return '';
+      const lowered = sanitized.toLowerCase();
+      if (lowered === 'expired') return 'Expired';
+      if (lowered === 'upcoming') return 'Upcoming';
+      if (lowered === 'active') return 'Active';
+      return '';
+    };
+
+    const consider = (slot, statusObj, label, fallbackType) => {
+      let type = normalizeType(statusObj && statusObj.type);
+      if (!type && fallbackType) type = normalizeType(fallbackType);
+      if (!type && statusObj && statusObj.label) type = normalizeType(statusObj.label);
+      if (!type && label) type = normalizeType(label);
+      if (!type) return;
+
+      const bucketKey = bucketKeyForType(type);
+      if (!bucketKey || !counts[bucketKey]) return;
+
+      const bucket = counts[bucketKey];
+      bucket.total += 1;
+      if (!Object.prototype.hasOwnProperty.call(bucket, slot)) {
+        bucket[slot] = 0;
       }
+      bucket[slot] += 1;
     };
 
-    considerStatus(r.exp1StatusInfo, r.exp1Status);
-    considerStatus(r.exp2StatusInfo, r.exp2Status);
-    considerStatus(r.statusInfo, r.status);
-    if (r.statusType && !candidates.length) {
-      considerStatus({ type: r.statusType, daysUntil: r.statusDaysUntil }, null);
-    }
-    if (!candidates.length) {
-      const raw = String(r.status || '').toLowerCase();
-      if (raw === 'expired') return 'Expired';
-      if (raw.startsWith('upcoming')) return 'Upcoming';
-      return 'Active';
-    }
-
-    const severity = type => {
-      if (type === 'Expired') return 0;
-      if (type === 'Upcoming') return 1;
-      if (type === 'Active') return 2;
-      return 3;
-    };
-
-    candidates.sort((a, b) => {
-      const sa = severity(a.type);
-      const sb = severity(b.type);
-      if (sa !== sb) return sa - sb;
-      const da = a.daysUntil != null ? a.daysUntil : Number.POSITIVE_INFINITY;
-      const db = b.daysUntil != null ? b.daysUntil : Number.POSITIVE_INFINITY;
-      return da - db;
+    arr.forEach(r => {
+      consider('exp1', r.exp1StatusInfo, r.exp1Status, null);
+      consider('exp2', r.exp2StatusInfo, r.exp2Status, null);
+      consider('overall', r.statusInfo, r.status, r.statusType);
     });
 
-    return candidates[0].type || 'Active';
+    return counts;
   };
-
-  const stats = arr => ({
-    total: arr.length,
-    expired: arr.filter(r => statusTypeOf(r) === 'Expired').length,
-    upcoming: arr.filter(r => statusTypeOf(r) === 'Upcoming').length,
-    active: arr.filter(r => statusTypeOf(r) === 'Active').length
-  });
 
   const countsAll = stats(all);
   const countsFiltered = stats(filtered);

@@ -402,8 +402,8 @@
 
     const state = {
       rows: [],
-      countsAll: { expired: 0, upcoming: 0, active: 0, total: 0 },
-      countsFiltered: { total: 0 }
+      countsAll: createEmptyCounts(),
+      countsFiltered: createEmptyCounts()
     };
     let hasLoaded = false;
     let lastUploadState = { type: 'idle', payload: null };
@@ -442,6 +442,52 @@
     function safeHref(url) {
       const value = String(url || '').trim();
       return /^https?:\/\//i.test(value) ? value : '';
+    }
+
+    function createEmptyStatusCounts() {
+      return { total: 0, exp1: 0, exp2: 0, overall: 0 };
+    }
+
+    function createEmptyCounts() {
+      return {
+        total: 0,
+        expired: createEmptyStatusCounts(),
+        upcoming: createEmptyStatusCounts(),
+        active: createEmptyStatusCounts()
+      };
+    }
+
+    function toCountNumber(value, fallback = 0) {
+      const num = Number(value);
+      if (Number.isFinite(num)) return num;
+      const fallbackNum = Number(fallback);
+      return Number.isFinite(fallbackNum) ? fallbackNum : 0;
+    }
+
+    function normalizeStatusCounts(bucket) {
+      const base = createEmptyStatusCounts();
+      if (!bucket || typeof bucket !== 'object') {
+        return base;
+      }
+      ['total', 'exp1', 'exp2', 'overall'].forEach(key => {
+        if (bucket[key] != null) {
+          base[key] = toCountNumber(bucket[key], base[key]);
+        }
+      });
+      return base;
+    }
+
+    function normalizeCountsPayload(payload, fallbackTotal) {
+      const base = createEmptyCounts();
+      if (!payload || typeof payload !== 'object') {
+        base.total = toCountNumber(fallbackTotal, 0);
+        return base;
+      }
+      base.total = toCountNumber(payload.total, fallbackTotal);
+      base.expired = normalizeStatusCounts(payload.expired);
+      base.upcoming = normalizeStatusCounts(payload.upcoming);
+      base.active = normalizeStatusCounts(payload.active);
+      return base;
     }
 
     function trimUploadTextFields() {
@@ -521,8 +567,8 @@
     }
 
     function formatCountLabel() {
-      const filtered = Number(state.countsFiltered && state.countsFiltered.total != null ? state.countsFiltered.total : state.rows.length);
-      const total = Number(state.countsAll && state.countsAll.total != null ? state.countsAll.total : filtered);
+      const filtered = toCountNumber(state.countsFiltered && state.countsFiltered.total, state.rows.length);
+      const total = toCountNumber(state.countsAll && state.countsAll.total, filtered);
       const same = filtered === total;
       const key = same
         ? (filtered === 1 ? 'results.countSingular' : 'results.countPlural')
@@ -546,9 +592,14 @@
     }
 
     function updateStatsDisplay() {
-      document.getElementById('stat-expired').textContent = Number(state.countsAll.expired || 0);
-      document.getElementById('stat-upcoming').textContent = Number(state.countsAll.upcoming || 0);
-      document.getElementById('stat-active').textContent = Number(state.countsAll.active || 0);
+      const counts = state.countsAll || createEmptyCounts();
+      const expired = counts.expired || createEmptyStatusCounts();
+      const upcoming = counts.upcoming || createEmptyStatusCounts();
+      const active = counts.active || createEmptyStatusCounts();
+
+      document.getElementById('stat-expired').textContent = toCountNumber(expired.total, 0);
+      document.getElementById('stat-upcoming').textContent = toCountNumber(upcoming.total, 0);
+      document.getElementById('stat-active').textContent = toCountNumber(active.total, 0);
     }
 
     function setUploadStatus(type, payload) {
@@ -761,24 +812,16 @@
     }
 
     function updateCounts(data) {
-      const countsAll = data || {};
-      state.countsAll.expired = Number(countsAll.expired || 0);
-      state.countsAll.upcoming = Number(countsAll.upcoming || 0);
-      state.countsAll.active = Number(countsAll.active || 0);
-      if (countsAll.total != null) {
-        state.countsAll.total = Number(countsAll.total);
-      } else {
-        state.countsAll.total = state.countsAll.expired + state.countsAll.upcoming + state.countsAll.active;
-      }
+      const prevTotal = state.countsAll && Number.isFinite(state.countsAll.total)
+        ? state.countsAll.total
+        : null;
+      const fallbackTotal = prevTotal && prevTotal > 0 ? prevTotal : state.rows.length;
+      state.countsAll = normalizeCountsPayload(data, fallbackTotal);
       updateStatsDisplay();
     }
 
     function updateFilteredCounts(countsFiltered) {
-      if (countsFiltered && countsFiltered.total != null) {
-        state.countsFiltered.total = Number(countsFiltered.total);
-      } else {
-        state.countsFiltered.total = state.rows.length;
-      }
+      state.countsFiltered = normalizeCountsPayload(countsFiltered, state.rows.length);
       if (resultState.type === 'count') {
         renderResultState();
       }
