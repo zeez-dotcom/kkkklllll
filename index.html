@@ -256,8 +256,13 @@
         status: {
           expired: 'Expired',
           active: 'Active',
-          upcomingPrefix: 'Upcoming',
-          upcomingExact: 'Upcoming (≤ 30 days)'
+          upcoming: {
+            label: 'Upcoming',
+            withinThreshold: 'Upcoming (≤ 30 days)',
+            inOneDay: 'Upcoming (in 1 day)',
+            inDays: 'Upcoming (in {days} days)',
+            today: 'Upcoming (today)'
+          }
         }
       },
       ar: {
@@ -333,8 +338,13 @@
         status: {
           expired: 'منتهي',
           active: 'ساري',
-          upcomingPrefix: 'قادم',
-          upcomingExact: 'قادم (≤ 30 يوم)'
+          upcoming: {
+            label: 'قادم',
+            withinThreshold: 'قادم (≤ 30 يوم)',
+            inOneDay: 'قادم (خلال يوم واحد)',
+            inDays: 'قادم (خلال {days} يوم)',
+            today: 'قادم (اليوم)'
+          }
         }
       }
     };
@@ -587,19 +597,78 @@
 
     function statusPill(status) {
       const base = 'pill status-';
-      const raw = String(status || '');
-      if (raw === 'Upcoming (≤ 30 days)') {
-        return `<span class="${base}Upcoming">${escapeHtml(t('status.upcomingExact'))}</span>`;
+      const langStatus = (translations[currentLang] && translations[currentLang].status) || translations.en.status;
+      const upcomingTranslations = langStatus.upcoming || {};
+
+      const statusObj = (status && typeof status === 'object') ? status : null;
+      const raw = statusObj && statusObj.label != null ? String(statusObj.label) : String(status || '');
+
+      let type = statusObj && statusObj.type ? String(statusObj.type) : '';
+      let days = statusObj && statusObj.daysUntil != null ? Number(statusObj.daysUntil) : null;
+      if (!Number.isFinite(days)) days = null;
+      let withinThreshold = !!(statusObj && statusObj.withinThreshold);
+      let mode = statusObj && statusObj.mode ? String(statusObj.mode) : '';
+
+      if (!type) {
+        const normalized = raw.toLowerCase();
+        if (normalized === 'expired') {
+          type = 'Expired';
+        } else if (normalized === 'active') {
+          type = 'Active';
+        } else if (normalized.startsWith('upcoming')) {
+          type = 'Upcoming';
+        }
       }
-      if (raw.startsWith('Upcoming')) {
-        const suffix = raw.substring('Upcoming'.length);
-        const text = `${t('status.upcomingPrefix')}${suffix}`;
-        return `<span class="${base}Upcoming">${escapeHtml(text.trim())}</span>`;
+
+      if (type === 'Upcoming') {
+        if (days == null) {
+          const match = raw.match(/in\s+(-?\d+)/i);
+          if (match) {
+            const parsed = Number(match[1]);
+            if (Number.isFinite(parsed)) days = parsed;
+          }
+        }
+        if (!withinThreshold && /≤\s*30/.test(raw)) {
+          withinThreshold = true;
+          if (!mode) mode = 'threshold';
+        }
+        if (!mode) {
+          mode = days != null ? 'exact' : (withinThreshold ? 'threshold' : '');
+        }
       }
-      if (raw === 'Expired') {
-        return `<span class="${base}Expired">${escapeHtml(t('status.expired'))}</span>`;
+
+      let text;
+      if (type === 'Expired') {
+        text = langStatus.expired;
+      } else if (type === 'Upcoming') {
+        if ((mode === 'threshold' || (withinThreshold && days == null)) && upcomingTranslations.withinThreshold) {
+          text = upcomingTranslations.withinThreshold;
+        } else if (days != null) {
+          if (days === 0 && upcomingTranslations.today) {
+            text = upcomingTranslations.today;
+          } else if (days === 1 && upcomingTranslations.inOneDay) {
+            text = upcomingTranslations.inOneDay;
+          } else if (upcomingTranslations.inDays) {
+            text = format(upcomingTranslations.inDays, { days });
+          } else if (upcomingTranslations.withinThreshold) {
+            text = upcomingTranslations.withinThreshold;
+          } else if (upcomingTranslations.label) {
+            text = upcomingTranslations.label;
+          } else {
+            text = 'Upcoming';
+          }
+        } else if (upcomingTranslations.label) {
+          text = upcomingTranslations.label;
+        } else {
+          text = 'Upcoming';
+        }
+      } else {
+        type = 'Active';
+        text = langStatus.active;
       }
-      return `<span class="${base}Active">${escapeHtml(t('status.active'))}</span>`;
+
+      const variant = type === 'Expired' ? 'Expired' : type === 'Upcoming' ? 'Upcoming' : 'Active';
+      return `<span class="${base}${variant}">${escapeHtml(text)}</span>`;
     }
 
     function getLocalizedField(row, key) {
@@ -647,7 +716,7 @@
             <td>${escapeHtml(displayDescription)}</td>
             <td>${exp1}</td>
             <td>${exp2}</td>
-            <td>${statusPill(r.status)}</td>
+            <td>${statusPill(r.statusInfo || r.status)}</td>
             <td>${fileCell}</td>
           </tr>
         `;
