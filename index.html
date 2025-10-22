@@ -115,17 +115,27 @@
           <div class="row">
             <div class="grow">
               <label for="uploadName" id="labelName"></label>
-              <input id="uploadName" name="name" required />
+              <input id="uploadName" name="name" required maxlength="200" />
             </div>
             <div class="grow">
               <label for="uploadDescription" id="labelDescription"></label>
-              <input id="uploadDescription" name="description" />
+              <input id="uploadDescription" name="description" maxlength="500" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="grow">
+              <label for="uploadNameAr" id="labelNameAr"></label>
+              <input id="uploadNameAr" name="nameAr" lang="ar" dir="rtl" maxlength="200" />
+            </div>
+            <div class="grow">
+              <label for="uploadDescriptionAr" id="labelDescriptionAr"></label>
+              <input id="uploadDescriptionAr" name="descriptionAr" lang="ar" dir="rtl" maxlength="500" />
             </div>
           </div>
           <div class="row">
             <div class="grow">
               <label for="uploadExp1Label" id="labelExp1"></label>
-              <input id="uploadExp1Label" name="exp1Label" placeholder="" />
+              <input id="uploadExp1Label" name="exp1Label" placeholder="" maxlength="200" />
             </div>
             <div class="grow">
               <label for="uploadExp1Date" id="labelExp1Date"></label>
@@ -135,11 +145,21 @@
           <div class="row">
             <div class="grow">
               <label for="uploadExp2Label" id="labelExp2"></label>
-              <input id="uploadExp2Label" name="exp2Label" placeholder="" />
+              <input id="uploadExp2Label" name="exp2Label" placeholder="" maxlength="200" />
             </div>
             <div class="grow">
               <label for="uploadExp2Date" id="labelExp2Date"></label>
               <input id="uploadExp2Date" type="date" name="exp2Date" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="grow">
+              <label for="uploadExp1LabelAr" id="labelExp1Ar"></label>
+              <input id="uploadExp1LabelAr" name="exp1LabelAr" placeholder="" lang="ar" dir="rtl" maxlength="200" />
+            </div>
+            <div class="grow">
+              <label for="uploadExp2LabelAr" id="labelExp2Ar"></label>
+              <input id="uploadExp2LabelAr" name="exp2LabelAr" placeholder="" lang="ar" dir="rtl" maxlength="200" />
             </div>
           </div>
           <div class="row" style="align-items:flex-end;">
@@ -202,12 +222,20 @@
         fileLinks: { open: 'Open', preview: 'Preview', none: '—' },
         uploadForm: {
           nameLabel: 'Name',
+          nameLabelAr: 'Name (Arabic)',
+          namePlaceholderAr: 'Optional Arabic name',
           descriptionLabel: 'Description',
+          descriptionLabelAr: 'Description (Arabic)',
+          descriptionPlaceholderAr: 'Optional Arabic description',
           exp1Label: 'Expiry 1 Label',
           exp1Placeholder: 'e.g., License Expiry',
+          exp1LabelAr: 'Expiry 1 Label (Arabic)',
+          exp1PlaceholderAr: 'Arabic label (optional)',
           exp1Date: 'Expiry 1 Date',
           exp2Label: 'Expiry 2 Label',
           exp2Placeholder: 'e.g., Insurance Expiry',
+          exp2LabelAr: 'Expiry 2 Label (Arabic)',
+          exp2PlaceholderAr: 'Arabic label (optional)',
           exp2Date: 'Expiry 2 Date',
           documentLabel: 'Document (Image or PDF)',
           documentHelp: 'Optional. Files up to ~5MB recommended.',
@@ -271,12 +299,20 @@
         fileLinks: { open: 'فتح', preview: 'معاينة', none: '—' },
         uploadForm: {
           nameLabel: 'الاسم',
+          nameLabelAr: 'الاسم (بالعربية)',
+          namePlaceholderAr: 'اسم عربي اختياري',
           descriptionLabel: 'الوصف',
+          descriptionLabelAr: 'الوصف (بالعربية)',
+          descriptionPlaceholderAr: 'وصف عربي اختياري',
           exp1Label: 'تسمية الانتهاء 1',
           exp1Placeholder: 'مثال: انتهاء الترخيص',
+          exp1LabelAr: 'تسمية الانتهاء 1 (بالعربية)',
+          exp1PlaceholderAr: 'تسمية عربية اختيارية',
           exp1Date: 'تاريخ الانتهاء 1',
           exp2Label: 'تسمية الانتهاء 2',
           exp2Placeholder: 'مثال: انتهاء التأمين',
+          exp2LabelAr: 'تسمية الانتهاء 2 (بالعربية)',
+          exp2PlaceholderAr: 'تسمية عربية اختيارية',
           exp2Date: 'تاريخ الانتهاء 2',
           documentLabel: 'المستند (صورة أو PDF)',
           documentHelp: 'اختياري. يفضل ملفات حتى 5 ميجابايت تقريبًا.',
@@ -321,10 +357,14 @@
     const btnClosePreview = document.getElementById('btnClosePreview');
     const labelName = document.getElementById('labelName');
     const labelDescription = document.getElementById('labelDescription');
+    const labelNameAr = document.getElementById('labelNameAr');
+    const labelDescriptionAr = document.getElementById('labelDescriptionAr');
     const labelExp1 = document.getElementById('labelExp1');
     const labelExp1Date = document.getElementById('labelExp1Date');
     const labelExp2 = document.getElementById('labelExp2');
     const labelExp2Date = document.getElementById('labelExp2Date');
+    const labelExp1Ar = document.getElementById('labelExp1Ar');
+    const labelExp2Ar = document.getElementById('labelExp2Ar');
     const labelDocument = document.getElementById('labelDocument');
     const documentHelp = document.getElementById('documentHelp');
     const btnUpload = document.getElementById('btnUpload');
@@ -332,8 +372,14 @@
     const languageLabel = document.getElementById('languageLabel');
     const uploadForm = document.getElementById('uploadForm');
 
-    const placeholderExp1 = document.getElementById('uploadExp1Label');
-    const placeholderExp2 = document.getElementById('uploadExp2Label');
+    const inputName = document.getElementById('uploadName');
+    const inputDescription = document.getElementById('uploadDescription');
+    const inputNameAr = document.getElementById('uploadNameAr');
+    const inputDescriptionAr = document.getElementById('uploadDescriptionAr');
+    const exp1LabelInputEn = document.getElementById('uploadExp1Label');
+    const exp1LabelInputAr = document.getElementById('uploadExp1LabelAr');
+    const exp2LabelInputEn = document.getElementById('uploadExp2Label');
+    const exp2LabelInputAr = document.getElementById('uploadExp2LabelAr');
 
     let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || 'en';
     if (!translations[currentLang]) currentLang = 'en';
@@ -383,6 +429,24 @@
       return /^https?:\/\//i.test(value) ? value : '';
     }
 
+    function trimUploadTextFields() {
+      [
+        inputName,
+        inputDescription,
+        inputNameAr,
+        inputDescriptionAr,
+        exp1LabelInputEn,
+        exp1LabelInputAr,
+        exp2LabelInputEn,
+        exp2LabelInputAr
+      ].forEach(input => {
+        if (!input) return;
+        if (typeof input.value === 'string') {
+          input.value = input.value.trim();
+        }
+      });
+    }
+
     function applyTranslations() {
       const langTable = translations[currentLang] || translations.en;
       document.documentElement.lang = currentLang;
@@ -412,15 +476,23 @@
       btnClosePreview.textContent = langTable.preview.close;
       labelName.textContent = langTable.uploadForm.nameLabel;
       labelDescription.textContent = langTable.uploadForm.descriptionLabel;
+      if (labelNameAr) labelNameAr.textContent = langTable.uploadForm.nameLabelAr;
+      if (labelDescriptionAr) labelDescriptionAr.textContent = langTable.uploadForm.descriptionLabelAr;
       labelExp1.textContent = langTable.uploadForm.exp1Label;
       labelExp1Date.textContent = langTable.uploadForm.exp1Date;
       labelExp2.textContent = langTable.uploadForm.exp2Label;
       labelExp2Date.textContent = langTable.uploadForm.exp2Date;
+      if (labelExp1Ar) labelExp1Ar.textContent = langTable.uploadForm.exp1LabelAr;
+      if (labelExp2Ar) labelExp2Ar.textContent = langTable.uploadForm.exp2LabelAr;
       labelDocument.textContent = langTable.uploadForm.documentLabel;
       documentHelp.textContent = langTable.uploadForm.documentHelp;
       btnUpload.textContent = langTable.uploadForm.submit;
-      placeholderExp1.placeholder = langTable.uploadForm.exp1Placeholder;
-      placeholderExp2.placeholder = langTable.uploadForm.exp2Placeholder;
+      exp1LabelInputEn.placeholder = langTable.uploadForm.exp1Placeholder;
+      exp2LabelInputEn.placeholder = langTable.uploadForm.exp2Placeholder;
+      if (inputNameAr) inputNameAr.placeholder = langTable.uploadForm.namePlaceholderAr;
+      if (inputDescriptionAr) inputDescriptionAr.placeholder = langTable.uploadForm.descriptionPlaceholderAr;
+      if (exp1LabelInputAr) exp1LabelInputAr.placeholder = langTable.uploadForm.exp1PlaceholderAr;
+      if (exp2LabelInputAr) exp2LabelInputAr.placeholder = langTable.uploadForm.exp2PlaceholderAr;
       languageLabel.textContent = langTable.languageLabel;
       languageSelect.setAttribute('aria-label', langTable.languageLabel);
       Object.entries(langTable.languages).forEach(([value, label]) => {
@@ -530,6 +602,17 @@
       return `<span class="${base}Active">${escapeHtml(t('status.active'))}</span>`;
     }
 
+    function getLocalizedField(row, key) {
+      if (!row) return '';
+      if (currentLang === 'ar') {
+        const localizedKey = `${key}Ar`;
+        if (row[localizedKey]) {
+          return row[localizedKey];
+        }
+      }
+      return row[key] || '';
+    }
+
     function renderTable(rows) {
       const tbody = document.querySelector('#table tbody');
       if (!hasLoaded && (!rows || !rows.length)) {
@@ -542,11 +625,15 @@
       }
 
       tbody.innerHTML = rows.map(r => {
-        const exp1 = `${escapeHtml(r.exp1Label)}${r.exp1Date ? ' ('+escapeHtml(r.exp1Date)+')' : ''}`;
-        const exp2 = `${escapeHtml(r.exp2Label)}${r.exp2Date ? ' ('+escapeHtml(r.exp2Date)+')' : ''}`;
+        const displayName = getLocalizedField(r, 'name');
+        const displayDescription = getLocalizedField(r, 'description');
+        const exp1Label = getLocalizedField(r, 'exp1Label');
+        const exp2Label = getLocalizedField(r, 'exp2Label');
+        const exp1 = `${escapeHtml(exp1Label)}${r.exp1Date ? ' ('+escapeHtml(r.exp1Date)+')' : ''}`;
+        const exp2 = `${escapeHtml(exp2Label)}${r.exp2Date ? ' ('+escapeHtml(r.exp2Date)+')' : ''}`;
         const fileUrl = safeHref(r.fileUrl);
         const previewUrl = safeHref(r.filePreviewUrl);
-        const previewTitleText = r.fileName || r.name || t('preview.defaultTitle');
+        const previewTitleText = r.fileName || displayName || t('preview.defaultTitle');
         const previewLink = previewUrl
           ? ` · <a class="link link-preview" role="button" href="#" data-preview-url="${escapeAttr(previewUrl)}" data-preview-title="${escapeAttr(previewTitleText)}">${escapeHtml(t('fileLinks.preview'))}</a>`
           : '';
@@ -556,8 +643,8 @@
         return `
           <tr>
             <td>${escapeHtml(r.id)}</td>
-            <td>${escapeHtml(r.name)}</td>
-            <td>${escapeHtml(r.description)}</td>
+            <td>${escapeHtml(displayName)}</td>
+            <td>${escapeHtml(displayDescription)}</td>
             <td>${exp1}</td>
             <td>${exp2}</td>
             <td>${statusPill(r.status)}</td>
@@ -669,6 +756,10 @@
 
     uploadForm.addEventListener('submit', async (e)=>{
       e.preventDefault();
+      trimUploadTextFields();
+      if (!uploadForm.reportValidity()) {
+        return;
+      }
       setUploadStatus('uploading');
       setLoading(btnUpload, true);
 
@@ -677,7 +768,11 @@
         const obj = {};
         fd.forEach((v,k)=>{
           if (k === 'file') return;
-          obj[k] = v;
+          if (typeof v === 'string') {
+            obj[k] = v.trim();
+          } else {
+            obj[k] = v;
+          }
         });
 
         const fileInput = uploadForm.file;

@@ -3,8 +3,11 @@
  **********************/
 const SHEET_NAME = 'Licenses';
 const HEADER = [
-  'id','name','description',
-  'exp1Label','exp1Date','exp2Label','exp2Date',
+  'id',
+  'name','nameAr',
+  'description','descriptionAr',
+  'exp1Label','exp1LabelAr','exp1Date',
+  'exp2Label','exp2LabelAr','exp2Date',
   'status','fileUrl','fileName','createdAt'
 ];
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
@@ -100,9 +103,13 @@ function normalizeRow_(row) {
   obj.exp2Date = toIso_(obj.exp2Date);
   obj.status = computeStatus_(obj.exp1Date, obj.exp2Date);
   obj.name = sanitizeString_(obj.name);
+  obj.nameAr = sanitizeString_(obj.nameAr);
   obj.description = sanitizeString_(obj.description);
+  obj.descriptionAr = sanitizeString_(obj.descriptionAr);
   obj.exp1Label = sanitizeString_(obj.exp1Label);
+  obj.exp1LabelAr = sanitizeString_(obj.exp1LabelAr);
   obj.exp2Label = sanitizeString_(obj.exp2Label);
+  obj.exp2LabelAr = sanitizeString_(obj.exp2LabelAr);
   obj.fileUrl = sanitizeUrl_(obj.fileUrl);
   obj.filePreviewUrl = makePreviewUrl_(obj.fileUrl);
   obj.fileName = sanitizeString_(obj.fileName || obj.name);
@@ -126,9 +133,13 @@ function estimateBase64Bytes_(b64) {
 function normalizeUploadInput_(obj) {
   const normalized = {
     name: sanitizeString_(obj && obj.name),
+    nameAr: sanitizeString_(obj && obj.nameAr),
     description: sanitizeString_(obj && obj.description),
+    descriptionAr: sanitizeString_(obj && obj.descriptionAr),
     exp1Label: sanitizeString_(obj && obj.exp1Label),
+    exp1LabelAr: sanitizeString_(obj && obj.exp1LabelAr),
     exp2Label: sanitizeString_(obj && obj.exp2Label),
+    exp2LabelAr: sanitizeString_(obj && obj.exp2LabelAr),
     exp1Date: toIso_(obj && obj.exp1Date),
     exp2Date: toIso_(obj && obj.exp2Date),
     file: null
@@ -163,7 +174,14 @@ function getDashboardData(q) {
 
   const query = (q || '').trim().toLowerCase();
   const filtered = !query ? all : all.filter(r => {
-    return [r.id, r.name, r.description, r.exp1Label, r.exp2Label, r.fileName]
+    return [
+      r.id,
+      r.name, r.nameAr,
+      r.description, r.descriptionAr,
+      r.exp1Label, r.exp1LabelAr,
+      r.exp2Label, r.exp2LabelAr,
+      r.fileName
+    ]
       .map(x => String(x||'').toLowerCase())
       .some(s => s.includes(query));
   });
@@ -216,10 +234,14 @@ function uploadDocument(obj) {
     sh.appendRow([
       id,
       data.name,
+      data.nameAr,
       data.description,
+      data.descriptionAr,
       data.exp1Label,
+      data.exp1LabelAr,
       data.exp1Date,
       data.exp2Label,
+      data.exp2LabelAr,
       data.exp2Date,
       status,
       fileUrl,
@@ -228,7 +250,22 @@ function uploadDocument(obj) {
     ]);
 
     const safeFileUrl = sanitizeUrl_(fileUrl);
-    return { ok:true, id, fileUrl: safeFileUrl, filePreviewUrl: makePreviewUrl_(safeFileUrl) };
+    return {
+      ok: true,
+      id,
+      fileUrl: safeFileUrl,
+      filePreviewUrl: makePreviewUrl_(safeFileUrl),
+      name: data.name,
+      nameAr: data.nameAr,
+      description: data.description,
+      descriptionAr: data.descriptionAr,
+      exp1Label: data.exp1Label,
+      exp1LabelAr: data.exp1LabelAr,
+      exp2Label: data.exp2Label,
+      exp2LabelAr: data.exp2LabelAr,
+      exp1Date: data.exp1Date,
+      exp2Date: data.exp2Date
+    };
   } catch (err) {
     return { ok:false, error:String(err && err.message || err) };
   }
