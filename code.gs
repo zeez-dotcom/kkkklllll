@@ -66,27 +66,86 @@ function daysUntil_(iso) {
   const d = new Date(iso + 'T00:00:00');
   return Math.round((d - today) / 86400000);
 }
-function computeStatus_(exp1Iso, exp2Iso) {
-  const candidateDates = [exp1Iso, exp2Iso].filter(Boolean).sort();
-  if (!candidateDates.length) {
-    return { type: 'Active', label: 'Active', daysUntil: null, withinThreshold: false, mode: 'none' };
-  }
+function computeExpiryStatus_(iso) {
+  if (!iso) return null;
 
-  const dd = daysUntil_(candidateDates[0]);
-  if (dd === null) {
-    return { type: 'Active', label: 'Active', daysUntil: null, withinThreshold: false, mode: 'none' };
-  }
+  const dd = daysUntil_(iso);
+  if (dd === null) return null;
 
   if (dd < 0) {
-    return { type: 'Expired', label: 'Expired', daysUntil: dd, withinThreshold: false, mode: 'past' };
+    return {
+      type: 'Expired',
+      label: 'Expired',
+      daysUntil: dd,
+      withinThreshold: false,
+      mode: 'past'
+    };
   }
 
   if (dd <= 30) {
-    const label = `Upcoming (in ${dd} day${dd === 1 ? '' : 's'})`;
-    return { type: 'Upcoming', label, daysUntil: dd, withinThreshold: true, mode: 'exact' };
+    let label;
+    if (dd === 0) {
+      label = 'Upcoming (today)';
+    } else if (dd === 1) {
+      label = 'Upcoming (in 1 day)';
+    } else {
+      label = `Upcoming (in ${dd} days)`;
+    }
+    return {
+      type: 'Upcoming',
+      label,
+      daysUntil: dd,
+      withinThreshold: true,
+      mode: dd === 0 ? 'today' : 'exact'
+    };
   }
 
-  return { type: 'Active', label: 'Active', daysUntil: dd, withinThreshold: false, mode: 'future' };
+  return {
+    type: 'Active',
+    label: 'Active',
+    daysUntil: dd,
+    withinThreshold: false,
+    mode: 'future'
+  };
+}
+
+function computeStatus_(exp1Iso, exp2Iso) {
+  const exp1Status = computeExpiryStatus_(exp1Iso);
+  const exp2Status = computeExpiryStatus_(exp2Iso);
+
+  const statuses = [exp1Status, exp2Status].filter(Boolean);
+  const defaultOverall = {
+    type: 'Active',
+    label: 'Active',
+    daysUntil: null,
+    withinThreshold: false,
+    mode: 'none'
+  };
+
+  if (!statuses.length) {
+    return { overall: defaultOverall, exp1: exp1Status, exp2: exp2Status };
+  }
+
+  const severity = status => {
+    if (!status || !status.type) return 3;
+    if (status.type === 'Expired') return 0;
+    if (status.type === 'Upcoming') return 1;
+    if (status.type === 'Active') return 2;
+    return 3;
+  };
+
+  statuses.sort((a, b) => {
+    const sa = severity(a);
+    const sb = severity(b);
+    if (sa !== sb) return sa - sb;
+    const da = a && a.daysUntil != null ? a.daysUntil : Number.POSITIVE_INFINITY;
+    const db = b && b.daysUntil != null ? b.daysUntil : Number.POSITIVE_INFINITY;
+    return da - db;
+  });
+
+  const overall = Object.assign({}, statuses[0]);
+
+  return { overall, exp1: exp1Status, exp2: exp2Status };
 }
 function parseDriveFileId_(url) {
   if (!url) return '';
@@ -115,16 +174,19 @@ function normalizeRow_(row) {
   obj.exp1Date = toIso_(obj.exp1Date);
   obj.exp2Date = toIso_(obj.exp2Date);
   const status = computeStatus_(obj.exp1Date, obj.exp2Date);
-  obj.status = status.label;
+  const overall = status.overall || { type: 'Active', label: 'Active', daysUntil: null, withinThreshold: false, mode: 'none' };
+  obj.exp1Status = status.exp1;
+  obj.exp2Status = status.exp2;
+  obj.status = overall.label;
   obj.statusInfo = {
-    type: status.type,
-    label: status.label,
-    daysUntil: status.daysUntil,
-    withinThreshold: !!status.withinThreshold,
-    mode: status.mode
+    type: overall.type,
+    label: overall.label,
+    daysUntil: overall.daysUntil,
+    withinThreshold: !!overall.withinThreshold,
+    mode: overall.mode
   };
-  obj.statusType = status.type;
-  obj.statusDaysUntil = status.daysUntil;
+  obj.statusType = overall.type;
+  obj.statusDaysUntil = overall.daysUntil;
   obj.name = sanitizeString_(obj.name);
   obj.nameAr = sanitizeString_(obj.nameAr);
   obj.description = sanitizeString_(obj.description);
@@ -210,12 +272,48 @@ function getDashboardData(q) {
   });
 
   const statusTypeOf = r => {
-    if (r.statusType) return r.statusType;
-    if (r.statusInfo && r.statusInfo.type) return r.statusInfo.type;
-    const raw = String(r.status || '').toLowerCase();
-    if (raw === 'expired') return 'Expired';
-    if (raw.startsWith('upcoming')) return 'Upcoming';
-    return 'Active';
+    const candidates = [];
+    const pushCandidate = status => {
+      if (status && status.type) {
+        candidates.push({
+          type: status.type,
+          daysUntil: status.daysUntil
+        });
+      }
+    };
+
+    pushCandidate(r.exp1Status);
+    pushCandidate(r.exp2Status);
+    if (r.statusInfo && r.statusInfo.type) {
+      pushCandidate(r.statusInfo);
+    }
+    if (r.statusType && !candidates.length) {
+      pushCandidate({ type: r.statusType, daysUntil: r.statusDaysUntil });
+    }
+    if (!candidates.length) {
+      const raw = String(r.status || '').toLowerCase();
+      if (raw === 'expired') return 'Expired';
+      if (raw.startsWith('upcoming')) return 'Upcoming';
+      return 'Active';
+    }
+
+    const severity = type => {
+      if (type === 'Expired') return 0;
+      if (type === 'Upcoming') return 1;
+      if (type === 'Active') return 2;
+      return 3;
+    };
+
+    candidates.sort((a, b) => {
+      const sa = severity(a.type);
+      const sb = severity(b.type);
+      if (sa !== sb) return sa - sb;
+      const da = a.daysUntil != null ? a.daysUntil : Number.POSITIVE_INFINITY;
+      const db = b.daysUntil != null ? b.daysUntil : Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+
+    return candidates[0].type || 'Active';
   };
 
   const stats = arr => ({
@@ -262,6 +360,7 @@ function uploadDocument(obj) {
     }
 
     const status = computeStatus_(data.exp1Date, data.exp2Date);
+    const overall = status.overall || { label: 'Active' };
 
     sh.appendRow([
       id,
@@ -275,7 +374,7 @@ function uploadDocument(obj) {
       data.exp2Label,
       data.exp2LabelAr,
       data.exp2Date,
-      status.label,
+      overall.label,
       fileUrl,
       fileName || data.name,
       now
