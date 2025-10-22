@@ -67,13 +67,26 @@ function daysUntil_(iso) {
   return Math.round((d - today) / 86400000);
 }
 function computeStatus_(exp1Iso, exp2Iso) {
-  const c = [exp1Iso, exp2Iso].filter(Boolean).sort();
-  if (!c.length) return 'Active';
-  const dd = daysUntil_(c[0]);
-  if (dd === null) return 'Active';
-  if (dd < 0) return 'Expired';
-  if (dd <= 30) return `Upcoming (in ${dd} day${dd===1?'':'s'})`;
-  return 'Active';
+  const candidateDates = [exp1Iso, exp2Iso].filter(Boolean).sort();
+  if (!candidateDates.length) {
+    return { type: 'Active', label: 'Active', daysUntil: null, withinThreshold: false, mode: 'none' };
+  }
+
+  const dd = daysUntil_(candidateDates[0]);
+  if (dd === null) {
+    return { type: 'Active', label: 'Active', daysUntil: null, withinThreshold: false, mode: 'none' };
+  }
+
+  if (dd < 0) {
+    return { type: 'Expired', label: 'Expired', daysUntil: dd, withinThreshold: false, mode: 'past' };
+  }
+
+  if (dd <= 30) {
+    const label = `Upcoming (in ${dd} day${dd === 1 ? '' : 's'})`;
+    return { type: 'Upcoming', label, daysUntil: dd, withinThreshold: true, mode: 'exact' };
+  }
+
+  return { type: 'Active', label: 'Active', daysUntil: dd, withinThreshold: false, mode: 'future' };
 }
 function parseDriveFileId_(url) {
   if (!url) return '';
@@ -101,7 +114,17 @@ function normalizeRow_(row) {
   HEADER.forEach((h, i) => obj[h] = row[i] ?? '');
   obj.exp1Date = toIso_(obj.exp1Date);
   obj.exp2Date = toIso_(obj.exp2Date);
-  obj.status = computeStatus_(obj.exp1Date, obj.exp2Date);
+  const status = computeStatus_(obj.exp1Date, obj.exp2Date);
+  obj.status = status.label;
+  obj.statusInfo = {
+    type: status.type,
+    label: status.label,
+    daysUntil: status.daysUntil,
+    withinThreshold: !!status.withinThreshold,
+    mode: status.mode
+  };
+  obj.statusType = status.type;
+  obj.statusDaysUntil = status.daysUntil;
   obj.name = sanitizeString_(obj.name);
   obj.nameAr = sanitizeString_(obj.nameAr);
   obj.description = sanitizeString_(obj.description);
@@ -186,11 +209,20 @@ function getDashboardData(q) {
       .some(s => s.includes(query));
   });
 
+  const statusTypeOf = r => {
+    if (r.statusType) return r.statusType;
+    if (r.statusInfo && r.statusInfo.type) return r.statusInfo.type;
+    const raw = String(r.status || '').toLowerCase();
+    if (raw === 'expired') return 'Expired';
+    if (raw.startsWith('upcoming')) return 'Upcoming';
+    return 'Active';
+  };
+
   const stats = arr => ({
     total: arr.length,
-    expired: arr.filter(r=>r.status==='Expired').length,
-    upcoming: arr.filter(r=>String(r.status).startsWith('Upcoming')).length,
-    active: arr.filter(r=>r.status==='Active').length
+    expired: arr.filter(r => statusTypeOf(r) === 'Expired').length,
+    upcoming: arr.filter(r => statusTypeOf(r) === 'Upcoming').length,
+    active: arr.filter(r => statusTypeOf(r) === 'Active').length
   });
 
   const countsAll = stats(all);
@@ -243,7 +275,7 @@ function uploadDocument(obj) {
       data.exp2Label,
       data.exp2LabelAr,
       data.exp2Date,
-      status,
+      status.label,
       fileUrl,
       fileName || data.name,
       now
