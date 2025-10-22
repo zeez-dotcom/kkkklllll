@@ -133,7 +133,7 @@ function normalizeHistoryRow_(row) {
   }
 
   const newFileUrl = sanitizeUrl_(values[13]);
-  const legacyFileUrl = sanitizeUrl_(row[6]);
+  const legacyFileUrl = sanitizeUrl_(row[5]) || sanitizeUrl_(row[6]);
   const labelArLooksDate = isDateLike_(row[4]);
   const exp1DateLooksWrong = !isDateLike_(row[5]) && !!row[5];
   const legacyDetected = ((!newFileUrl && !!legacyFileUrl) || (labelArLooksDate && exp1DateLooksWrong));
