@@ -794,13 +794,14 @@
       applyTranslations();
     });
 
-    searchEl.addEventListener('input', debounce(refresh, 250));
-    btnRefresh.addEventListener('click', refresh);
+    searchEl.addEventListener('input', debounce(() => refresh(), 250));
+    btnRefresh.addEventListener('click', () => refresh());
 
     function debounce(fn, ms){ let to; return (...a)=>{ clearTimeout(to); to=setTimeout(()=>fn(...a), ms); }; }
 
-    function refresh() {
-      const q = searchEl.value || '';
+    function refresh(options) {
+      const hasOverride = options && typeof options === 'object' && Object.prototype.hasOwnProperty.call(options, 'query');
+      const q = hasOverride ? options.query : (searchEl.value || '');
       setLoading(btnRefresh, true);
       try {
         if (typeof google === 'undefined' || !google.script || !google.script.run) {
@@ -879,7 +880,8 @@
             const openUrl = res.fileUrl ? safeHref(res.fileUrl) : '';
             setUploadStatus('saved', { id: res.id, fileUrl: openUrl });
             uploadForm.reset();
-            refresh();
+            searchEl.value = '';
+            refresh({ query: '' });
           } else {
             const message = res && res.error ? res.error : '';
             setUploadStatus('error', { message: String(message || '') });
