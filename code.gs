@@ -14,16 +14,23 @@ const HEADER = [
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
 const SHARE_FILES_PUBLIC = true;    // auto "Anyone with link → Viewer"
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB safety limit
-const HISTORY_SHEET_NAME = 'LicenseHistory';
-const HISTORY_HEADER = [
+const LICENSE_HISTORY_SHEET_NAME = 'LicenseHistory';
+const LICENSE_HISTORY_HEADER = [
   'id',
   'timestamp',
   'action',
+  'prevExp1Label',
+  'prevExp1LabelAr',
   'prevExp1Date',
+  'prevExp1Status',
+  'prevExp2Label',
+  'prevExp2LabelAr',
   'prevExp2Date',
+  'prevExp2Status',
+  'prevStatus',
+  'prevStatusType',
   'prevFileUrl',
-  'prevFileName',
-  'prevStatus'
+  'prevFileName'
 ];
 
 /**********************
@@ -73,13 +80,13 @@ function getFolder_() {
 function getHistorySheet_() {
   const sh = getSheet_(); // ensure spreadsheet exists
   const ss = sh.getParent();
-  let history = ss.getSheetByName(HISTORY_SHEET_NAME);
+  let history = ss.getSheetByName(LICENSE_HISTORY_SHEET_NAME);
   if (!history) {
-    history = ss.insertSheet(HISTORY_SHEET_NAME);
+    history = ss.insertSheet(LICENSE_HISTORY_SHEET_NAME);
   }
-  const first = history.getRange(1, 1, 1, HISTORY_HEADER.length).getValues()[0];
-  if (first.length !== HISTORY_HEADER.length || HISTORY_HEADER.some((h, i) => first[i] !== h)) {
-    history.getRange(1, 1, 1, HISTORY_HEADER.length).setValues([HISTORY_HEADER]);
+  const first = history.getRange(1, 1, 1, LICENSE_HISTORY_HEADER.length).getValues()[0];
+  if (first.length !== LICENSE_HISTORY_HEADER.length || LICENSE_HISTORY_HEADER.some((h, i) => first[i] !== h)) {
+    history.getRange(1, 1, 1, LICENSE_HISTORY_HEADER.length).setValues([LICENSE_HISTORY_HEADER]);
   }
   return history;
 }
@@ -421,12 +428,34 @@ function recordHistoryEntry_(id, existingObj, action) {
     sanitizeString_(id),
     timestamp,
     sanitizeString_(action) || 'update',
+    sanitizeString_(existingObj.exp1Label),
+    sanitizeString_(existingObj.exp1LabelAr),
     toIso_(existingObj.exp1Date),
+    sanitizeString_(existingObj.exp1StatusInfo && existingObj.exp1StatusInfo.label ? existingObj.exp1StatusInfo.label : existingObj.exp1Status),
+    sanitizeString_(existingObj.exp2Label),
+    sanitizeString_(existingObj.exp2LabelAr),
     toIso_(existingObj.exp2Date),
+    sanitizeString_(existingObj.exp2StatusInfo && existingObj.exp2StatusInfo.label ? existingObj.exp2StatusInfo.label : existingObj.exp2Status),
+    sanitizeString_(existingObj.statusInfo && existingObj.statusInfo.label ? existingObj.statusInfo.label : existingObj.status),
+    sanitizeString_(existingObj.statusInfo && existingObj.statusInfo.type ? existingObj.statusInfo.type : existingObj.statusType),
     sanitizeUrl_(existingObj.fileUrl),
-    sanitizeString_(existingObj.fileName || existingObj.name),
-    sanitizeString_(existingObj.statusInfo && existingObj.statusInfo.label ? existingObj.statusInfo.label : existingObj.status)
+    sanitizeString_(existingObj.fileName || existingObj.name)
   ]);
+}
+
+function getLicenseHistoryIndex_() {
+  const sheet = getHistorySheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) {
+    return new Set();
+  }
+  const values = sheet.getRange(2, 1, last - 1, 1).getValues();
+  const ids = new Set();
+  values.forEach(row => {
+    const id = sanitizeString_(row[0]);
+    if (id) ids.add(id);
+  });
+  return ids;
 }
 
 /**********************
@@ -434,6 +463,17 @@ function recordHistoryEntry_(id, existingObj, action) {
  **********************/
 function getDashboardData(q) {
   const all = getAllRows_();
+
+  let historyIds;
+  try {
+    historyIds = getLicenseHistoryIndex_();
+  } catch (err) {
+    historyIds = new Set();
+  }
+  all.forEach(row => {
+    const key = sanitizeString_(row.id);
+    row.hasHistory = key ? historyIds.has(key) : false;
+  });
 
   const query = (q || '').trim().toLowerCase();
   const filtered = !query ? all : all.filter(r => {
@@ -585,12 +625,18 @@ function uploadDocument(obj) {
     return { ok:false, error:String(err && err.message || err) };
   }
 }
-function updateDocument(obj) {
+/**
+ * Updates an existing license record and records a snapshot of the previous values.
+ * @param {Object} obj normalized license payload including the record `id`.
+ * @returns {Object} response consumed by the web UI.
+ */
+function updateLicense(obj) {
   try {
     const id = sanitizeString_(obj && obj.id);
     if (!id) {
       throw new Error('Record ID is required.');
     }
+
     const found = findRowById_(id);
     if (!found) {
       throw new Error('Record not found.');
@@ -598,10 +644,11 @@ function updateDocument(obj) {
 
     const sh = getSheet_();
     const data = normalizeUploadInput_(obj);
-    const action = String(obj && obj.mode).toLowerCase() === 'renew' ? 'renew' : 'update';
+    const mode = sanitizeString_(obj && obj.mode).toLowerCase();
+    const action = mode === 'renew' ? 'renew' : 'update';
 
     let fileUrl = sanitizeUrl_(found.object.fileUrl);
-    let fileName = sanitizeString_(found.object.fileName || data.name);
+    let fileName = sanitizeString_(found.object.fileName || found.object.name);
 
     if (data.file) {
       const folder = getFolder_();
@@ -609,16 +656,23 @@ function updateDocument(obj) {
       const mime = data.file.type || MimeType.PDF;
       const blob = Utilities.newBlob(bytes, mime, data.file.name);
       const created = folder.createFile(blob).setName(data.file.name);
-      if (SHARE_FILES_PUBLIC) created.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      if (SHARE_FILES_PUBLIC) {
+        created.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      }
       fileUrl = sanitizeUrl_(created.getUrl());
       fileName = data.file.name;
     }
 
     const status = computeStatus_(data.exp1Date, data.exp2Date);
-    const overall = status.overall || { label: 'Active' };
+    const overall = status.overall || { label: 'Active', type: 'Active' };
+    const exp1StatusLabel = status.exp1 && status.exp1.label ? status.exp1.label : '';
+    const exp2StatusLabel = status.exp2 && status.exp2.label ? status.exp2.label : '';
 
     const createdAtIndex = HEADER.indexOf('createdAt');
     const existingCreated = createdAtIndex >= 0 ? found.values[createdAtIndex] : new Date();
+
+    // Capture the state before it is overwritten so history always reflects prior values.
+    recordHistoryEntry_(id, found.object, action);
 
     const rowValues = [
       id,
@@ -629,11 +683,11 @@ function updateDocument(obj) {
       data.exp1Label,
       data.exp1LabelAr,
       data.exp1Date,
-      status.exp1 && status.exp1.label ? status.exp1.label : '',
+      exp1StatusLabel,
       data.exp2Label,
       data.exp2LabelAr,
       data.exp2Date,
-      status.exp2 && status.exp2.label ? status.exp2.label : '',
+      exp2StatusLabel,
       overall.label,
       fileUrl,
       fileName || data.name,
@@ -641,12 +695,12 @@ function updateDocument(obj) {
     ];
 
     sh.getRange(found.rowNumber, 1, 1, HEADER.length).setValues([rowValues]);
-    recordHistoryEntry_(id, found.object, action);
 
     const safeFileUrl = sanitizeUrl_(fileUrl);
     return {
       ok: true,
       id,
+      action,
       fileUrl: safeFileUrl,
       filePreviewUrl: makePreviewUrl_(safeFileUrl),
       name: data.name,
@@ -659,13 +713,28 @@ function updateDocument(obj) {
       exp2LabelAr: data.exp2LabelAr,
       exp1Date: data.exp1Date,
       exp2Date: data.exp2Date,
-      action
+      hasHistory: true
     };
   } catch (err) {
-    return { ok:false, error:String(err && err.message || err) };
+    return { ok: false, error: String((err && err.message) || err) };
   }
 }
-function getDocumentHistory(id) {
+
+/**
+ * Convenience alias that enforces `mode:"renew"` semantics when renewing a license.
+ * @param {Object} obj payload accepted by {@link updateLicense}.
+ */
+function renewLicense(obj) {
+  const payload = obj ? Object.assign({}, obj, { mode: 'renew' }) : { mode: 'renew' };
+  return updateLicense(payload);
+}
+
+/**
+ * Returns prior revisions of a license stored in the history sheet, newest-first.
+ * @param {string|number} id license identifier.
+ * @returns {Array<Object>} chronological entries for the UI timeline.
+ */
+function getLicenseHistory(id) {
   const target = sanitizeString_(id);
   if (!target) {
     throw new Error('Record ID is required.');
@@ -675,7 +744,7 @@ function getDocumentHistory(id) {
   if (last < 2) {
     return [];
   }
-  const values = sheet.getRange(2, 1, last - 1, HISTORY_HEADER.length).getValues();
+  const values = sheet.getRange(2, 1, last - 1, LICENSE_HISTORY_HEADER.length).getValues();
   const filtered = values.filter(row => String(row[0]) === target);
   filtered.sort((a, b) => {
     const da = new Date(a[1]);
@@ -686,17 +755,33 @@ function getDocumentHistory(id) {
     return db.getTime() - da.getTime();
   });
   return filtered.map(row => {
-    const fileUrl = sanitizeUrl_(row[5]);
+    const fileUrl = sanitizeUrl_(row[13]);
     return {
       id: target,
       timestamp: formatTimestamp_(row[1]),
       action: sanitizeString_(row[2] || ''),
-      prevExp1Date: toIso_(row[3]),
-      prevExp2Date: toIso_(row[4]),
+      prevExp1Label: sanitizeString_(row[3]),
+      prevExp1LabelAr: sanitizeString_(row[4]),
+      prevExp1Date: toIso_(row[5]),
+      prevExp1Status: sanitizeString_(row[6]),
+      prevExp2Label: sanitizeString_(row[7]),
+      prevExp2LabelAr: sanitizeString_(row[8]),
+      prevExp2Date: toIso_(row[9]),
+      prevExp2Status: sanitizeString_(row[10]),
+      prevStatus: sanitizeString_(row[11]),
+      prevStatusType: sanitizeString_(row[12]),
       prevFileUrl: fileUrl,
       prevFilePreviewUrl: makePreviewUrl_(fileUrl),
-      prevFileName: sanitizeString_(row[6]),
-      prevStatus: sanitizeString_(row[7])
+      prevFileName: sanitizeString_(row[14])
     };
   });
+}
+
+// Backward compatible aliases for existing client integrations.
+function updateDocument(obj) {
+  return updateLicense(obj);
+}
+
+function getDocumentHistory(id) {
+  return getLicenseHistory(id);
 }

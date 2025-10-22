@@ -18,6 +18,16 @@ If the ID is missing and the script is not bound to a spreadsheet, calls to `get
 
 When deploying as a web app, ensure the published script has access to the configured spreadsheet and, if necessary, update the Drive folder permissions for uploaded files.
 
+## License renewals & history tracking
+
+The backend exposes dedicated helpers for updating existing rows and for fetching their revision history:
+
+* `updateLicense(payload)` replaces the editable cells (expiry labels/dates, status, and file metadata) for a given `id`. When a replacement file is supplied it is uploaded to Drive before the sheet is updated. The function recomputes status columns with `computeStatus_` and stores a snapshot of the pre-update values in `LicenseHistory`.
+* `renewLicense(payload)` is a thin alias around `updateLicense` that always records the action as a renewal. Use this when the UI offers a “renew” workflow.
+* `getLicenseHistory(id)` reads the `LicenseHistory` sheet and returns the previous values ordered from newest to oldest. The payload includes timestamps, the previous expiry labels/dates, status labels, and file URLs so the frontend can render a detailed timeline.
+
+The history sheet is initialised automatically with the `LICENSE_HISTORY_HEADER` column order. Every update (or renewal) appends a new row capturing the prior expiry dates, status labels, Drive file link, and a timestamp of when the change occurred. Dashboard rows also include a `hasHistory` flag so the UI can disable or hide history toggles for licenses that have never been updated.
+
 ## Regression check
 
 To confirm the dashboard tallies mixed status rows correctly, add a record whose first expiry date is already past while the second expiry date is still active. For example:
