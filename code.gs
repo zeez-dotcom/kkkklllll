@@ -3,8 +3,9 @@
  **********************/
 const SHEET_NAME = 'Licenses';
 const HEADER = [
-  'id','name','description',
-  'exp1Label','exp1Date','exp2Label','exp2Date',
+  'id','name','nameAr','description','descriptionAr',
+  'exp1Label','exp1LabelAr','exp1Date',
+  'exp2Label','exp2LabelAr','exp2Date',
   'status','fileUrl','fileName','createdAt'
 ];
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
@@ -110,7 +111,7 @@ function getDashboardData(q) {
 
   const query = (q || '').trim().toLowerCase();
   const filtered = !query ? all : all.filter(r => {
-    return [r.id, r.name, r.description, r.exp1Label, r.exp2Label, r.fileName]
+    return [r.id, r.name, r.nameAr, r.description, r.descriptionAr, r.exp1Label, r.exp1LabelAr, r.exp2Label, r.exp2LabelAr, r.fileName]
       .map(x => String(x||'').toLowerCase())
       .some(s => s.includes(query));
   });
@@ -127,7 +128,8 @@ function getDashboardData(q) {
 
   const key = r => {
     const ds = [r.exp1Date, r.exp2Date].filter(Boolean).sort();
-    return (ds[0] || '9999-12-31') + '|' + (r.name||'');
+    const sortName = r.name || r.nameAr || '';
+    return (ds[0] || '9999-12-31') + '|' + sortName;
   };
   filtered.sort((a,b)=> key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
 
@@ -158,14 +160,34 @@ function uploadDocument(obj) {
     }
 
     const name        = String(obj && obj.name || '');
+    const nameAr      = String(obj && obj.nameAr || '');
     const description = String(obj && obj.description || '');
+    const descriptionAr = String(obj && obj.descriptionAr || '');
     const exp1Label   = String(obj && obj.exp1Label || '');
+    const exp1LabelAr = String(obj && obj.exp1LabelAr || '');
     const exp1Date    = toIso_(obj && obj.exp1Date);
     const exp2Label   = String(obj && obj.exp2Label || '');
+    const exp2LabelAr = String(obj && obj.exp2LabelAr || '');
     const exp2Date    = toIso_(obj && obj.exp2Date);
     const status      = computeStatus_(exp1Date, exp2Date);
 
-    sh.appendRow([ id, name, description, exp1Label, exp1Date, exp2Label, exp2Date, status, fileUrl, fileName || name, now ]);
+    sh.appendRow([
+      id,
+      name,
+      nameAr,
+      description,
+      descriptionAr,
+      exp1Label,
+      exp1LabelAr,
+      exp1Date,
+      exp2Label,
+      exp2LabelAr,
+      exp2Date,
+      status,
+      fileUrl,
+      fileName || name || nameAr,
+      now
+    ]);
 
     return { ok:true, id, fileUrl, filePreviewUrl: makePreviewUrl_(fileUrl) };
   } catch (err) {

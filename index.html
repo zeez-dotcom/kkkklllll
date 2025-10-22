@@ -10,6 +10,9 @@
     body { font-family: system-ui, Arial, sans-serif; margin: 0; background: #f6f7fb; color: #1c1c1c; }
     header { background: #1f2937; color: white; padding: 14px 18px; }
     header h1 { margin: 0; font-size: 18px; }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    header button { width: auto; min-width: auto; background: #111827; color: white; border: 1px solid rgba(255,255,255,.3); }
+    header button:hover { background: #0f172a; }
     .container { padding: 16px; max-width: 1200px; margin: 0 auto; }
     .card { background: white; border-radius: var(--radius); padding: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
     .grid { display: grid; gap: var(--gap); }
@@ -36,47 +39,57 @@
     .hidden { display: none; }
     .preview { width: 100%; height: 70vh; border: 0; border-radius: 10px; background: #fafafa; }
     .loading { opacity: .7; pointer-events: none; }
+    body[dir="rtl"] { direction: rtl; }
+    body[dir="rtl"] table { direction: rtl; }
+    body[dir="rtl"] th, body[dir="rtl"] td { text-align: right; }
+    body[dir="rtl"] .tabs { flex-direction: row-reverse; }
+    body[dir="rtl"] input, body[dir="rtl"] textarea, body[dir="rtl"] select { text-align: right; }
   </style>
 </head>
 <body>
-  <header><h1>Admin Office Licenses</h1></header>
+  <header>
+    <div class="header-inner">
+      <h1 data-i18n="title">Admin Office Licenses</h1>
+      <button type="button" id="toggleLanguage" data-i18n="toggleLanguage">العربية</button>
+    </div>
+  </header>
   <div class="container">
 
     <div class="tabs" role="tablist" aria-label="Sections">
-      <button type="button" class="tab active" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
-      <button type="button" class="tab" data-tab="upload" role="tab" aria-selected="false">Upload</button>
+      <button type="button" class="tab active" data-tab="dashboard" role="tab" aria-selected="true" data-i18n="tabs.dashboard">Dashboard</button>
+      <button type="button" class="tab" data-tab="upload" role="tab" aria-selected="false" data-i18n="tabs.upload">Upload</button>
     </div>
 
     <!-- DASHBOARD -->
     <section id="dashboard" class="grid" style="gap:16px;">
       <div class="grid cols-3">
         <div class="card stat">
-          <div class="muted">Expired</div>
+          <div class="muted" id="label-expired" data-i18n="statsLabel.expired">Expired</div>
           <h2 id="stat-expired">0</h2>
         </div>
         <div class="card stat">
-          <div class="muted">Upcoming (≤ 30 days)</div>
+          <div class="muted" id="label-upcoming" data-i18n="statsLabel.upcoming">Upcoming (≤ 30 days)</div>
           <h2 id="stat-upcoming">0</h2>
         </div>
         <div class="card stat">
-          <div class="muted">Active</div>
+          <div class="muted" id="label-active" data-i18n="statsLabel.active">Active</div>
           <h2 id="stat-active">0</h2>
         </div>
       </div>
 
       <div class="card">
         <div class="row" style="align-items:center; margin-bottom:10px;">
-          <input id="search" class="grow" placeholder="Search by name, description, labels…" aria-label="Search" />
-          <button type="button" id="btnRefresh" style="max-width:160px;">Refresh</button>
+          <input id="search" class="grow" placeholder="Search by name, description, labels…" aria-label="Search" data-i18n-placeholder="searchPlaceholder" data-i18n-aria-label="searchAria" />
+          <button type="button" id="btnRefresh" style="max-width:160px;" data-i18n="refresh">Refresh</button>
         </div>
         <div class="muted" id="result-count">0 result(s)</div>
         <div style="overflow:auto;">
           <table id="table" aria-label="Licenses table">
             <thead>
               <tr>
-                <th>ID</th><th>Name</th><th>Description</th>
-                <th>Expiry 1</th><th>Expiry 2</th>
-                <th>Status</th><th>File</th>
+                <th data-i18n="tableHeaders.id">ID</th><th data-i18n="tableHeaders.name">Name</th><th data-i18n="tableHeaders.description">Description</th>
+                <th data-i18n="tableHeaders.exp1">Expiry 1</th><th data-i18n="tableHeaders.exp2">Expiry 2</th>
+                <th data-i18n="tableHeaders.status">Status</th><th data-i18n="tableHeaders.file">File</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -86,8 +99,8 @@
 
       <div id="preview-card" class="card hidden" aria-live="polite">
         <div class="row" style="align-items:center;">
-          <div class="grow"><strong id="preview-title">Preview</strong></div>
-          <button type="button" id="btnClosePreview" style="max-width:120px;">Close</button>
+          <div class="grow"><strong id="preview-title" data-i18n="previewTitle">Preview</strong></div>
+          <button type="button" id="btnClosePreview" style="max-width:120px;" data-i18n="closePreview">Close</button>
         </div>
         <div id="preview-body">
           <iframe id="preview-frame" class="preview" title="File preview"></iframe>
@@ -101,42 +114,62 @@
         <form id="uploadForm">
           <div class="row">
             <div class="grow">
-              <label>Name</label>
+              <label data-i18n="upload.formName">Name</label>
               <input name="name" required />
             </div>
             <div class="grow">
-              <label>Description</label>
+              <label data-i18n="upload.formDescription">Description</label>
               <input name="description" />
             </div>
           </div>
           <div class="row">
             <div class="grow">
-              <label>Expiry 1 Label</label>
-              <input name="exp1Label" placeholder="e.g., License Expiry" />
+              <label data-i18n="upload.formNameAr">Name (Arabic)</label>
+              <input name="nameAr" dir="rtl" data-i18n-placeholder="upload.formNameArPlaceholder" placeholder="e.g., Arabic name" />
             </div>
             <div class="grow">
-              <label>Expiry 1 Date</label>
+              <label data-i18n="upload.formDescriptionAr">Description (Arabic)</label>
+              <input name="descriptionAr" dir="rtl" data-i18n-placeholder="upload.formDescriptionArPlaceholder" placeholder="e.g., Arabic description" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="grow">
+              <label data-i18n="upload.formExp1Label">Expiry 1 Label</label>
+              <input name="exp1Label" placeholder="e.g., License Expiry" data-i18n-placeholder="upload.formExp1LabelPlaceholder" />
+            </div>
+            <div class="grow">
+              <label data-i18n="upload.formExp1Date">Expiry 1 Date</label>
               <input type="date" name="exp1Date" />
             </div>
           </div>
           <div class="row">
             <div class="grow">
-              <label>Expiry 2 Label</label>
-              <input name="exp2Label" placeholder="e.g., Insurance Expiry" />
+              <label data-i18n="upload.formExp1LabelAr">Expiry 1 Label (Arabic)</label>
+              <input name="exp1LabelAr" dir="rtl" data-i18n-placeholder="upload.formExp1LabelArPlaceholder" placeholder="e.g., Arabic label" />
             </div>
             <div class="grow">
-              <label>Expiry 2 Date</label>
+              <label data-i18n="upload.formExp2LabelAr">Expiry 2 Label (Arabic)</label>
+              <input name="exp2LabelAr" dir="rtl" data-i18n-placeholder="upload.formExp2LabelArPlaceholder" placeholder="e.g., Arabic label" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="grow">
+              <label data-i18n="upload.formExp2Label">Expiry 2 Label</label>
+              <input name="exp2Label" placeholder="e.g., Insurance Expiry" data-i18n-placeholder="upload.formExp2LabelPlaceholder" />
+            </div>
+            <div class="grow">
+              <label data-i18n="upload.formExp2Date">Expiry 2 Date</label>
               <input type="date" name="exp2Date" />
             </div>
           </div>
           <div class="row" style="align-items:flex-end;">
             <div class="grow">
-              <label>Document (Image or PDF)</label>
+              <label data-i18n="upload.formDocument">Document (Image or PDF)</label>
               <input type="file" name="file" accept="image/*,application/pdf" />
-              <div class="muted">Optional. Files up to ~5MB recommended.</div>
+              <div class="muted" data-i18n="upload.optionalNote">Optional. Files up to ~5MB recommended.</div>
             </div>
             <div style="min-width:160px;">
-              <button type="submit" id="btnUpload">Save</button>
+              <button type="submit" id="btnUpload" data-i18n="upload.submit">Save</button>
             </div>
           </div>
         </form>
@@ -148,6 +181,295 @@
 
   <script>
   (function(){
+    const translations = {
+      en: {
+        title: 'Admin Office Licenses',
+        toggleLanguage: 'العربية',
+        tabs: { dashboard: 'Dashboard', upload: 'Upload' },
+        statsLabel: { expired: 'Expired', upcoming: 'Upcoming (≤ 30 days)', active: 'Active' },
+        searchPlaceholder: 'Search by name, description, labels…',
+        searchAria: 'Search',
+        refresh: 'Refresh',
+        resultCount: (shown, total) => `${shown} result(s) — showing ${shown} of ${total}`,
+        previewTitle: 'Preview',
+        closePreview: 'Close',
+        tableHeaders: { id: 'ID', name: 'Name', description: 'Description', exp1: 'Expiry 1', exp2: 'Expiry 2', status: 'Status', file: 'File' },
+        links: { open: 'Open', preview: 'Preview', openFile: 'Open file' },
+        upload: {
+          formName: 'Name',
+          formDescription: 'Description',
+          formNameAr: 'Name (Arabic)',
+          formNameArPlaceholder: 'e.g., Arabic name',
+          formDescriptionAr: 'Description (Arabic)',
+          formDescriptionArPlaceholder: 'e.g., Arabic description',
+          formExp1Label: 'Expiry 1 Label',
+          formExp1LabelPlaceholder: 'e.g., License Expiry',
+          formExp1Date: 'Expiry 1 Date',
+          formExp1LabelAr: 'Expiry 1 Label (Arabic)',
+          formExp1LabelArPlaceholder: 'e.g., Arabic label',
+          formExp2LabelAr: 'Expiry 2 Label (Arabic)',
+          formExp2LabelArPlaceholder: 'e.g., Arabic label',
+          formExp2Label: 'Expiry 2 Label',
+          formExp2LabelPlaceholder: 'e.g., Insurance Expiry',
+          formExp2Date: 'Expiry 2 Date',
+          formDocument: 'Document (Image or PDF)',
+          optionalNote: 'Optional. Files up to ~5MB recommended.',
+          submit: 'Save',
+          uploading: 'Uploading…',
+          saved: id => `Saved. ID: ${id}`,
+          linkSeparator: ' · ',
+          error: 'Error saving record.',
+          failed: msg => `Failed: ${msg}`
+        },
+        statuses: {
+          expired: 'Expired',
+          active: 'Active',
+          upcoming: days => `Upcoming (in ${days} day${days === 1 ? '' : 's'})`,
+          upcomingToday: 'Upcoming (today)',
+          upcomingTomorrow: 'Upcoming (in 1 day)',
+          upcomingGeneric: 'Upcoming'
+        },
+        loadFailed: msg => `Failed to load: ${msg}`,
+        noFile: '—'
+      },
+      ar: {
+        title: 'تراخيص المكتب الإداري',
+        toggleLanguage: 'English',
+        tabs: { dashboard: 'لوحة التحكم', upload: 'رفع' },
+        statsLabel: { expired: 'منتهي', upcoming: 'قادم (≤ 30 يومًا)', active: 'ساري' },
+        searchPlaceholder: 'ابحث بالاسم أو الوصف أو التصنيفات…',
+        searchAria: 'بحث',
+        refresh: 'تحديث',
+        resultCount: (shown, total) => `${shown} نتيجة — يتم عرض ${shown} من ${total}`,
+        previewTitle: 'معاينة',
+        closePreview: 'إغلاق',
+        tableHeaders: { id: 'المعرف', name: 'الاسم', description: 'الوصف', exp1: 'انتهاء 1', exp2: 'انتهاء 2', status: 'الحالة', file: 'الملف' },
+        links: { open: 'فتح', preview: 'معاينة', openFile: 'فتح الملف' },
+        upload: {
+          formName: 'الاسم',
+          formDescription: 'الوصف',
+          formNameAr: 'الاسم (عربي)',
+          formNameArPlaceholder: 'مثال: الاسم بالعربية',
+          formDescriptionAr: 'الوصف (عربي)',
+          formDescriptionArPlaceholder: 'مثال: الوصف بالعربية',
+          formExp1Label: 'تسمية انتهاء 1',
+          formExp1LabelPlaceholder: 'مثال: انتهاء الترخيص',
+          formExp1Date: 'تاريخ انتهاء 1',
+          formExp1LabelAr: 'تسمية انتهاء 1 (عربي)',
+          formExp1LabelArPlaceholder: 'مثال: انتهاء الترخيص بالعربية',
+          formExp2LabelAr: 'تسمية انتهاء 2 (عربي)',
+          formExp2LabelArPlaceholder: 'مثال: انتهاء التأمين بالعربية',
+          formExp2Label: 'تسمية انتهاء 2',
+          formExp2LabelPlaceholder: 'مثال: انتهاء التأمين',
+          formExp2Date: 'تاريخ انتهاء 2',
+          formDocument: 'المستند (صورة أو PDF)',
+          optionalNote: 'اختياري. يُفضَّل ملفات حتى 5 ميجابايت تقريبًا.',
+          submit: 'حفظ',
+          uploading: 'جارٍ الرفع…',
+          saved: id => `تم الحفظ. المعرف: ${id}`,
+          linkSeparator: ' · ',
+          error: 'حدث خطأ أثناء حفظ السجل.',
+          failed: msg => `فشل: ${msg}`
+        },
+        statuses: {
+          expired: 'منتهي',
+          active: 'ساري',
+          upcoming: days => {
+            if (days === 0) return 'قادم اليوم';
+            if (days === 1) return 'قادم خلال يوم واحد';
+            if (days === 2) return 'قادم خلال يومين';
+            return `قادم خلال ${days} يوم`;
+          },
+          upcomingToday: 'قادم اليوم',
+          upcomingTomorrow: 'قادم خلال يوم واحد',
+          upcomingGeneric: 'قادم قريبًا'
+        },
+        loadFailed: msg => `تعذّر التحميل: ${msg}`,
+        noFile: '—'
+      }
+    };
+
+    const toggleLanguageBtn = document.getElementById('toggleLanguage');
+    const searchEl = document.getElementById('search');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const previewCard = document.getElementById('preview-card');
+    const previewTitleEl = document.getElementById('preview-title');
+    const btnClosePreview = document.getElementById('btnClosePreview');
+    const btnUpload = document.getElementById('btnUpload');
+
+    const storedLang = localStorage.getItem('language');
+    let currentLang = storedLang === 'ar' ? 'ar' : 'en';
+    let lastRows = [];
+    let lastCountsAll = null;
+    let lastCountsFiltered = null;
+
+    function getNested(obj, path) {
+      if (!obj) return undefined;
+      return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), obj);
+    }
+
+    function translate(path, fallback, ...args) {
+      let value = getNested(translations[currentLang], path);
+      if (value === undefined) value = getNested(translations.en, path);
+      if (value === undefined) value = fallback;
+      if (typeof value === 'function') return value(...args);
+      return value;
+    }
+
+    function applyTranslations() {
+      document.documentElement.lang = currentLang;
+      document.body.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        if (el.id === 'preview-title' && !previewCard.classList.contains('hidden')) return;
+        const key = el.dataset.i18n;
+        const text = translate(key, el.textContent);
+        if (text !== undefined) el.textContent = text;
+      });
+
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        const text = translate(key, el.placeholder);
+        if (text !== undefined) el.placeholder = text;
+      });
+
+      document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+        const key = el.dataset.i18nAriaLabel;
+        const text = translate(key, el.getAttribute('aria-label'));
+        if (text !== undefined) el.setAttribute('aria-label', text);
+      });
+
+      if (toggleLanguageBtn) {
+        toggleLanguageBtn.setAttribute('aria-label', translate('toggleLanguage', toggleLanguageBtn.textContent));
+        toggleLanguageBtn.dir = currentLang === 'ar' ? 'ltr' : 'rtl';
+        toggleLanguageBtn.setAttribute('lang', currentLang === 'ar' ? 'en' : 'ar');
+      }
+
+      if (searchEl) {
+        searchEl.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+      }
+
+      updateResultCountText();
+    }
+
+    function getLocalizedField(row, field) {
+      const arValue = row[`${field}Ar`];
+      if (currentLang === 'ar' && arValue) return arValue;
+      return row[field];
+    }
+
+    function getStatusClass(status) {
+      if (String(status || '').startsWith('Upcoming')) return 'Upcoming';
+      if (status === 'Expired') return 'Expired';
+      return 'Active';
+    }
+
+    function translateStatus(status) {
+      if (String(status || '').startsWith('Upcoming')) {
+        const match = String(status).match(/(\d+)/);
+        const days = match ? Number(match[1]) : null;
+        if (days === 0) return translate('statuses.upcomingToday', 'Upcoming (today)');
+        if (days === 1) return translate('statuses.upcomingTomorrow', 'Upcoming (in 1 day)');
+        if (days !== null) return translate('statuses.upcoming', `Upcoming (in ${days} days)`, days);
+        return translate('statuses.upcomingGeneric', 'Upcoming');
+      }
+      if (status === 'Expired') return translate('statuses.expired', 'Expired');
+      return translate('statuses.active', 'Active');
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function statusPill(status) {
+      const label = translateStatus(status);
+      return `<span class="pill status-${getStatusClass(status)}">${escapeHtml(label)}</span>`;
+    }
+
+    function renderTable(rows) {
+      const tbody = document.querySelector('#table tbody');
+      if (!tbody) return;
+      const openLabel = escapeHtml(translate('links.open', 'Open'));
+      const previewLabel = escapeHtml(translate('links.preview', 'Preview'));
+      const previewSeparatorRaw = translate('upload.linkSeparator', '·') || '·';
+      const previewSeparatorTrimmed = String(previewSeparatorRaw).trim() || '·';
+      const previewSeparator = ` ${escapeHtml(previewSeparatorTrimmed)} `;
+      const noFile = escapeHtml(translate('noFile', '—'));
+      tbody.innerHTML = rows.map(r => {
+        const name = escapeHtml(getLocalizedField(r, 'name'));
+        const description = escapeHtml(getLocalizedField(r, 'description'));
+        const exp1Parts = [];
+        const exp1Label = getLocalizedField(r, 'exp1Label');
+        if (exp1Label) exp1Parts.push(escapeHtml(exp1Label));
+        if (r.exp1Date) exp1Parts.push(`(${escapeHtml(r.exp1Date)})`);
+        const exp2Parts = [];
+        const exp2Label = getLocalizedField(r, 'exp2Label');
+        if (exp2Label) exp2Parts.push(escapeHtml(exp2Label));
+        if (r.exp2Date) exp2Parts.push(`(${escapeHtml(r.exp2Date)})`);
+        const fileCell = r.fileUrl
+          ? `<a class="link" href="${r.fileUrl}" target="_blank" rel="noopener">${openLabel}</a>` +
+              (r.filePreviewUrl ? `${previewSeparator}<a class="link" href="#" onclick="preview('${encodeURIComponent(r.filePreviewUrl)}','${encodeURIComponent(r.fileName || getLocalizedField(r, 'name') || translate('previewTitle', 'Preview'))}');return false;">${previewLabel}</a>` : '')
+          : `<span class="muted">${noFile}</span>`;
+        return `
+        <tr>
+          <td>${escapeHtml(r.id)}</td>
+          <td>${name}</td>
+          <td>${description}</td>
+          <td>${exp1Parts.join(' ')}</td>
+          <td>${exp2Parts.join(' ')}</td>
+          <td>${statusPill(r.status)}</td>
+          <td>${fileCell}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function setLoading(el, isLoading){ if (!el) return; el.classList.toggle('loading', !!isLoading); el.disabled = !!isLoading; }
+
+    function updateStatsNumbers() {
+      if (!lastCountsAll) return;
+      document.getElementById('stat-expired').textContent = lastCountsAll.expired;
+      document.getElementById('stat-upcoming').textContent = lastCountsAll.upcoming;
+      document.getElementById('stat-active').textContent = lastCountsAll.active;
+    }
+
+    function updateResultCountText() {
+      const el = document.getElementById('result-count');
+      if (!el) return;
+      if (!lastCountsFiltered || !lastCountsAll) {
+        el.textContent = translate('resultCount', '0 result(s) — showing 0 of 0', 0, 0);
+        return;
+      }
+      const text = translate('resultCount', `${lastCountsFiltered.total} result(s) — showing ${lastCountsFiltered.total} of ${lastCountsAll.total}`, lastCountsFiltered.total, lastCountsAll.total);
+      el.textContent = text;
+    }
+
+    function refresh() {
+      const q = searchEl.value || '';
+      setLoading(btnRefresh, true);
+      try {
+        google.script.run.withSuccessHandler(({rows, countsAll, countsFiltered})=>{
+          lastRows = rows || [];
+          lastCountsAll = countsAll;
+          lastCountsFiltered = countsFiltered;
+          updateStatsNumbers();
+          updateResultCountText();
+          renderTable(lastRows);
+          setLoading(btnRefresh, false);
+        }).withFailureHandler(err=>{
+          const message = err && err.message ? err.message : err;
+          alert(translate('loadFailed', `Failed to load: ${message}`, message));
+          setLoading(btnRefresh, false);
+        }).getDashboardData(q);
+      } catch(e) {
+        console.error(e);
+        setLoading(btnRefresh, false);
+      }
+    }
+
+    function debounce(fn, ms){ let to; return (...a)=>{ clearTimeout(to); to=setTimeout(()=>fn(...a), ms); }; }
+
     // Tabs
     document.querySelectorAll('.tab').forEach(t=>{
       t.addEventListener('click', ()=>{
@@ -161,89 +483,42 @@
       });
     });
 
-    // Search / Refresh
-    const searchEl = document.getElementById('search');
-    const btnRefresh = document.getElementById('btnRefresh');
+    if (toggleLanguageBtn) {
+      toggleLanguageBtn.addEventListener('click', ()=>{
+        currentLang = currentLang === 'ar' ? 'en' : 'ar';
+        localStorage.setItem('language', currentLang);
+        applyTranslations();
+        renderTable(lastRows);
+        updateStatsNumbers();
+        updateResultCountText();
+      });
+    }
+
     searchEl.addEventListener('input', debounce(refresh, 250));
     btnRefresh.addEventListener('click', refresh);
-    function debounce(fn, ms){ let to; return (...a)=>{ clearTimeout(to); to=setTimeout(()=>fn(...a), ms); }; }
-
-    function statusPill(status) {
-      const base = 'pill status-';
-      if (String(status||'').startsWith('Upcoming')) return `<span class="${base}Upcoming">${escapeHtml(status)}</span>`;
-      if (status === 'Expired') return `<span class="${base}Expired">Expired</span>`;
-      return `<span class="${base}Active">Active</span>`;
-    }
-    function escapeHtml(s) {
-      return String(s ?? '')
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    }
-    function setLoading(el, isLoading){ if (!el) return; el.classList.toggle('loading', !!isLoading); el.disabled = !!isLoading; }
-
-    function renderTable(rows) {
-      const tbody = document.querySelector('#table tbody');
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${escapeHtml(r.id)}</td>
-          <td>${escapeHtml(r.name)}</td>
-          <td>${escapeHtml(r.description)}</td>
-          <td>${escapeHtml(r.exp1Label)} ${r.exp1Date ? '('+escapeHtml(r.exp1Date)+')' : ''}</td>
-          <td>${escapeHtml(r.exp2Label)} ${r.exp2Date ? '('+escapeHtml(r.exp2Date)+')' : ''}</td>
-          <td>${statusPill(r.status)}</td>
-          <td>${
-            r.fileUrl
-              ? `<a class="link" href="${r.fileUrl}" target="_blank" rel="noopener">Open</a>` +
-                (r.filePreviewUrl ? ` · <a class="link" href="#" onclick="preview('${encodeURIComponent(r.filePreviewUrl)}','${encodeURIComponent(r.fileName||r.name||'Preview')}');return false;">Preview</a>` : '')
-              : '<span class="muted">—</span>'
-          }</td>
-        </tr>
-      `).join('');
-    }
-
-    function refresh() {
-      const q = searchEl.value || '';
-      setLoading(btnRefresh, true);
-      try {
-        google.script.run.withSuccessHandler(({rows, countsAll, countsFiltered})=>{
-          document.getElementById('stat-expired').textContent = countsAll.expired;
-          document.getElementById('stat-upcoming').textContent = countsAll.upcoming;
-          document.getElementById('stat-active').textContent = countsAll.active;
-          document.getElementById('result-count').textContent = `${countsFiltered.total} result(s) — showing ${countsFiltered.total} of ${countsAll.total}`;
-          renderTable(rows);
-          setLoading(btnRefresh, false);
-        }).withFailureHandler(err=>{
-          alert('Failed to load: ' + (err && err.message ? err.message : err));
-          setLoading(btnRefresh, false);
-        }).getDashboardData(q);
-      } catch(e) {
-        console.error(e);
-        setLoading(btnRefresh, false);
-      }
-    }
 
     window.preview = function(encodedUrl, encodedTitle){
       const url = decodeURIComponent(encodedUrl || '');
-      const title = decodeURIComponent(encodedTitle||'Preview');
-      document.getElementById('preview-title').textContent = title || 'Preview';
+      const title = decodeURIComponent(encodedTitle||'');
+      previewTitleEl.textContent = title || translate('previewTitle', 'Preview');
       const frame = document.getElementById('preview-frame');
       frame.src = url;
-      document.getElementById('preview-card').classList.remove('hidden');
+      previewCard.classList.remove('hidden');
       frame.focus();
     };
-    document.getElementById('btnClosePreview').addEventListener('click', ()=>{
-      document.getElementById('preview-card').classList.add('hidden');
+
+    btnClosePreview.addEventListener('click', ()=>{
+      previewCard.classList.add('hidden');
       document.getElementById('preview-frame').src = '';
+      applyTranslations();
     });
 
-    // Upload (base64)
     const form = document.getElementById('uploadForm');
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const btn = document.getElementById('btnUpload');
       const out = document.getElementById('uploadResult');
-      setLoading(btn, true);
-      out.textContent = 'Uploading…';
+      setLoading(btnUpload, true);
+      out.textContent = translate('upload.uploading', 'Uploading…');
 
       try {
         const fd = new FormData(form);
@@ -259,21 +534,33 @@
         }
 
         google.script.run.withSuccessHandler(res=>{
-          setLoading(btn, false);
+          setLoading(btnUpload, false);
           if (res && res.ok) {
-            out.innerHTML = `Saved. ID: ${res.id}${res.fileUrl ? ' · <a class="link" target="_blank" rel="noopener" href="'+res.fileUrl+'">Open file</a>' : ''}`;
+            let message = translate('upload.saved', id => `Saved. ID: ${id}`, res.id) || '';
+            message = escapeHtml(message);
+            if (res.fileUrl) {
+              const separatorRaw = translate('upload.linkSeparator', '·') || '·';
+              const separatorTrimmed = String(separatorRaw).trim() || '·';
+              const separatorSafe = ` ${escapeHtml(separatorTrimmed)} `;
+              const openFileText = escapeHtml(translate('links.openFile', 'Open file'));
+              message += separatorSafe;
+              message += `<a class="link" target="_blank" rel="noopener" href="${res.fileUrl}">${openFileText}</a>`;
+            }
+            out.innerHTML = message;
             form.reset();
             refresh();
           } else {
-            out.textContent = 'Error saving record.';
+            out.textContent = translate('upload.error', 'Error saving record.');
           }
         }).withFailureHandler(err=>{
-          setLoading(btn, false);
-          out.textContent = 'Failed: ' + (err && err.message ? err.message : err);
+          setLoading(btnUpload, false);
+          const message = err && err.message ? err.message : err;
+          out.textContent = translate('upload.failed', `Failed: ${message}`, message);
         }).uploadDocument(obj);
       } catch (err) {
-        setLoading(btn, false);
-        document.getElementById('uploadResult').textContent = 'Failed: ' + (err && err.message ? err.message : err);
+        setLoading(btnUpload, false);
+        const message = err && err.message ? err.message : err;
+        document.getElementById('uploadResult').textContent = translate('upload.failed', `Failed: ${message}`, message);
       }
     });
 
@@ -289,7 +576,10 @@
       });
     }
 
-    // First load
+    applyTranslations();
+    renderTable(lastRows);
+    updateStatsNumbers();
+    updateResultCountText();
     refresh();
   })();
   </script>
