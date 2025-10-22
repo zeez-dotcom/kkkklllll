@@ -112,11 +112,6 @@ function nextId_() {
   const sh = getSheet_();
   const last = sh.getLastRow();
   if (last < 2) return '1';
-  const lastValue = sh.getRange(last, 1).getValue();
-  const numeric = Number(lastValue);
-  if (isFinite(numeric) && numeric >= 0) {
-    return String(numeric + 1);
-  }
   const values = sh.getRange(2, 1, last - 1, 1).getValues();
   const max = values.reduce((m, r) => {
     const v = Number(r[0]);
