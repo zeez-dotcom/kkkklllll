@@ -806,15 +806,32 @@
         if (typeof google === 'undefined' || !google.script || !google.script.run) {
           throw new Error(t('errors.runtimeUnavailable'));
         }
-        google.script.run.withSuccessHandler(({rows, countsAll, countsFiltered})=>{
-          state.rows = Array.isArray(rows) ? rows : [];
-          updateCounts(countsAll);
-          updateFilteredCounts(countsFiltered);
-          hasLoaded = true;
-          renderTable(state.rows);
-          setResultState('count');
-          setLoading(btnRefresh, false);
+        google.script.run.withSuccessHandler((payload = {})=>{
+          try {
+            if (!payload || typeof payload !== 'object') {
+              throw new Error('Invalid dashboard payload.');
+            }
+            const { rows = [], countsAll, countsFiltered } = payload;
+            if (!Array.isArray(rows)) {
+              throw new Error('Payload rows must be an array.');
+            }
+
+            state.rows = rows;
+            updateCounts(countsAll);
+            updateFilteredCounts(countsFiltered);
+            hasLoaded = true;
+            renderTable(state.rows);
+            setResultState('count');
+          } catch (err) {
+            console.error('Unexpected dashboard payload', err, payload);
+            const message = err && err.message ? err.message : t('results.unable');
+            alert(format(t('errors.loadFail'), { message: String(message || '') }));
+            setResultState('failed');
+          } finally {
+            setLoading(btnRefresh, false);
+          }
         }).withFailureHandler(err=>{
+          console.error('Failed to load dashboard data', err);
           setLoading(btnRefresh, false);
           const message = err && err.message ? err.message : err;
           alert(format(t('errors.loadFail'), { message: String(message || '') }));
