@@ -297,8 +297,83 @@ function parseDriveFileId_(url) {
 function makePreviewUrl_(fileUrl) {
   const safeUrl = sanitizeUrl_(fileUrl);
   const id = parseDriveFileId_(safeUrl);
-  return id ? `https://drive.google.com/file/d/${id}/preview` : safeUrl;
+  if (!id) return safeUrl;
+
+  const allowedQueryKeys = ['resourcekey', 'usp', 'export'];
+  let preservedQuery = '';
+
+  if (safeUrl) {
+    let queryString = '';
+    const questionIdx = safeUrl.indexOf('?');
+    if (questionIdx !== -1) {
+      queryString = safeUrl.substring(questionIdx + 1);
+      const hashIdx = queryString.indexOf('#');
+      if (hashIdx !== -1) {
+        queryString = queryString.substring(0, hashIdx);
+      }
+    }
+
+    if (queryString) {
+      const preservedPairs = [];
+      queryString.split('&').forEach(part => {
+        if (!part) return;
+        const eqIdx = part.indexOf('=');
+        const rawKey = eqIdx === -1 ? part : part.substring(0, eqIdx);
+        const rawValue = eqIdx === -1 ? '' : part.substring(eqIdx + 1);
+        let key;
+        try {
+          key = decodeURIComponent(rawKey || '').trim();
+        } catch (err) {
+          key = String(rawKey || '').trim();
+        }
+        if (allowedQueryKeys.indexOf(key) === -1) return;
+        let value = '';
+        if (rawValue) {
+          try {
+            value = decodeURIComponent(rawValue);
+          } catch (err) {
+            value = String(rawValue);
+          }
+        }
+        preservedPairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+      });
+      if (preservedPairs.length) {
+        preservedQuery = `?${preservedPairs.join('&')}`;
+      }
+    }
+  }
+
+  const previewUrl = `https://drive.google.com/file/d/${id}/preview${preservedQuery}`;
+
+  if (
+    typeof console !== 'undefined' &&
+    safeUrl &&
+    safeUrl.indexOf('resourcekey=') !== -1 &&
+    previewUrl.indexOf('resourcekey=') === -1 &&
+    typeof console.warn === 'function'
+  ) {
+    console.warn('makePreviewUrl_ dropped resourcekey parameter while rebuilding preview URL.', safeUrl, previewUrl);
+  }
+
+  return previewUrl;
 }
+
+(function previewUrlRegressionCheck_() {
+  const sampleId = 'SAMPLE_ID';
+  const resourceKey = 'resourcekey=1-testKey';
+  const sampleUrl = `https://drive.google.com/file/d/${sampleId}/view?usp=drivesdk&${resourceKey}`;
+  const preview = makePreviewUrl_(sampleUrl);
+  if (typeof console !== 'undefined') {
+    if (typeof console.assert === 'function') {
+      console.assert(
+        preview.indexOf(resourceKey) !== -1,
+        'makePreviewUrl_ should retain resourcekey query parameter for preview URLs.'
+      );
+    } else if (preview.indexOf(resourceKey) === -1 && typeof console.warn === 'function') {
+      console.warn('makePreviewUrl_ failed to retain resourcekey during regression check.', preview);
+    }
+  }
+})();
 function getAllRows_() {
   const sh = getSheet_();
   const last = sh.getLastRow();
