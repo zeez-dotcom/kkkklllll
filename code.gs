@@ -104,13 +104,18 @@ function makePreviewUrl_(fileUrl) {
   return id ? `https://drive.google.com/file/d/${id}/preview` : safeUrl;
 }
 function looksLegacyRow_(row) {
-  const newStatus = sanitizeString_(row[11]);
-  if (newStatus) return false;
+  const first = Array.isArray(row) ? row.slice(0, LEGACY_HEADER.length) : [];
+  if (!first.length) return false;
+  const hasAnyLegacyData = first.some(value => sanitizeString_(value));
+  if (!hasAnyLegacyData) return false;
   const legacyStatus = sanitizeString_(row[7]);
   if (!legacyStatus) return false;
   const normalized = legacyStatus.toLowerCase();
   const isLegacyStatus = normalized === 'active' || normalized === 'expired' || normalized.startsWith('upcoming');
   if (!isLegacyStatus) return false;
+  const newStatus = sanitizeString_(row[11]).toLowerCase();
+  const isRecognizedNewStatus = newStatus === 'active' || newStatus === 'expired' || newStatus.startsWith('upcoming');
+  if (isRecognizedNewStatus) return false;
   return true;
 }
 function convertLegacyRow_(row) {
