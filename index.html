@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Office Licenses</title>
+  <title></title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root { --gap: 12px; --radius: 10px; }
@@ -16,15 +16,19 @@
     .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
     .stat { padding: 16px; border-radius: var(--radius); text-align: center; }
     .stat h2 { margin: 6px 0 0; font-size: 28px; }
-    .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .tabs { display: flex; gap: 6px; }
     .tab { padding: 10px 12px; border-radius: 8px; background: #e5e7eb; cursor: pointer; user-select: none; }
     .tab.active { background: #111827; color: white; }
+    .language-toggle { display: flex; align-items: center; gap: 6px; }
+    .language-toggle label { font-size: 14px; color: #4b5563; }
+    .language-toggle select { width: auto; min-width: 120px; }
     .row { display: flex; gap: var(--gap); flex-wrap: wrap; }
     .grow { flex: 1; min-width: 240px; }
     input, textarea, select, button { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; background: white; }
     button { cursor: pointer; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+    th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: start; vertical-align: top; }
     tr:hover { background: #fafafa; }
     .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; }
     .status-Expired { background: #fee2e2; color: #991b1b; }
@@ -39,44 +43,53 @@
   </style>
 </head>
 <body>
-  <header><h1>Admin Office Licenses</h1></header>
+  <header><h1 id="headerTitle"></h1></header>
   <div class="container">
 
-    <div class="tabs" role="tablist" aria-label="Sections">
-      <button type="button" class="tab active" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
-      <button type="button" class="tab" data-tab="upload" role="tab" aria-selected="false">Upload</button>
+    <div class="toolbar">
+      <div class="tabs" role="tablist" aria-label="" id="tablist">
+        <button type="button" class="tab active" data-tab="dashboard" role="tab" aria-selected="true" id="tabDashboard"></button>
+        <button type="button" class="tab" data-tab="upload" role="tab" aria-selected="false" id="tabUpload"></button>
+      </div>
+      <div class="language-toggle">
+        <label for="languageSelect" id="languageLabel"></label>
+        <select id="languageSelect" aria-label="">
+          <option value="en"></option>
+          <option value="ar"></option>
+        </select>
+      </div>
     </div>
 
     <!-- DASHBOARD -->
     <section id="dashboard" class="grid" style="gap:16px;">
       <div class="grid cols-3">
         <div class="card stat">
-          <div class="muted">Expired</div>
+          <div class="muted" id="statLabelExpired"></div>
           <h2 id="stat-expired">0</h2>
         </div>
         <div class="card stat">
-          <div class="muted">Upcoming (≤ 30 days)</div>
+          <div class="muted" id="statLabelUpcoming"></div>
           <h2 id="stat-upcoming">0</h2>
         </div>
         <div class="card stat">
-          <div class="muted">Active</div>
+          <div class="muted" id="statLabelActive"></div>
           <h2 id="stat-active">0</h2>
         </div>
       </div>
 
       <div class="card">
         <div class="row" style="align-items:center; margin-bottom:10px;">
-          <input id="search" class="grow" placeholder="Search by name, description, labels…" aria-label="Search" />
-          <button type="button" id="btnRefresh" style="max-width:160px;" aria-busy="false">Refresh</button>
+          <input id="search" class="grow" placeholder="" aria-label="" />
+          <button type="button" id="btnRefresh" style="max-width:160px;" aria-busy="false"></button>
         </div>
-        <div class="muted" id="result-count" role="status" aria-live="polite">0 result(s)</div>
+        <div class="muted" id="result-count" role="status" aria-live="polite"></div>
         <div style="overflow:auto;">
-          <table id="table" aria-label="Licenses table">
+          <table id="table" aria-label="">
             <thead>
               <tr>
-                <th>ID</th><th>Name</th><th>Description</th>
-                <th>Expiry 1</th><th>Expiry 2</th>
-                <th>Status</th><th>File</th>
+                <th id="thId"></th><th id="thName"></th><th id="thDescription"></th>
+                <th id="thExpiry1"></th><th id="thExpiry2"></th>
+                <th id="thStatus"></th><th id="thFile"></th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -86,11 +99,11 @@
 
       <div id="preview-card" class="card hidden" aria-live="polite">
         <div class="row" style="align-items:center;">
-          <div class="grow"><strong id="preview-title">Preview</strong></div>
-          <button type="button" id="btnClosePreview" style="max-width:120px;">Close</button>
+          <div class="grow"><strong id="preview-title"></strong></div>
+          <button type="button" id="btnClosePreview" style="max-width:120px;"></button>
         </div>
         <div id="preview-body">
-          <iframe id="preview-frame" class="preview" title="File preview"></iframe>
+          <iframe id="preview-frame" class="preview" title=""></iframe>
         </div>
       </div>
     </section>
@@ -101,42 +114,42 @@
         <form id="uploadForm">
           <div class="row">
             <div class="grow">
-              <label>Name</label>
-              <input name="name" required />
+              <label for="uploadName" id="labelName"></label>
+              <input id="uploadName" name="name" required />
             </div>
             <div class="grow">
-              <label>Description</label>
-              <input name="description" />
-            </div>
-          </div>
-          <div class="row">
-            <div class="grow">
-              <label>Expiry 1 Label</label>
-              <input name="exp1Label" placeholder="e.g., License Expiry" />
-            </div>
-            <div class="grow">
-              <label>Expiry 1 Date</label>
-              <input type="date" name="exp1Date" />
+              <label for="uploadDescription" id="labelDescription"></label>
+              <input id="uploadDescription" name="description" />
             </div>
           </div>
           <div class="row">
             <div class="grow">
-              <label>Expiry 2 Label</label>
-              <input name="exp2Label" placeholder="e.g., Insurance Expiry" />
+              <label for="uploadExp1Label" id="labelExp1"></label>
+              <input id="uploadExp1Label" name="exp1Label" placeholder="" />
             </div>
             <div class="grow">
-              <label>Expiry 2 Date</label>
-              <input type="date" name="exp2Date" />
+              <label for="uploadExp1Date" id="labelExp1Date"></label>
+              <input id="uploadExp1Date" type="date" name="exp1Date" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="grow">
+              <label for="uploadExp2Label" id="labelExp2"></label>
+              <input id="uploadExp2Label" name="exp2Label" placeholder="" />
+            </div>
+            <div class="grow">
+              <label for="uploadExp2Date" id="labelExp2Date"></label>
+              <input id="uploadExp2Date" type="date" name="exp2Date" />
             </div>
           </div>
           <div class="row" style="align-items:flex-end;">
             <div class="grow">
-              <label>Document (Image or PDF)</label>
-              <input type="file" name="file" accept="image/*,application/pdf" />
-              <div class="muted">Optional. Files up to ~5MB recommended.</div>
+              <label for="uploadFile" id="labelDocument"></label>
+              <input id="uploadFile" type="file" name="file" accept="image/*,application/pdf" />
+              <div class="muted" id="documentHelp"></div>
             </div>
             <div style="min-width:160px;">
-              <button type="submit" id="btnUpload" aria-busy="false">Save</button>
+              <button type="submit" id="btnUpload" aria-busy="false"></button>
             </div>
           </div>
         </form>
@@ -148,32 +161,213 @@
 
   <script>
   (function(){
-    // Tabs
-    document.querySelectorAll('.tab').forEach(t=>{
-      t.addEventListener('click', ()=>{
-        document.querySelectorAll('.tab').forEach(x=>{
-          x.classList.remove('active'); x.setAttribute('aria-selected','false');
-        });
-        t.classList.add('active'); t.setAttribute('aria-selected','true');
-        const tab = t.dataset.tab;
-        document.getElementById('dashboard').classList.toggle('hidden', tab!=='dashboard');
-        document.getElementById('upload').classList.toggle('hidden', tab!=='upload');
-      });
-    });
+    const LANG_STORAGE_KEY = 'adminOfficeLicenses.lang';
+    const translations = {
+      en: {
+        languageLabel: 'Language',
+        languages: { en: 'English', ar: 'Arabic' },
+        pageTitle: 'Admin Office Licenses',
+        headerTitle: 'Admin Office Licenses',
+        tablistLabel: 'Sections',
+        tableAria: 'Licenses table',
+        tabs: { dashboard: 'Dashboard', upload: 'Upload' },
+        stats: { expired: 'Expired', upcoming: 'Upcoming (≤ 30 days)', active: 'Active' },
+        searchPlaceholder: 'Search by name, description, labels…',
+        searchAria: 'Search',
+        refresh: 'Refresh',
+        results: {
+          countSingular: '{count} result',
+          countPlural: '{count} result(s)',
+          filteredSingular: '{count} result of {total} total',
+          filteredPlural: '{count} result(s) of {total} total',
+          failed: 'Failed to load data.',
+          unable: 'Unable to load data.'
+        },
+        tableHeaders: {
+          id: 'ID',
+          name: 'Name',
+          description: 'Description',
+          exp1: 'Expiry 1',
+          exp2: 'Expiry 2',
+          status: 'Status',
+          file: 'File'
+        },
+        preview: {
+          title: 'Preview',
+          defaultTitle: 'Preview',
+          close: 'Close',
+          iframeTitle: 'File preview'
+        },
+        noRecords: 'No matching records.',
+        fileLinks: { open: 'Open', preview: 'Preview', none: '—' },
+        uploadForm: {
+          nameLabel: 'Name',
+          descriptionLabel: 'Description',
+          exp1Label: 'Expiry 1 Label',
+          exp1Placeholder: 'e.g., License Expiry',
+          exp1Date: 'Expiry 1 Date',
+          exp2Label: 'Expiry 2 Label',
+          exp2Placeholder: 'e.g., Insurance Expiry',
+          exp2Date: 'Expiry 2 Date',
+          documentLabel: 'Document (Image or PDF)',
+          documentHelp: 'Optional. Files up to ~5MB recommended.',
+          submit: 'Save'
+        },
+        uploadStatus: {
+          uploading: 'Uploading…',
+          saved: 'Saved. ID: {id}',
+          link: 'Open file',
+          errorWithMessage: 'Error: {message}',
+          generic: 'Error saving record.',
+          failedWithMessage: 'Failed: {message}'
+        },
+        errors: {
+          loadFail: 'Failed to load: {message}',
+          runtimeUnavailable: 'Google Apps Script runtime is unavailable.'
+        },
+        status: {
+          expired: 'Expired',
+          active: 'Active',
+          upcomingPrefix: 'Upcoming',
+          upcomingExact: 'Upcoming (≤ 30 days)'
+        }
+      },
+      ar: {
+        languageLabel: 'اللغة',
+        languages: { en: 'الإنجليزية', ar: 'العربية' },
+        pageTitle: 'تراخيص مكتب الإدارة',
+        headerTitle: 'تراخيص مكتب الإدارة',
+        tablistLabel: 'الأقسام',
+        tableAria: 'جدول التراخيص',
+        tabs: { dashboard: 'لوحة المعلومات', upload: 'رفع' },
+        stats: { expired: 'منتهي', upcoming: 'قادم (≤ 30 يوم)', active: 'ساري' },
+        searchPlaceholder: 'ابحث بالاسم أو الوصف أو التصنيفات…',
+        searchAria: 'بحث',
+        refresh: 'تحديث',
+        results: {
+          countSingular: '{count} نتيجة',
+          countPlural: '{count} نتيجة',
+          filteredSingular: '{count} نتيجة من إجمالي {total}',
+          filteredPlural: '{count} نتيجة من إجمالي {total}',
+          failed: 'فشل تحميل البيانات.',
+          unable: 'تعذر تحميل البيانات.'
+        },
+        tableHeaders: {
+          id: 'المعرف',
+          name: 'الاسم',
+          description: 'الوصف',
+          exp1: 'الانتهاء 1',
+          exp2: 'الانتهاء 2',
+          status: 'الحالة',
+          file: 'الملف'
+        },
+        preview: {
+          title: 'معاينة',
+          defaultTitle: 'معاينة',
+          close: 'إغلاق',
+          iframeTitle: 'معاينة الملف'
+        },
+        noRecords: 'لا توجد سجلات مطابقة.',
+        fileLinks: { open: 'فتح', preview: 'معاينة', none: '—' },
+        uploadForm: {
+          nameLabel: 'الاسم',
+          descriptionLabel: 'الوصف',
+          exp1Label: 'تسمية الانتهاء 1',
+          exp1Placeholder: 'مثال: انتهاء الترخيص',
+          exp1Date: 'تاريخ الانتهاء 1',
+          exp2Label: 'تسمية الانتهاء 2',
+          exp2Placeholder: 'مثال: انتهاء التأمين',
+          exp2Date: 'تاريخ الانتهاء 2',
+          documentLabel: 'المستند (صورة أو PDF)',
+          documentHelp: 'اختياري. يفضل ملفات حتى 5 ميجابايت تقريبًا.',
+          submit: 'حفظ'
+        },
+        uploadStatus: {
+          uploading: 'جارٍ الرفع…',
+          saved: 'تم الحفظ. المعرّف: {id}',
+          link: 'فتح الملف',
+          errorWithMessage: 'خطأ: {message}',
+          generic: 'حدث خطأ أثناء حفظ السجل.',
+          failedWithMessage: 'فشل: {message}'
+        },
+        errors: {
+          loadFail: 'فشل التحميل: {message}',
+          runtimeUnavailable: 'بيئة Google Apps Script غير متاحة.'
+        },
+        status: {
+          expired: 'منتهي',
+          active: 'ساري',
+          upcomingPrefix: 'قادم',
+          upcomingExact: 'قادم (≤ 30 يوم)'
+        }
+      }
+    };
 
-    // Search / Refresh
+    const languageSelect = document.getElementById('languageSelect');
+    const headerTitle = document.getElementById('headerTitle');
+    const tabDashboard = document.getElementById('tabDashboard');
+    const tabUpload = document.getElementById('tabUpload');
+    const tablist = document.getElementById('tablist');
+    const statLabelExpired = document.getElementById('statLabelExpired');
+    const statLabelUpcoming = document.getElementById('statLabelUpcoming');
+    const statLabelActive = document.getElementById('statLabelActive');
     const searchEl = document.getElementById('search');
     const btnRefresh = document.getElementById('btnRefresh');
-    searchEl.addEventListener('input', debounce(refresh, 250));
-    btnRefresh.addEventListener('click', refresh);
-    function debounce(fn, ms){ let to; return (...a)=>{ clearTimeout(to); to=setTimeout(()=>fn(...a), ms); }; }
+    const resultCountEl = document.getElementById('result-count');
+    const table = document.getElementById('table');
+    const previewCard = document.getElementById('preview-card');
+    const previewTitle = document.getElementById('preview-title');
+    const previewFrame = document.getElementById('preview-frame');
+    const btnClosePreview = document.getElementById('btnClosePreview');
+    const labelName = document.getElementById('labelName');
+    const labelDescription = document.getElementById('labelDescription');
+    const labelExp1 = document.getElementById('labelExp1');
+    const labelExp1Date = document.getElementById('labelExp1Date');
+    const labelExp2 = document.getElementById('labelExp2');
+    const labelExp2Date = document.getElementById('labelExp2Date');
+    const labelDocument = document.getElementById('labelDocument');
+    const documentHelp = document.getElementById('documentHelp');
+    const btnUpload = document.getElementById('btnUpload');
+    const uploadResult = document.getElementById('uploadResult');
+    const languageLabel = document.getElementById('languageLabel');
+    const uploadForm = document.getElementById('uploadForm');
 
-    function statusPill(status) {
-      const base = 'pill status-';
-      if (String(status||'').startsWith('Upcoming')) return `<span class="${base}Upcoming">${escapeHtml(status)}</span>`;
-      if (status === 'Expired') return `<span class="${base}Expired">Expired</span>`;
-      return `<span class="${base}Active">Active</span>`;
+    const placeholderExp1 = document.getElementById('uploadExp1Label');
+    const placeholderExp2 = document.getElementById('uploadExp2Label');
+
+    let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || 'en';
+    if (!translations[currentLang]) currentLang = 'en';
+    languageSelect.value = currentLang;
+
+    const state = {
+      rows: [],
+      countsAll: { expired: 0, upcoming: 0, active: 0, total: 0 },
+      countsFiltered: { total: 0 }
+    };
+    let hasLoaded = false;
+    let lastUploadState = { type: 'idle', payload: null };
+    let resultState = { type: 'count' };
+
+    function t(path) {
+      const langTable = translations[currentLang] || translations.en;
+      const parts = path.split('.');
+      let node = langTable;
+      for (const part of parts) {
+        if (node && Object.prototype.hasOwnProperty.call(node, part)) {
+          node = node[part];
+        } else {
+          return path;
+        }
+      }
+      return typeof node === 'string' ? node : path;
     }
+
+    function format(str, params = {}) {
+      return String(str).replace(/\{(\w+)\}/g, (_, key) => (
+        params[key] != null ? params[key] : ''
+      ));
+    }
+
     function escapeHtml(s) {
       return String(s ?? '')
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -188,6 +382,129 @@
       const value = String(url || '').trim();
       return /^https?:\/\//i.test(value) ? value : '';
     }
+
+    function applyTranslations() {
+      const langTable = translations[currentLang] || translations.en;
+      document.documentElement.lang = currentLang;
+      document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+      document.title = langTable.pageTitle;
+      headerTitle.textContent = langTable.headerTitle;
+      tabDashboard.textContent = langTable.tabs.dashboard;
+      tabUpload.textContent = langTable.tabs.upload;
+      tablist.setAttribute('aria-label', langTable.tablistLabel);
+      statLabelExpired.textContent = langTable.stats.expired;
+      statLabelUpcoming.textContent = langTable.stats.upcoming;
+      statLabelActive.textContent = langTable.stats.active;
+      searchEl.placeholder = langTable.searchPlaceholder;
+      searchEl.setAttribute('aria-label', langTable.searchAria);
+      btnRefresh.textContent = langTable.refresh;
+      renderResultState();
+      table.setAttribute('aria-label', langTable.tableAria);
+      document.getElementById('thId').textContent = langTable.tableHeaders.id;
+      document.getElementById('thName').textContent = langTable.tableHeaders.name;
+      document.getElementById('thDescription').textContent = langTable.tableHeaders.description;
+      document.getElementById('thExpiry1').textContent = langTable.tableHeaders.exp1;
+      document.getElementById('thExpiry2').textContent = langTable.tableHeaders.exp2;
+      document.getElementById('thStatus').textContent = langTable.tableHeaders.status;
+      document.getElementById('thFile').textContent = langTable.tableHeaders.file;
+      previewTitle.textContent = previewCard.classList.contains('hidden') ? langTable.preview.title : previewTitle.textContent;
+      previewFrame.title = langTable.preview.iframeTitle;
+      btnClosePreview.textContent = langTable.preview.close;
+      labelName.textContent = langTable.uploadForm.nameLabel;
+      labelDescription.textContent = langTable.uploadForm.descriptionLabel;
+      labelExp1.textContent = langTable.uploadForm.exp1Label;
+      labelExp1Date.textContent = langTable.uploadForm.exp1Date;
+      labelExp2.textContent = langTable.uploadForm.exp2Label;
+      labelExp2Date.textContent = langTable.uploadForm.exp2Date;
+      labelDocument.textContent = langTable.uploadForm.documentLabel;
+      documentHelp.textContent = langTable.uploadForm.documentHelp;
+      btnUpload.textContent = langTable.uploadForm.submit;
+      placeholderExp1.placeholder = langTable.uploadForm.exp1Placeholder;
+      placeholderExp2.placeholder = langTable.uploadForm.exp2Placeholder;
+      languageLabel.textContent = langTable.languageLabel;
+      languageSelect.setAttribute('aria-label', langTable.languageLabel);
+      Object.entries(langTable.languages).forEach(([value, label]) => {
+        const option = languageSelect.querySelector(`option[value="${value}"]`);
+        if (option) option.textContent = label;
+      });
+      renderUploadStatus();
+      renderTable(state.rows);
+      updateStatsDisplay();
+      renderResultState();
+    }
+
+    function formatCountLabel() {
+      const filtered = Number(state.countsFiltered && state.countsFiltered.total != null ? state.countsFiltered.total : state.rows.length);
+      const total = Number(state.countsAll && state.countsAll.total != null ? state.countsAll.total : filtered);
+      const same = filtered === total;
+      const key = same
+        ? (filtered === 1 ? 'results.countSingular' : 'results.countPlural')
+        : (filtered === 1 ? 'results.filteredSingular' : 'results.filteredPlural');
+      return format(t(key), { count: filtered, total });
+    }
+
+    function renderResultState() {
+      if (resultState.type === 'failed') {
+        resultCountEl.textContent = t('results.failed');
+      } else if (resultState.type === 'unable') {
+        resultCountEl.textContent = t('results.unable');
+      } else {
+        resultCountEl.textContent = formatCountLabel();
+      }
+    }
+
+    function setResultState(type) {
+      resultState = { type };
+      renderResultState();
+    }
+
+    function updateStatsDisplay() {
+      document.getElementById('stat-expired').textContent = Number(state.countsAll.expired || 0);
+      document.getElementById('stat-upcoming').textContent = Number(state.countsAll.upcoming || 0);
+      document.getElementById('stat-active').textContent = Number(state.countsAll.active || 0);
+    }
+
+    function setUploadStatus(type, payload) {
+      lastUploadState = { type, payload };
+      renderUploadStatus();
+    }
+
+    function renderUploadStatus() {
+      switch (lastUploadState.type) {
+        case 'uploading':
+          uploadResult.textContent = t('uploadStatus.uploading');
+          break;
+        case 'saved': {
+          const payload = lastUploadState.payload || {};
+          const openUrl = safeHref(payload.fileUrl);
+          const savedText = format(t('uploadStatus.saved'), { id: payload.id != null ? payload.id : '' });
+          const linkHtml = openUrl
+            ? ` · <a class="link" target="_blank" rel="noopener" href="${escapeAttr(openUrl)}">${escapeHtml(t('uploadStatus.link'))}</a>`
+            : '';
+          uploadResult.innerHTML = `${escapeHtml(savedText)}${linkHtml}`;
+          break;
+        }
+        case 'error': {
+          const messageRaw = lastUploadState.payload && lastUploadState.payload.message;
+          const message = messageRaw != null ? String(messageRaw) : '';
+          if (message) {
+            uploadResult.textContent = format(t('uploadStatus.errorWithMessage'), { message });
+          } else {
+            uploadResult.textContent = t('uploadStatus.generic');
+          }
+          break;
+        }
+        case 'failed': {
+          const messageRaw = lastUploadState.payload && lastUploadState.payload.message;
+          const message = messageRaw != null ? String(messageRaw) : '';
+          uploadResult.textContent = format(t('uploadStatus.failedWithMessage'), { message });
+          break;
+        }
+        default:
+          uploadResult.textContent = '';
+      }
+    }
+
     function setLoading(el, isLoading){
       if (!el) return;
       const loading = !!isLoading;
@@ -196,10 +513,31 @@
       el.setAttribute('aria-busy', loading ? 'true' : 'false');
     }
 
+    function statusPill(status) {
+      const base = 'pill status-';
+      const raw = String(status || '');
+      if (raw === 'Upcoming (≤ 30 days)') {
+        return `<span class="${base}Upcoming">${escapeHtml(t('status.upcomingExact'))}</span>`;
+      }
+      if (raw.startsWith('Upcoming')) {
+        const suffix = raw.substring('Upcoming'.length);
+        const text = `${t('status.upcomingPrefix')}${suffix}`;
+        return `<span class="${base}Upcoming">${escapeHtml(text.trim())}</span>`;
+      }
+      if (raw === 'Expired') {
+        return `<span class="${base}Expired">${escapeHtml(t('status.expired'))}</span>`;
+      }
+      return `<span class="${base}Active">${escapeHtml(t('status.active'))}</span>`;
+    }
+
     function renderTable(rows) {
       const tbody = document.querySelector('#table tbody');
+      if (!hasLoaded && (!rows || !rows.length)) {
+        tbody.innerHTML = '';
+        return;
+      }
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="muted">No matching records.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" class="muted">${escapeHtml(t('noRecords'))}</td></tr>`;
         return;
       }
 
@@ -208,13 +546,13 @@
         const exp2 = `${escapeHtml(r.exp2Label)}${r.exp2Date ? ' ('+escapeHtml(r.exp2Date)+')' : ''}`;
         const fileUrl = safeHref(r.fileUrl);
         const previewUrl = safeHref(r.filePreviewUrl);
-        const previewTitle = r.fileName || r.name || 'Preview';
+        const previewTitleText = r.fileName || r.name || t('preview.defaultTitle');
         const previewLink = previewUrl
-          ? ` · <a class="link link-preview" role="button" href="#" data-preview-url="${escapeAttr(previewUrl)}" data-preview-title="${escapeAttr(previewTitle)}">Preview</a>`
+          ? ` · <a class="link link-preview" role="button" href="#" data-preview-url="${escapeAttr(previewUrl)}" data-preview-title="${escapeAttr(previewTitleText)}">${escapeHtml(t('fileLinks.preview'))}</a>`
           : '';
         const fileCell = fileUrl
-          ? `<a class="link" href="${escapeAttr(fileUrl)}" target="_blank" rel="noopener">Open</a>${previewLink}`
-          : '<span class="muted">—</span>';
+          ? `<a class="link" href="${escapeAttr(fileUrl)}" target="_blank" rel="noopener">${escapeHtml(t('fileLinks.open'))}</a>${previewLink}`
+          : `<span class="muted">${escapeHtml(t('fileLinks.none'))}</span>`;
         return `
           <tr>
             <td>${escapeHtml(r.id)}</td>
@@ -236,69 +574,113 @@
       });
     }
 
+    function updateCounts(data) {
+      const countsAll = data || {};
+      state.countsAll.expired = Number(countsAll.expired || 0);
+      state.countsAll.upcoming = Number(countsAll.upcoming || 0);
+      state.countsAll.active = Number(countsAll.active || 0);
+      if (countsAll.total != null) {
+        state.countsAll.total = Number(countsAll.total);
+      } else {
+        state.countsAll.total = state.countsAll.expired + state.countsAll.upcoming + state.countsAll.active;
+      }
+      updateStatsDisplay();
+    }
+
+    function updateFilteredCounts(countsFiltered) {
+      if (countsFiltered && countsFiltered.total != null) {
+        state.countsFiltered.total = Number(countsFiltered.total);
+      } else {
+        state.countsFiltered.total = state.rows.length;
+      }
+      if (resultState.type === 'count') {
+        renderResultState();
+      }
+    }
+
+    function preview(url, title){
+      const safeUrl = safeHref(url);
+      if (!safeUrl) return;
+      previewTitle.textContent = title || t('preview.defaultTitle');
+      previewFrame.src = safeUrl;
+      previewCard.classList.remove('hidden');
+      if (typeof previewFrame.focus === 'function') {
+        previewFrame.focus();
+      }
+    }
+    window.preview = preview;
+    btnClosePreview.addEventListener('click', ()=>{
+      previewCard.classList.add('hidden');
+      previewFrame.src = '';
+      previewTitle.textContent = t('preview.title');
+    });
+
+    document.querySelectorAll('.tab').forEach(t=>{
+      t.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab').forEach(x=>{
+          x.classList.remove('active'); x.setAttribute('aria-selected','false');
+        });
+        t.classList.add('active'); t.setAttribute('aria-selected','true');
+        const tab = t.dataset.tab;
+        document.getElementById('dashboard').classList.toggle('hidden', tab!=='dashboard');
+        document.getElementById('upload').classList.toggle('hidden', tab!=='upload');
+      });
+    });
+
+    languageSelect.addEventListener('change', ()=>{
+      const value = languageSelect.value;
+      currentLang = translations[value] ? value : 'en';
+      localStorage.setItem(LANG_STORAGE_KEY, currentLang);
+      applyTranslations();
+    });
+
+    searchEl.addEventListener('input', debounce(refresh, 250));
+    btnRefresh.addEventListener('click', refresh);
+
+    function debounce(fn, ms){ let to; return (...a)=>{ clearTimeout(to); to=setTimeout(()=>fn(...a), ms); }; }
+
     function refresh() {
       const q = searchEl.value || '';
       setLoading(btnRefresh, true);
       try {
         if (typeof google === 'undefined' || !google.script || !google.script.run) {
-          throw new Error('Google Apps Script runtime is unavailable.');
+          throw new Error(t('errors.runtimeUnavailable'));
         }
         google.script.run.withSuccessHandler(({rows, countsAll, countsFiltered})=>{
-          document.getElementById('stat-expired').textContent = countsAll.expired;
-          document.getElementById('stat-upcoming').textContent = countsAll.upcoming;
-          document.getElementById('stat-active').textContent = countsAll.active;
-          const resultsLabel = countsFiltered.total === countsAll.total
-            ? `${countsFiltered.total} result(s)`
-            : `${countsFiltered.total} result(s) of ${countsAll.total} total`;
-          document.getElementById('result-count').textContent = resultsLabel;
-          renderTable(rows);
+          state.rows = Array.isArray(rows) ? rows : [];
+          updateCounts(countsAll);
+          updateFilteredCounts(countsFiltered);
+          hasLoaded = true;
+          renderTable(state.rows);
+          setResultState('count');
           setLoading(btnRefresh, false);
         }).withFailureHandler(err=>{
-          alert('Failed to load: ' + (err && err.message ? err.message : err));
           setLoading(btnRefresh, false);
-          document.getElementById('result-count').textContent = 'Failed to load data.';
+          const message = err && err.message ? err.message : err;
+          alert(format(t('errors.loadFail'), { message: String(message || '') }));
+          setResultState('failed');
         }).getDashboardData(q);
       } catch(e) {
         console.error(e);
         setLoading(btnRefresh, false);
-        document.getElementById('result-count').textContent = 'Unable to load data.';
+        setResultState('unable');
       }
     }
 
-    window.preview = function(url, title){
-      const safeUrl = safeHref(url);
-      if (!safeUrl) return;
-      document.getElementById('preview-title').textContent = title || 'Preview';
-      const frame = document.getElementById('preview-frame');
-      frame.src = safeUrl;
-      document.getElementById('preview-card').classList.remove('hidden');
-      if (typeof frame.focus === 'function') {
-        frame.focus();
-      }
-    };
-    document.getElementById('btnClosePreview').addEventListener('click', ()=>{
-      document.getElementById('preview-card').classList.add('hidden');
-      document.getElementById('preview-frame').src = '';
-    });
-
-    // Upload (base64)
-    const form = document.getElementById('uploadForm');
-    form.addEventListener('submit', async (e)=>{
+    uploadForm.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const btn = document.getElementById('btnUpload');
-      const out = document.getElementById('uploadResult');
-      setLoading(btn, true);
-      out.textContent = 'Uploading…';
+      setUploadStatus('uploading');
+      setLoading(btnUpload, true);
 
       try {
-        const fd = new FormData(form);
+        const fd = new FormData(uploadForm);
         const obj = {};
         fd.forEach((v,k)=>{
           if (k === 'file') return;
           obj[k] = v;
         });
 
-        const fileInput = form.file;
+        const fileInput = uploadForm.file;
         if (fileInput && fileInput.files && fileInput.files.length) {
           const file = fileInput.files[0];
           obj.fileName = file.name;
@@ -307,24 +689,25 @@
         }
 
         google.script.run.withSuccessHandler(res=>{
-          setLoading(btn, false);
+          setLoading(btnUpload, false);
           if (res && res.ok) {
             const openUrl = res.fileUrl ? safeHref(res.fileUrl) : '';
-            const linkHtml = openUrl ? ` · <a class="link" target="_blank" rel="noopener" href="${escapeAttr(openUrl)}">Open file</a>` : '';
-            out.innerHTML = `Saved. ID: ${escapeHtml(res.id)}${linkHtml}`;
-            form.reset();
+            setUploadStatus('saved', { id: res.id, fileUrl: openUrl });
+            uploadForm.reset();
             refresh();
           } else {
-            const message = res && res.error ? `Error: ${res.error}` : 'Error saving record.';
-            out.textContent = message;
+            const message = res && res.error ? res.error : '';
+            setUploadStatus('error', { message: String(message || '') });
           }
         }).withFailureHandler(err=>{
-          setLoading(btn, false);
-          out.textContent = 'Failed: ' + (err && err.message ? err.message : err);
+          setLoading(btnUpload, false);
+          const message = err && err.message ? err.message : err;
+          setUploadStatus('failed', { message: String(message || '') });
         }).uploadDocument(obj);
       } catch (err) {
-        setLoading(btn, false);
-        document.getElementById('uploadResult').textContent = 'Failed: ' + (err && err.message ? err.message : err);
+        setLoading(btnUpload, false);
+        const message = err && err.message ? err.message : err;
+        setUploadStatus('failed', { message: String(message || '') });
       }
     });
 
@@ -340,7 +723,10 @@
       });
     }
 
-    // First load
+    applyTranslations();
+    updateStatsDisplay();
+    renderResultState();
+    renderTable(state.rows);
     refresh();
   })();
   </script>
