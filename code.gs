@@ -593,7 +593,7 @@ function getDashboardData(q) {
       return '';
     };
 
-    const consider = (slot, statusObj, label, fallbackType) => {
+    const consider = (rowState, slot, statusObj, label, fallbackType) => {
       let type = normalizeType(statusObj && statusObj.type);
       if (!type && fallbackType) type = normalizeType(fallbackType);
       if (!type && statusObj && statusObj.label) type = normalizeType(statusObj.label);
@@ -604,17 +604,30 @@ function getDashboardData(q) {
       if (!bucketKey || !counts[bucketKey]) return;
 
       const bucket = counts[bucketKey];
-      bucket.total += 1;
       if (!Object.prototype.hasOwnProperty.call(bucket, slot)) {
         bucket[slot] = 0;
       }
       bucket[slot] += 1;
+
+      rowState.touchedBuckets.add(bucketKey);
+      if (slot === 'overall') {
+        rowState.overallBucket = bucketKey;
+      }
     };
 
     arr.forEach(r => {
-      consider('exp1', r.exp1StatusInfo, r.exp1Status, null);
-      consider('exp2', r.exp2StatusInfo, r.exp2Status, null);
-      consider('overall', r.statusInfo, r.status, r.statusType);
+      const rowState = { touchedBuckets: new Set(), overallBucket: '' };
+      consider(rowState, 'exp1', r.exp1StatusInfo, r.exp1Status, null);
+      consider(rowState, 'exp2', r.exp2StatusInfo, r.exp2Status, null);
+      consider(rowState, 'overall', r.statusInfo, r.status, r.statusType);
+
+      if (rowState.overallBucket) {
+        counts[rowState.overallBucket].total += 1;
+      } else {
+        rowState.touchedBuckets.forEach(key => {
+          counts[key].total += 1;
+        });
+      }
     });
 
     return counts;
