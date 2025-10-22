@@ -5,56 +5,655 @@
   <title></title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { --gap: 12px; --radius: 10px; }
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, Arial, sans-serif; margin: 0; background: #f6f7fb; color: #1c1c1c; }
-    header { background: #1f2937; color: white; padding: 14px 18px; }
-    header h1 { margin: 0; font-size: 18px; }
-    .container { padding: 16px; max-width: 1200px; margin: 0 auto; }
-    .card { background: white; border-radius: var(--radius); padding: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
-    .grid { display: grid; gap: var(--gap); }
-    .grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-    @media (max-width: 640px) {
-      .grid.cols-3 { grid-template-columns: minmax(0, 1fr); }
+    :root {
+      color-scheme: light;
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-muted: rgba(255, 255, 255, 0.75);
+      --shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-strong: #1d4ed8;
+      --accent: #f97316;
+      --accent-soft: rgba(249, 115, 22, 0.16);
+      --success: #16a34a;
+      --warning: #f97316;
+      --danger: #dc2626;
+      --text: #0f172a;
+      --muted: #64748b;
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 10px;
+      --transition: 150ms ease;
     }
-    .stat { padding: 16px; border-radius: var(--radius); text-align: center; }
-    .stat h2 { margin: 6px 0 0; font-size: 28px; }
-    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .tabs { display: flex; gap: 6px; }
-    .tab { padding: 10px 12px; border-radius: 8px; background: #e5e7eb; cursor: pointer; user-select: none; }
-    .tab.active { background: #111827; color: white; }
-    .language-toggle { display: flex; align-items: center; gap: 6px; }
-    .language-toggle label { font-size: 14px; color: #4b5563; }
-    .language-toggle select { width: auto; min-width: 120px; }
-    .row { display: flex; gap: var(--gap); flex-wrap: wrap; }
-    .grow { flex: 1; min-width: 240px; }
-    input, textarea, select, button { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; background: white; }
-    button { cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: start; vertical-align: top; }
-    tr:hover { background: #fafafa; }
-    .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; }
-    .status-Expired { background: #fee2e2; color: #991b1b; }
-    .status-Upcoming { background: #fef3c7; color: #92400e; }
-    .status-Active { background: #dcfce7; color: #166534; }
-    .expiry-cell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-    .muted { color: #6b7280; font-size: 12px; }
-    .link { color: #2563eb; text-decoration: none; }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    a { color: inherit; }
+
+    .app-header {
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.7), rgba(37, 99, 235, 0.95));
+      color: #ffffff;
+      padding: 32px 16px 88px;
+    }
+
+    .app-header::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(249, 115, 22, 0.35), transparent 55%);
+      pointer-events: none;
+    }
+
+    .header-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .header-title h1 {
+      margin: 0;
+      font-size: inherit;
+      font-weight: inherit;
+    }
+
+    .header-icon {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(15, 23, 42, 0.08));
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    }
+
+    .header-icon svg {
+      width: 28px;
+      height: 28px;
+      fill: currentColor;
+      opacity: 0.9;
+    }
+
+    .language-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.25);
+      padding: 10px 14px;
+      border-radius: 999px;
+      backdrop-filter: blur(12px);
+    }
+
+    .language-toggle label {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .language-toggle select {
+      appearance: none;
+      min-width: 150px;
+      padding: 8px 32px 8px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: rgba(15, 23, 42, 0.4) url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white"%3E%3Cpath d="M6.293 7.293a1 1 0 011.414 0L10 9.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/%3E%3C/svg%3E') no-repeat right 12px center / 16px;
+      color: #ffffff;
+      font: inherit;
+    }
+
+    .language-toggle select:focus-visible {
+      outline: 2px solid #ffffff;
+      outline-offset: 2px;
+    }
+
+    .header-tabs {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 32px auto 0;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      background: rgba(15, 23, 42, 0.28);
+      border-radius: 999px;
+      backdrop-filter: blur(12px);
+    }
+
+    .tab {
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 20px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: background var(--transition), color var(--transition), transform var(--transition);
+    }
+
+    .tab:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .tab.active {
+      color: #1f2937;
+      background: #ffffff;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .container {
+      position: relative;
+      max-width: 1200px;
+      margin: -48px auto 48px;
+      padding: 0 16px 48px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .stats-grid {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 22px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(226, 232, 240, 0.6));
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    .stat-icon {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      font-size: 1.5rem;
+      color: #ffffff;
+    }
+
+    .stat-icon.expired { background: linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(248, 113, 113, 0.9)); }
+    .stat-icon.upcoming { background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(253, 230, 138, 0.9)); color: #7c2d12; }
+    .stat-icon.active { background: linear-gradient(135deg, rgba(5, 150, 105, 0.95), rgba(16, 185, 129, 0.9)); }
+
+    .stat-body { flex: 1; min-width: 0; }
+
+    .stat-label {
+      display: block;
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      margin: 0;
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .search-group {
+      position: relative;
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .search-group input {
+      width: 100%;
+      padding: 14px 16px 14px 48px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      font: inherit;
+      background: #ffffff;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .search-group input:focus {
+      outline: none;
+      border-color: rgba(37, 99, 235, 0.7);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+    }
+
+    .search-icon {
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 16px;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      color: var(--muted);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+      transition: transform var(--transition), box-shadow var(--transition), background var(--transition), color var(--transition);
+    }
+
+    .btn svg { width: 18px; height: 18px; }
+
+    .btn:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.35);
+      outline-offset: 2px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-primary:hover { background: var(--primary-strong); }
+
+    .btn-ghost {
+      background: rgba(15, 23, 42, 0.05);
+      color: var(--text);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15, 23, 42, 0.12);
+    }
+
+    .btn-icon-only {
+      padding: 10px;
+      border-radius: 50%;
+    }
+
+    .btn-refresh::before,
+    .btn-upload::before,
+    .btn-close-preview::before {
+      content: "";
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      margin-inline-end: 8px;
+      background: currentColor;
+    }
+
+    .btn-refresh::before {
+      mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpolyline points="1 4 1 10 7 10"/%3E%3Cpolyline points="23 20 23 14 17 14"/%3E%3Cpath d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/%3E%3C/svg%3E') no-repeat center / contain;
+      -webkit-mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpolyline points="1 4 1 10 7 10"/%3E%3Cpolyline points="23 20 23 14 17 14"/%3E%3Cpath d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/%3E%3C/svg%3E') no-repeat center / contain;
+    }
+
+    .btn-upload::before {
+      mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/%3E%3Cpolyline points="7 9 12 4 17 9"/%3E%3Cline x1="12" x2="12" y1="4" y2="16"/%3E%3C/svg%3E') no-repeat center / contain;
+      -webkit-mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/%3E%3Cpolyline points="7 9 12 4 17 9"/%3E%3Cline x1="12" x2="12" y1="4" y2="16"/%3E%3C/svg%3E') no-repeat center / contain;
+    }
+
+    .btn-close-preview::before {
+      mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"%3E%3Cline x1="6" y1="6" x2="18" y2="18"/%3E%3Cline x1="18" y1="6" x2="6" y2="18"/%3E%3C/svg%3E') no-repeat center / contain;
+      -webkit-mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"%3E%3Cline x1="6" y1="6" x2="18" y2="18"/%3E%3Cline x1="18" y1="6" x2="6" y2="18"/%3E%3C/svg%3E') no-repeat center / contain;
+    }
+
+    .btn-close-preview {
+      align-self: flex-start;
+      color: var(--muted);
+    }
+
+    .btn-close-preview:hover {
+      color: var(--text);
+      background: rgba(15, 23, 42, 0.1);
+    }
+
+    .btn.loading::after {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      border-top-color: rgba(255, 255, 255, 0.1);
+      animation: spin 0.9s linear infinite;
+      margin-inline-start: 10px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .muted { color: var(--muted); font-size: 0.9rem; }
+
+    .link {
+      color: var(--primary-strong);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
     .link:hover { text-decoration: underline; }
-    button.link { background: none; border: 0; padding: 0; font: inherit; width: auto; }
-    .hidden { display: none; }
-    .preview { width: 100%; height: 70vh; border: 0; border-radius: 10px; background: #fafafa; }
-    .loading { opacity: .7; pointer-events: none; }
+
+    .table-wrapper {
+      overflow: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+      background: #ffffff;
+    }
+
+    thead {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.04));
+      color: #1f2937;
+    }
+
+    th, td {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      text-align: start;
+      vertical-align: top;
+      font-size: 0.95rem;
+    }
+
+    tbody tr:hover { background: rgba(37, 99, 235, 0.04); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .status-Expired { background: rgba(220, 38, 38, 0.1); color: #b91c1c; }
+    .status-Upcoming { background: rgba(245, 158, 11, 0.15); color: #92400e; }
+    .status-Active { background: rgba(5, 150, 105, 0.12); color: #047857; }
+
+    .expiry-cell {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .doc-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .doc-action-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font: inherit;
+      border: 1px solid transparent;
+      background: rgba(37, 99, 235, 0.08);
+      color: var(--primary-strong);
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+    }
+
+    .doc-action-button:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.35);
+      outline-offset: 2px;
+    }
+
+    .doc-action-button:hover {
+      transform: translateY(-1px);
+      background: rgba(37, 99, 235, 0.16);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.16);
+    }
+
+    .doc-action-button svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .doc-action-button.preview {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .doc-action-button.preview:hover {
+      background: rgba(249, 115, 22, 0.28);
+      box-shadow: 0 10px 22px rgba(249, 115, 22, 0.2);
+    }
+
+    .doc-action-empty { display: inline-block; }
+
+    .upload-card {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    #uploadResult {
+      padding-inline: 4px;
+    }
+
+    .upload-form {
+      display: grid;
+      gap: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-field label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .form-field input,
+    .form-field textarea,
+    .form-field select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: #ffffff;
+      font: inherit;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .form-field input:focus,
+    .form-field textarea:focus,
+    .form-field select:focus {
+      outline: none;
+      border-color: rgba(37, 99, 235, 0.7);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+
+    .form-actions .form-field { flex: 1; }
+
+    input[type="file"] {
+      padding: 12px 16px;
+      border: 1px dashed var(--border);
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(241, 245, 249, 0.9), rgba(226, 232, 240, 0.6));
+    }
+
+    input[type="file"]:focus { outline: none; border-color: rgba(37, 99, 235, 0.7); }
+
+    .preview-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 40;
+      backdrop-filter: blur(4px);
+    }
+
+    .preview-dialog {
+      width: min(960px, 100%);
+      max-height: 90vh;
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .preview-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .preview-title-group svg {
+      width: 22px;
+      height: 22px;
+      color: var(--primary);
+    }
+
+    .preview-body { padding: 0 24px 24px; }
+
+    .preview {
+      width: 100%;
+      height: 65vh;
+      border: 0;
+      border-radius: var(--radius-md);
+      background: #f8fafc;
+    }
+
+    .hidden { display: none !important; }
+
+    .loading { pointer-events: none; }
+
+    @media (max-width: 720px) {
+      .app-header { padding-bottom: 72px; }
+      .container { margin-top: -36px; padding-inline: 12px; }
+      .card { padding: 20px; }
+      .panel-header { align-items: stretch; }
+      .btn { width: 100%; }
+      .form-actions { flex-direction: column; align-items: stretch; }
+      .form-actions .btn { width: 100%; }
+      .preview-body { padding-inline: 16px; padding-bottom: 16px; }
+    }
+
+    html[dir="rtl"] .header-inner { flex-direction: row-reverse; }
+    html[dir="rtl"] .header-title { flex-direction: row-reverse; }
+    html[dir="rtl"] .header-tabs { justify-content: flex-end; }
+    html[dir="rtl"] .language-toggle { flex-direction: row-reverse; }
+    html[dir="rtl"] .preview-header { flex-direction: row-reverse; }
+    html[dir="rtl"] .preview-title-group { flex-direction: row-reverse; }
+    html[dir="rtl"] .panel-header { flex-direction: column; align-items: stretch; }
+    html[dir="rtl"] .search-group input { padding-inline-start: 16px; padding-inline-end: 48px; }
+    html[dir="rtl"] .search-icon { inset-inline-start: auto; inset-inline-end: 16px; }
+    html[dir="rtl"] .doc-actions { justify-content: flex-end; flex-direction: row-reverse; }
   </style>
 </head>
 <body>
-  <header><h1 id="headerTitle"></h1></header>
-  <div class="container">
-
-    <div class="toolbar">
-      <div class="tabs" role="tablist" aria-label="" id="tablist">
-        <button type="button" class="tab active" data-tab="dashboard" role="tab" aria-selected="true" id="tabDashboard"></button>
-        <button type="button" class="tab" data-tab="upload" role="tab" aria-selected="false" id="tabUpload"></button>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 4.75A2.75 2.75 0 017.75 2h6.19c.73 0 1.43.29 1.95.81l3.3 3.3c.52.52.81 1.22.81 1.95v11.19A2.75 2.75 0 0117.25 22h-9.5A2.75 2.75 0 015 19.25V4.75zm11.5-.69V6.5h2.44L16.5 4.06zM7.75 3.5A1.25 1.25 0 006.5 4.75v14.5c0 .69.56 1.25 1.25 1.25h9.5c.69 0 1.25-.56 1.25-1.25V8h-3.75A1.25 1.25 0 0013.5 6.75V3.5h-5.75z" />
+          </svg>
+        </span>
+        <h1 id="headerTitle"></h1>
       </div>
       <div class="language-toggle">
         <label for="languageSelect" id="languageLabel"></label>
@@ -64,124 +663,170 @@
         </select>
       </div>
     </div>
+    <div class="header-tabs">
+      <div class="tabs" role="tablist" aria-label="" id="tablist">
+        <button type="button" class="tab active" data-tab="dashboard" role="tab" aria-selected="true" id="tabDashboard"></button>
+        <button type="button" class="tab" data-tab="upload" role="tab" aria-selected="false" id="tabUpload"></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" role="main">
 
     <!-- DASHBOARD -->
-    <section id="dashboard" class="grid" style="gap:16px;">
-      <div class="grid cols-3">
-        <div class="card stat">
-          <div class="muted" id="statLabelExpired"></div>
-          <h2 id="stat-expired">0</h2>
-        </div>
-        <div class="card stat">
-          <div class="muted" id="statLabelUpcoming"></div>
-          <h2 id="stat-upcoming">0</h2>
-        </div>
-        <div class="card stat">
-          <div class="muted" id="statLabelActive"></div>
-          <h2 id="stat-active">0</h2>
-        </div>
+    <section id="dashboard">
+      <div class="stats-grid">
+        <article class="stat-card">
+          <div class="stat-icon expired" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2a9.94 9.94 0 00-7.07 2.93A10 10 0 1012 2zm0 18.5A8.5 8.5 0 1120.5 12 8.51 8.51 0 0112 20.5zm-.75-12.75a.75.75 0 011.5 0V12l2.22 2.22a.75.75 0 01-1.06 1.06l-2.47-2.47a.75.75 0 01-.19-.49z" />
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label" id="statLabelExpired"></span>
+            <p class="stat-value" id="stat-expired">0</p>
+          </div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-icon upcoming" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2a10 10 0 00-7.07 17.07A10 10 0 1012 2zm0 18.5A8.5 8.5 0 1120.5 12 8.51 8.51 0 0112 20.5zm-.75-12.25a.75.75 0 011.5 0v4.06l2.55 1.47a.75.75 0 11-.75 1.3l-3-1.73a.75.75 0 01-.37-.65z" />
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label" id="statLabelUpcoming"></span>
+            <p class="stat-value" id="stat-upcoming">0</p>
+          </div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-icon active" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm-1.12 13.42l-2.8-2.8a1 1 0 011.42-1.42l2.08 2.08 4.21-4.21a1 1 0 011.42 1.42l-4.92 4.93a1 1 0 01-1.42 0z" />
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label" id="statLabelActive"></span>
+            <p class="stat-value" id="stat-active">0</p>
+          </div>
+        </article>
       </div>
 
-      <div class="card">
-        <div class="row" style="align-items:center; margin-bottom:10px;">
-          <input id="search" class="grow" placeholder="" aria-label="" />
-          <button type="button" id="btnRefresh" style="max-width:160px;" aria-busy="false"></button>
+      <div class="card panel">
+        <div class="panel-header">
+          <div class="search-group">
+            <span class="search-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 3.5a7.5 7.5 0 015.9 12.15l3.23 3.22a1 1 0 01-1.42 1.42l-3.22-3.23A7.5 7.5 0 1111 3.5zm0 13a5.5 5.5 0 10-5.5-5.5 5.5 5.5 0 005.5 5.5z" />
+              </svg>
+            </span>
+            <input id="search" placeholder="" aria-label="" />
+          </div>
+          <button type="button" id="btnRefresh" class="btn btn-primary btn-refresh" aria-busy="false"></button>
         </div>
         <div class="muted" id="result-count" role="status" aria-live="polite"></div>
-        <div style="overflow:auto;">
+        <div class="table-wrapper">
           <table id="table" aria-label="">
             <thead>
               <tr>
-                <th id="thId"></th><th id="thName"></th><th id="thDescription"></th>
-                <th id="thExpiry1"></th><th id="thExpiry2"></th>
-                <th id="thStatus"></th><th id="thFile"></th>
+                <th id="thId"></th>
+                <th id="thName"></th>
+                <th id="thDescription"></th>
+                <th id="thExpiry1"></th>
+                <th id="thExpiry2"></th>
+                <th id="thStatus"></th>
+                <th id="thFile"></th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
-
-      <div id="preview-card" class="card hidden" aria-live="polite">
-        <div class="row" style="align-items:center;">
-          <div class="grow"><strong id="preview-title"></strong></div>
-          <button type="button" id="btnClosePreview" style="max-width:120px;"></button>
-        </div>
-        <div id="preview-body">
-          <iframe id="preview-frame" class="preview" title=""></iframe>
-        </div>
-      </div>
     </section>
 
     <!-- UPLOAD -->
     <section id="upload" class="hidden">
-      <div class="card">
-        <form id="uploadForm">
-          <div class="row">
-            <div class="grow">
+      <div class="card upload-card">
+        <form id="uploadForm" class="upload-form">
+          <div class="form-grid">
+            <div class="form-field">
               <label for="uploadName" id="labelName"></label>
               <input id="uploadName" name="name" required maxlength="200" />
             </div>
-            <div class="grow">
+            <div class="form-field">
               <label for="uploadDescription" id="labelDescription"></label>
               <input id="uploadDescription" name="description" maxlength="500" />
             </div>
           </div>
-          <div class="row">
-            <div class="grow">
+          <div class="form-grid">
+            <div class="form-field">
               <label for="uploadNameAr" id="labelNameAr"></label>
               <input id="uploadNameAr" name="nameAr" lang="ar" dir="rtl" maxlength="200" />
             </div>
-            <div class="grow">
+            <div class="form-field">
               <label for="uploadDescriptionAr" id="labelDescriptionAr"></label>
               <input id="uploadDescriptionAr" name="descriptionAr" lang="ar" dir="rtl" maxlength="500" />
             </div>
           </div>
-          <div class="row">
-            <div class="grow">
+          <div class="form-grid">
+            <div class="form-field">
               <label for="uploadExp1Label" id="labelExp1"></label>
               <input id="uploadExp1Label" name="exp1Label" placeholder="" maxlength="200" />
             </div>
-            <div class="grow">
+            <div class="form-field">
               <label for="uploadExp1Date" id="labelExp1Date"></label>
               <input id="uploadExp1Date" type="date" name="exp1Date" />
             </div>
           </div>
-          <div class="row">
-            <div class="grow">
+          <div class="form-grid">
+            <div class="form-field">
               <label for="uploadExp2Label" id="labelExp2"></label>
               <input id="uploadExp2Label" name="exp2Label" placeholder="" maxlength="200" />
             </div>
-            <div class="grow">
+            <div class="form-field">
               <label for="uploadExp2Date" id="labelExp2Date"></label>
               <input id="uploadExp2Date" type="date" name="exp2Date" />
             </div>
           </div>
-          <div class="row">
-            <div class="grow">
+          <div class="form-grid">
+            <div class="form-field">
               <label for="uploadExp1LabelAr" id="labelExp1Ar"></label>
               <input id="uploadExp1LabelAr" name="exp1LabelAr" placeholder="" lang="ar" dir="rtl" maxlength="200" />
             </div>
-            <div class="grow">
+            <div class="form-field">
               <label for="uploadExp2LabelAr" id="labelExp2Ar"></label>
               <input id="uploadExp2LabelAr" name="exp2LabelAr" placeholder="" lang="ar" dir="rtl" maxlength="200" />
             </div>
           </div>
-          <div class="row" style="align-items:flex-end;">
-            <div class="grow">
+          <div class="form-actions">
+            <div class="form-field">
               <label for="uploadFile" id="labelDocument"></label>
               <input id="uploadFile" type="file" name="file" accept="image/*,application/pdf" />
               <div class="muted" id="documentHelp"></div>
             </div>
-            <div style="min-width:160px;">
-              <button type="submit" id="btnUpload" aria-busy="false"></button>
-            </div>
+            <button type="submit" id="btnUpload" class="btn btn-primary btn-upload" aria-busy="false"></button>
           </div>
         </form>
-        <div id="uploadResult" class="muted" style="margin-top:10px;" role="status" aria-live="polite"></div>
+        <div id="uploadResult" class="muted" role="status" aria-live="polite"></div>
       </div>
     </section>
 
+  </main>
+
+  <div id="preview-card" class="preview-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+    <div class="preview-dialog">
+      <div class="preview-header">
+        <div class="preview-title-group">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5.75A2.75 2.75 0 016.75 3h10.5A2.75 2.75 0 0120 5.75v12.5A2.75 2.75 0 0117.25 21H6.75A2.75 2.75 0 014 18.25zm1.5 0v12.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25V5.75c0-.69-.56-1.25-1.25-1.25H6.75c-.69 0-1.25.56-1.25 1.25zm2.75 2a.75.75 0 010-1.5h7.5a.75.75 0 010 1.5zm0 4a.75.75 0 010-1.5h7.5a.75.75 0 010 1.5zm0 4a.75.75 0 010-1.5h4.5a.75.75 0 010 1.5z" />
+          </svg>
+          <strong id="preview-title"></strong>
+        </div>
+        <button type="button" id="btnClosePreview" class="btn btn-ghost btn-close-preview"></button>
+      </div>
+      <div class="preview-body" id="preview-body">
+        <iframe id="preview-frame" class="preview" title=""></iframe>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -784,12 +1429,21 @@
         const fileUrl = safeHref(r.fileUrl);
         const previewUrl = safeHref(r.filePreviewUrl);
         const previewTitleText = r.fileName || displayName || t('preview.defaultTitle');
-        const previewLink = previewUrl
-          ? ` · <button type="button" class="link link-preview" data-preview-url="${escapeAttr(previewUrl)}" data-preview-title="${escapeAttr(previewTitleText)}">${escapeHtml(t('fileLinks.preview'))}</button>`
+        const openButton = fileUrl
+          ? `<a class="doc-action-button open" href="${escapeAttr(fileUrl)}" target="_blank" rel="noopener">`
+            + `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">`
+            + `<path d="M14 3h7v7" /><path d="M10 14L21 3" /><path d="M21 10v9a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h9" />`
+            + `</svg><span>${escapeHtml(t('fileLinks.open'))}</span></a>`
           : '';
-        const fileCell = fileUrl
-          ? `<a class="link" href="${escapeAttr(fileUrl)}" target="_blank" rel="noopener">${escapeHtml(t('fileLinks.open'))}</a>${previewLink}`
-          : `<span class="muted">${escapeHtml(t('fileLinks.none'))}</span>`;
+        const previewButton = previewUrl
+          ? `<button type="button" class="doc-action-button preview link-preview" aria-haspopup="dialog" data-preview-url="${escapeAttr(previewUrl)}" data-preview-title="${escapeAttr(previewTitleText)}">`
+            + `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">`
+            + `<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" /><circle cx="12" cy="12" r="3" />`
+            + `</svg><span>${escapeHtml(t('fileLinks.preview'))}</span></button>`
+          : '';
+        const fileCell = openButton || previewButton
+          ? `<div class="doc-actions">${openButton}${previewButton}</div>`
+          : `<span class="muted doc-action-empty">${escapeHtml(t('fileLinks.none'))}</span>`;
         return `
           <tr>
             <td>${escapeHtml(r.id)}</td>
