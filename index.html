@@ -293,7 +293,10 @@
       try {
         const fd = new FormData(form);
         const obj = {};
-        fd.forEach((v,k)=>{ obj[k] = v; });
+        fd.forEach((v,k)=>{
+          if (k === 'file') return;
+          obj[k] = v;
+        });
 
         const fileInput = form.file;
         if (fileInput && fileInput.files && fileInput.files.length) {
