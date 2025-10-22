@@ -67,9 +67,9 @@
       <div class="card">
         <div class="row" style="align-items:center; margin-bottom:10px;">
           <input id="search" class="grow" placeholder="Search by name, description, labels…" aria-label="Search" />
-          <button type="button" id="btnRefresh" style="max-width:160px;">Refresh</button>
+          <button type="button" id="btnRefresh" style="max-width:160px;" aria-busy="false">Refresh</button>
         </div>
-        <div class="muted" id="result-count">0 result(s)</div>
+        <div class="muted" id="result-count" role="status" aria-live="polite">0 result(s)</div>
         <div style="overflow:auto;">
           <table id="table" aria-label="Licenses table">
             <thead>
@@ -136,11 +136,11 @@
               <div class="muted">Optional. Files up to ~5MB recommended.</div>
             </div>
             <div style="min-width:160px;">
-              <button type="submit" id="btnUpload">Save</button>
+              <button type="submit" id="btnUpload" aria-busy="false">Save</button>
             </div>
           </div>
         </form>
-        <div id="uploadResult" class="muted" style="margin-top:10px;"></div>
+        <div id="uploadResult" class="muted" style="margin-top:10px;" role="status" aria-live="polite"></div>
       </div>
     </section>
 
@@ -179,57 +179,102 @@
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
-    function setLoading(el, isLoading){ if (!el) return; el.classList.toggle('loading', !!isLoading); el.disabled = !!isLoading; }
+    function escapeAttr(s) {
+      return String(s ?? '')
+        .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;').replace(/</g,'&lt;');
+    }
+    function safeHref(url) {
+      const value = String(url || '').trim();
+      return /^https?:\/\//i.test(value) ? value : '';
+    }
+    function setLoading(el, isLoading){
+      if (!el) return;
+      const loading = !!isLoading;
+      el.classList.toggle('loading', loading);
+      if ('disabled' in el) el.disabled = loading;
+      el.setAttribute('aria-busy', loading ? 'true' : 'false');
+    }
 
     function renderTable(rows) {
       const tbody = document.querySelector('#table tbody');
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${escapeHtml(r.id)}</td>
-          <td>${escapeHtml(r.name)}</td>
-          <td>${escapeHtml(r.description)}</td>
-          <td>${escapeHtml(r.exp1Label)} ${r.exp1Date ? '('+escapeHtml(r.exp1Date)+')' : ''}</td>
-          <td>${escapeHtml(r.exp2Label)} ${r.exp2Date ? '('+escapeHtml(r.exp2Date)+')' : ''}</td>
-          <td>${statusPill(r.status)}</td>
-          <td>${
-            r.fileUrl
-              ? `<a class="link" href="${r.fileUrl}" target="_blank" rel="noopener">Open</a>` +
-                (r.filePreviewUrl ? ` · <a class="link" href="#" onclick="preview('${encodeURIComponent(r.filePreviewUrl)}','${encodeURIComponent(r.fileName||r.name||'Preview')}');return false;">Preview</a>` : '')
-              : '<span class="muted">—</span>'
-          }</td>
-        </tr>
-      `).join('');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="muted">No matching records.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map(r => {
+        const exp1 = `${escapeHtml(r.exp1Label)}${r.exp1Date ? ' ('+escapeHtml(r.exp1Date)+')' : ''}`;
+        const exp2 = `${escapeHtml(r.exp2Label)}${r.exp2Date ? ' ('+escapeHtml(r.exp2Date)+')' : ''}`;
+        const fileUrl = safeHref(r.fileUrl);
+        const previewUrl = safeHref(r.filePreviewUrl);
+        const previewTitle = r.fileName || r.name || 'Preview';
+        const previewLink = previewUrl
+          ? ` · <a class="link link-preview" role="button" href="#" data-preview-url="${escapeAttr(previewUrl)}" data-preview-title="${escapeAttr(previewTitle)}">Preview</a>`
+          : '';
+        const fileCell = fileUrl
+          ? `<a class="link" href="${escapeAttr(fileUrl)}" target="_blank" rel="noopener">Open</a>${previewLink}`
+          : '<span class="muted">—</span>';
+        return `
+          <tr>
+            <td>${escapeHtml(r.id)}</td>
+            <td>${escapeHtml(r.name)}</td>
+            <td>${escapeHtml(r.description)}</td>
+            <td>${exp1}</td>
+            <td>${exp2}</td>
+            <td>${statusPill(r.status)}</td>
+            <td>${fileCell}</td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('.link-preview').forEach(link => {
+        link.addEventListener('click', evt => {
+          evt.preventDefault();
+          preview(link.getAttribute('data-preview-url'), link.getAttribute('data-preview-title'));
+        });
+      });
     }
 
     function refresh() {
       const q = searchEl.value || '';
       setLoading(btnRefresh, true);
       try {
+        if (typeof google === 'undefined' || !google.script || !google.script.run) {
+          throw new Error('Google Apps Script runtime is unavailable.');
+        }
         google.script.run.withSuccessHandler(({rows, countsAll, countsFiltered})=>{
           document.getElementById('stat-expired').textContent = countsAll.expired;
           document.getElementById('stat-upcoming').textContent = countsAll.upcoming;
           document.getElementById('stat-active').textContent = countsAll.active;
-          document.getElementById('result-count').textContent = `${countsFiltered.total} result(s) — showing ${countsFiltered.total} of ${countsAll.total}`;
+          const resultsLabel = countsFiltered.total === countsAll.total
+            ? `${countsFiltered.total} result(s)`
+            : `${countsFiltered.total} result(s) of ${countsAll.total} total`;
+          document.getElementById('result-count').textContent = resultsLabel;
           renderTable(rows);
           setLoading(btnRefresh, false);
         }).withFailureHandler(err=>{
           alert('Failed to load: ' + (err && err.message ? err.message : err));
           setLoading(btnRefresh, false);
+          document.getElementById('result-count').textContent = 'Failed to load data.';
         }).getDashboardData(q);
       } catch(e) {
         console.error(e);
         setLoading(btnRefresh, false);
+        document.getElementById('result-count').textContent = 'Unable to load data.';
       }
     }
 
-    window.preview = function(encodedUrl, encodedTitle){
-      const url = decodeURIComponent(encodedUrl || '');
-      const title = decodeURIComponent(encodedTitle||'Preview');
+    window.preview = function(url, title){
+      const safeUrl = safeHref(url);
+      if (!safeUrl) return;
       document.getElementById('preview-title').textContent = title || 'Preview';
       const frame = document.getElementById('preview-frame');
-      frame.src = url;
+      frame.src = safeUrl;
       document.getElementById('preview-card').classList.remove('hidden');
-      frame.focus();
+      if (typeof frame.focus === 'function') {
+        frame.focus();
+      }
     };
     document.getElementById('btnClosePreview').addEventListener('click', ()=>{
       document.getElementById('preview-card').classList.add('hidden');
@@ -261,11 +306,14 @@
         google.script.run.withSuccessHandler(res=>{
           setLoading(btn, false);
           if (res && res.ok) {
-            out.innerHTML = `Saved. ID: ${res.id}${res.fileUrl ? ' · <a class="link" target="_blank" rel="noopener" href="'+res.fileUrl+'">Open file</a>' : ''}`;
+            const openUrl = res.fileUrl ? safeHref(res.fileUrl) : '';
+            const linkHtml = openUrl ? ` · <a class="link" target="_blank" rel="noopener" href="${escapeAttr(openUrl)}">Open file</a>` : '';
+            out.innerHTML = `Saved. ID: ${escapeHtml(res.id)}${linkHtml}`;
             form.reset();
             refresh();
           } else {
-            out.textContent = 'Error saving record.';
+            const message = res && res.error ? `Error: ${res.error}` : 'Error saving record.';
+            out.textContent = message;
           }
         }).withFailureHandler(err=>{
           setLoading(btn, false);

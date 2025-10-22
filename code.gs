@@ -9,6 +9,7 @@ const HEADER = [
 ];
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
 const SHARE_FILES_PUBLIC = true;    // auto "Anyone with link → Viewer"
+const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB safety limit
 
 /**********************
  * WEB APP ENTRY
@@ -37,6 +38,13 @@ function getFolder_() {
   const folder = it.hasNext() ? it.next() : DriveApp.createFolder(name);
   FOLDER_ID = folder.getId();
   return folder;
+}
+function sanitizeString_(value) {
+  return String(value == null ? '' : value).trim();
+}
+function sanitizeUrl_(url) {
+  const s = sanitizeString_(url);
+  return /^https?:\/\//i.test(s) ? s : '';
 }
 function toIso_(d) {
   if (!d) return '';
@@ -72,8 +80,9 @@ function parseDriveFileId_(url) {
   return '';
 }
 function makePreviewUrl_(fileUrl) {
-  const id = parseDriveFileId_(fileUrl);
-  return id ? `https://drive.google.com/file/d/${id}/preview` : (fileUrl || '');
+  const safeUrl = sanitizeUrl_(fileUrl);
+  const id = parseDriveFileId_(safeUrl);
+  return id ? `https://drive.google.com/file/d/${id}/preview` : safeUrl;
 }
 function getAllRows_() {
   const sh = getSheet_();
@@ -90,16 +99,60 @@ function normalizeRow_(row) {
   obj.exp1Date = toIso_(obj.exp1Date);
   obj.exp2Date = toIso_(obj.exp2Date);
   obj.status = computeStatus_(obj.exp1Date, obj.exp2Date);
+  obj.name = sanitizeString_(obj.name);
+  obj.description = sanitizeString_(obj.description);
+  obj.exp1Label = sanitizeString_(obj.exp1Label);
+  obj.exp2Label = sanitizeString_(obj.exp2Label);
+  obj.fileUrl = sanitizeUrl_(obj.fileUrl);
   obj.filePreviewUrl = makePreviewUrl_(obj.fileUrl);
+  obj.fileName = sanitizeString_(obj.fileName || obj.name);
   return obj;
 }
 function nextId_() {
-  const rows = getAllRows_();
-  const maxId = rows.reduce((m,r)=> {
-    const n = Number(r.id);
-    return isFinite(n) && n > m ? n : m;
+  const sh = getSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return '1';
+  const values = sh.getRange(2, 1, last - 1, 1).getValues();
+  const max = values.reduce((m, r) => {
+    const v = Number(r[0]);
+    return isFinite(v) && v > m ? v : m;
   }, 0);
-  return String(maxId + 1);
+  return String(max + 1);
+}
+function estimateBase64Bytes_(b64) {
+  const cleaned = sanitizeString_(b64).replace(/=+$/, '');
+  return Math.ceil(cleaned.length * 3 / 4);
+}
+function normalizeUploadInput_(obj) {
+  const normalized = {
+    name: sanitizeString_(obj && obj.name),
+    description: sanitizeString_(obj && obj.description),
+    exp1Label: sanitizeString_(obj && obj.exp1Label),
+    exp2Label: sanitizeString_(obj && obj.exp2Label),
+    exp1Date: toIso_(obj && obj.exp1Date),
+    exp2Date: toIso_(obj && obj.exp2Date),
+    file: null
+  };
+
+  if (!normalized.name) {
+    throw new Error('Name is required.');
+  }
+
+  const fileB64 = sanitizeString_(obj && obj.fileB64);
+  if (fileB64) {
+    const approxBytes = estimateBase64Bytes_(fileB64);
+    if (approxBytes > MAX_UPLOAD_SIZE_BYTES) {
+      throw new Error('File is too large. Maximum size is 5 MB.');
+    }
+    const fileName = sanitizeString_(obj && obj.fileName) || normalized.name;
+    normalized.file = {
+      b64: fileB64,
+      name: fileName,
+      type: sanitizeString_(obj && obj.fileType) || MimeType.PDF
+    };
+  }
+
+  return normalized;
 }
 
 /**********************
@@ -142,32 +195,40 @@ function uploadDocument(obj) {
     const sh = getSheet_();
     const id = nextId_();
     const now = new Date();
+    const data = normalizeUploadInput_(obj);
 
     let fileUrl = '';
     let fileName = '';
 
-    if (obj && obj.fileB64 && obj.fileName) {
+    if (data.file) {
       const folder = getFolder_();
-      const bytes = Utilities.base64Decode(obj.fileB64);
-      const mime = obj.fileType || MimeType.PDF;
-      const blob = Utilities.newBlob(bytes, mime, obj.fileName);
-      const created = folder.createFile(blob).setName(obj.fileName);
+      const bytes = Utilities.base64Decode(data.file.b64);
+      const mime = data.file.type || MimeType.PDF;
+      const blob = Utilities.newBlob(bytes, mime, data.file.name);
+      const created = folder.createFile(blob).setName(data.file.name);
       if (SHARE_FILES_PUBLIC) created.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      fileUrl = created.getUrl();
-      fileName = obj.fileName;
+      fileUrl = sanitizeUrl_(created.getUrl());
+      fileName = data.file.name;
     }
 
-    const name        = String(obj && obj.name || '');
-    const description = String(obj && obj.description || '');
-    const exp1Label   = String(obj && obj.exp1Label || '');
-    const exp1Date    = toIso_(obj && obj.exp1Date);
-    const exp2Label   = String(obj && obj.exp2Label || '');
-    const exp2Date    = toIso_(obj && obj.exp2Date);
-    const status      = computeStatus_(exp1Date, exp2Date);
+    const status = computeStatus_(data.exp1Date, data.exp2Date);
 
-    sh.appendRow([ id, name, description, exp1Label, exp1Date, exp2Label, exp2Date, status, fileUrl, fileName || name, now ]);
+    sh.appendRow([
+      id,
+      data.name,
+      data.description,
+      data.exp1Label,
+      data.exp1Date,
+      data.exp2Label,
+      data.exp2Date,
+      status,
+      fileUrl,
+      fileName || data.name,
+      now
+    ]);
 
-    return { ok:true, id, fileUrl, filePreviewUrl: makePreviewUrl_(fileUrl) };
+    const safeFileUrl = sanitizeUrl_(fileUrl);
+    return { ok:true, id, fileUrl: safeFileUrl, filePreviewUrl: makePreviewUrl_(safeFileUrl) };
   } catch (err) {
     return { ok:false, error:String(err && err.message || err) };
   }
