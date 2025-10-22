@@ -10,6 +10,19 @@ const HEADER = [
   'exp2Label','exp2LabelAr','exp2Date',
   'status','fileUrl','fileName','createdAt'
 ];
+const LEGACY_HEADER = [
+  'id',
+  'name',
+  'description',
+  'exp1Label',
+  'exp1Date',
+  'exp2Label',
+  'exp2Date',
+  'status',
+  'fileUrl',
+  'fileName',
+  'createdAt'
+];
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
 const SHARE_FILES_PUBLIC = true;    // auto "Anyone with link → Viewer"
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB safety limit
@@ -28,10 +41,13 @@ function getSheet_() {
   const ss = SpreadsheetApp.getActive();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
-  const first = sh.getRange(1,1,1,HEADER.length).getValues()[0];
-  if (first.length !== HEADER.length || HEADER.some((h,i)=>first[i] !== h)) {
+  const width = Math.max(sh.getLastColumn(), HEADER.length, LEGACY_HEADER.length);
+  const first = sh.getRange(1,1,1,width).getValues()[0];
+  const isCurrentHeader = HEADER.every((h,i)=>first[i] === h);
+  if (!isCurrentHeader) {
     sh.getRange(1,1,1,HEADER.length).setValues([HEADER]);
   }
+  upgradeLegacyRowsIfNeeded_(sh);
   return sh;
 }
 function getFolder_() {
@@ -86,6 +102,56 @@ function makePreviewUrl_(fileUrl) {
   const safeUrl = sanitizeUrl_(fileUrl);
   const id = parseDriveFileId_(safeUrl);
   return id ? `https://drive.google.com/file/d/${id}/preview` : safeUrl;
+}
+function looksLegacyRow_(row) {
+  const newStatus = sanitizeString_(row[11]);
+  if (newStatus) return false;
+  const legacyStatus = sanitizeString_(row[7]);
+  if (!legacyStatus) return false;
+  const normalized = legacyStatus.toLowerCase();
+  const isLegacyStatus = normalized === 'active' || normalized === 'expired' || normalized.startsWith('upcoming');
+  if (!isLegacyStatus) return false;
+  return true;
+}
+function convertLegacyRow_(row) {
+  const exp1Date = toIso_(row[4]);
+  const exp2Date = toIso_(row[6]);
+  const legacyStatus = sanitizeString_(row[7]);
+  const status = legacyStatus || computeStatus_(exp1Date, exp2Date);
+  return [
+    row[0] ?? '',
+    sanitizeString_(row[1]),
+    '',
+    sanitizeString_(row[2]),
+    '',
+    sanitizeString_(row[3]),
+    '',
+    exp1Date,
+    sanitizeString_(row[5]),
+    '',
+    exp2Date,
+    status,
+    sanitizeUrl_(row[8]),
+    sanitizeString_(row[9]) || sanitizeString_(row[1]),
+    row[10] ?? ''
+  ];
+}
+function upgradeLegacyRowsIfNeeded_(sh) {
+  const last = sh.getLastRow();
+  if (last < 2) return;
+  const width = Math.max(sh.getLastColumn(), HEADER.length);
+  const values = sh.getRange(2, 1, last - 1, width).getValues();
+  let needsUpdate = false;
+  const upgraded = values.map(row => {
+    if (looksLegacyRow_(row)) {
+      needsUpdate = true;
+      return convertLegacyRow_(row);
+    }
+    return HEADER.map((_, i) => row[i] ?? '');
+  });
+  if (needsUpdate) {
+    sh.getRange(2, 1, upgraded.length, HEADER.length).setValues(upgraded);
+  }
 }
 function getAllRows_() {
   const sh = getSheet_();
