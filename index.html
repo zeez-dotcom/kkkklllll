@@ -37,6 +37,7 @@
     .status-Expired { background: #fee2e2; color: #991b1b; }
     .status-Upcoming { background: #fef3c7; color: #92400e; }
     .status-Active { background: #dcfce7; color: #166534; }
+    .expiry-cell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
     .muted { color: #6b7280; font-size: 12px; }
     .link { color: #2563eb; text-decoration: none; }
     .link:hover { text-decoration: underline; }
@@ -600,12 +601,19 @@
     }
 
     function statusPill(status) {
+      if (status == null || status === '') {
+        return '';
+      }
       const base = 'pill status-';
       const langStatus = (translations[currentLang] && translations[currentLang].status) || translations.en.status;
       const upcomingTranslations = langStatus.upcoming || {};
 
       const statusObj = (status && typeof status === 'object') ? status : null;
       const raw = statusObj && statusObj.label != null ? String(statusObj.label) : String(status || '');
+
+      if (!statusObj && !raw.trim()) {
+        return '';
+      }
 
       let type = statusObj && statusObj.type ? String(statusObj.type) : '';
       let days = statusObj && statusObj.daysUntil != null ? Number(statusObj.daysUntil) : null;
@@ -675,6 +683,24 @@
       return `<span class="${base}${variant}">${escapeHtml(text)}</span>`;
     }
 
+    function renderExpiryCell(label, date, status) {
+      const pieces = [];
+      const hasLabel = label && String(label).trim();
+      const hasDate = date && String(date).trim();
+      if (hasLabel) {
+        pieces.push(escapeHtml(label));
+      }
+      if (hasDate) {
+        pieces.push(`<span class="muted">(${escapeHtml(date)})</span>`);
+      }
+      if (!pieces.length) {
+        pieces.push(`<span class="muted">—</span>`);
+      }
+      const pill = statusPill(status);
+      const pillPart = pill ? ` ${pill}` : '';
+      return `<div class="expiry-cell">${pieces.join(' ')}${pillPart}</div>`;
+    }
+
     function getLocalizedField(row, key) {
       if (!row) return '';
       if (currentLang === 'ar') {
@@ -702,8 +728,8 @@
         const displayDescription = getLocalizedField(r, 'description');
         const exp1Label = getLocalizedField(r, 'exp1Label');
         const exp2Label = getLocalizedField(r, 'exp2Label');
-        const exp1 = `${escapeHtml(exp1Label)}${r.exp1Date ? ' ('+escapeHtml(r.exp1Date)+')' : ''}`;
-        const exp2 = `${escapeHtml(exp2Label)}${r.exp2Date ? ' ('+escapeHtml(r.exp2Date)+')' : ''}`;
+        const exp1 = renderExpiryCell(exp1Label, r.exp1Date, r.exp1Status || null);
+        const exp2 = renderExpiryCell(exp2Label, r.exp2Date, r.exp2Status || null);
         const fileUrl = safeHref(r.fileUrl);
         const previewUrl = safeHref(r.filePreviewUrl);
         const previewTitleText = r.fileName || displayName || t('preview.defaultTitle');
