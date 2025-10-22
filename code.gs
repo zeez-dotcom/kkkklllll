@@ -11,6 +11,14 @@ const HEADER = [
   'exp2Label','exp2LabelAr','exp2Date','exp2Status',
   'status','fileUrl','fileName','createdAt'
 ];
+const LEGACY_HEADER_V1 = [
+  'id',
+  'name','nameAr',
+  'description','descriptionAr',
+  'exp1Label','exp1LabelAr','exp1Date',
+  'exp2Label','exp2LabelAr','exp2Date',
+  'status','fileUrl','fileName','createdAt'
+];
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
 const SHARE_FILES_PUBLIC = true;    // auto "Anyone with link → Viewer"
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB safety limit
@@ -45,9 +53,29 @@ function getSheet_() {
 
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
-  const first = sh.getRange(1,1,1,HEADER.length).getValues()[0];
-  if (first.length !== HEADER.length || HEADER.some((h,i)=>first[i] !== h)) {
-    sh.getRange(1,1,1,HEADER.length).setValues([HEADER]);
+
+  const lastColumn = sh.getLastColumn();
+  const headerWidth = Math.max(lastColumn, HEADER.length);
+  const rawHeader = headerWidth > 0 ? sh.getRange(1, 1, 1, headerWidth).getValues()[0] : [];
+  const normalizedHeader = rawHeader.map(value => String(value || '').trim());
+
+  const headerMatches = HEADER.every((h, i) => normalizedHeader[i] === h);
+  if (!headerMatches) {
+    const legacyMatches = LEGACY_HEADER_V1.every((h, i) => normalizedHeader[i] === h);
+    if (legacyMatches) {
+      const exp1DateCol = LEGACY_HEADER_V1.indexOf('exp1Date') + 1;
+      if (exp1DateCol > 0) {
+        sh.insertColumnAfter(exp1DateCol);
+      }
+      const headerAfterFirstInsert = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+        .map(value => String(value || '').trim());
+      const exp2DateIndex = headerAfterFirstInsert.indexOf('exp2Date');
+      if (exp2DateIndex !== -1) {
+        const exp2DateCol = exp2DateIndex + 1;
+        sh.insertColumnAfter(exp2DateCol);
+      }
+    }
+    sh.getRange(1, 1, 1, HEADER.length).setValues([HEADER]);
   }
   return sh;
 }
