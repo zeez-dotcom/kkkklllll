@@ -728,8 +728,8 @@
         const displayDescription = getLocalizedField(r, 'description');
         const exp1Label = getLocalizedField(r, 'exp1Label');
         const exp2Label = getLocalizedField(r, 'exp2Label');
-        const exp1 = renderExpiryCell(exp1Label, r.exp1Date, r.exp1Status || null);
-        const exp2 = renderExpiryCell(exp2Label, r.exp2Date, r.exp2Status || null);
+        const exp1 = renderExpiryCell(exp1Label, r.exp1Date, r.exp1StatusInfo || r.exp1Status || null);
+        const exp2 = renderExpiryCell(exp2Label, r.exp2Date, r.exp2StatusInfo || r.exp2Status || null);
         const fileUrl = safeHref(r.fileUrl);
         const previewUrl = safeHref(r.filePreviewUrl);
         const previewTitleText = r.fileName || displayName || t('preview.defaultTitle');

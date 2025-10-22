@@ -7,8 +7,8 @@ const HEADER = [
   'id',
   'name','nameAr',
   'description','descriptionAr',
-  'exp1Label','exp1LabelAr','exp1Date',
-  'exp2Label','exp2LabelAr','exp2Date',
+  'exp1Label','exp1LabelAr','exp1Date','exp1Status',
+  'exp2Label','exp2LabelAr','exp2Date','exp2Status',
   'status','fileUrl','fileName','createdAt'
 ];
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
@@ -164,6 +164,91 @@ function computeStatus_(exp1Iso, exp2Iso) {
 
   return { overall, exp1: exp1Status, exp2: exp2Status };
 }
+
+function inferStatusType_(label) {
+  const normalized = sanitizeString_(label).toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'expired') return 'Expired';
+  if (normalized === 'active') return 'Active';
+  if (normalized.startsWith('upcoming')) return 'Upcoming';
+  return '';
+}
+
+function mergeStoredStatus_(computed, storedLabel) {
+  const label = sanitizeString_(storedLabel);
+  if (computed) {
+    const merged = Object.assign({}, computed);
+    if (label) {
+      merged.label = label;
+      if (!merged.type) {
+        const inferred = inferStatusType_(label);
+        if (inferred) merged.type = inferred;
+      }
+    }
+    return merged;
+  }
+  if (label) {
+    const type = inferStatusType_(label);
+    return {
+      type: type || 'Active',
+      label,
+      daysUntil: null,
+      withinThreshold: type === 'Upcoming',
+      mode: 'legacy'
+    };
+  }
+  return null;
+}
+
+function formatStatusInfo_(status, defaults) {
+  const result = {
+    type: '',
+    label: '',
+    daysUntil: null,
+    withinThreshold: false,
+    mode: ''
+  };
+
+  if (status) {
+    if (status.type) result.type = String(status.type);
+    if (status.label != null) result.label = sanitizeString_(status.label);
+    if (status.daysUntil != null && isFinite(status.daysUntil)) {
+      result.daysUntil = Number(status.daysUntil);
+    }
+    if (status.mode != null) result.mode = String(status.mode);
+    if (status.withinThreshold != null) {
+      result.withinThreshold = !!status.withinThreshold;
+    }
+  }
+
+  const fallback = defaults || {};
+  if (!result.type && fallback.type) {
+    result.type = String(fallback.type);
+  }
+  if (!result.label && fallback.label != null) {
+    result.label = sanitizeString_(fallback.label);
+  }
+  if (result.daysUntil == null && fallback.daysUntil != null && isFinite(fallback.daysUntil)) {
+    result.daysUntil = Number(fallback.daysUntil);
+  }
+  if (!result.mode && fallback.mode != null) {
+    result.mode = String(fallback.mode);
+  }
+  if (!result.withinThreshold && fallback.withinThreshold) {
+    result.withinThreshold = !!fallback.withinThreshold;
+  }
+
+  if (!result.type && result.label) {
+    const inferred = inferStatusType_(result.label);
+    if (inferred) result.type = inferred;
+  }
+
+  if (!result.type && !result.label) {
+    return null;
+  }
+
+  return result;
+}
 function parseDriveFileId_(url) {
   if (!url) return '';
   let m = String(url).match(/\/file\/d\/([a-zA-Z0-9_-]+)/); if (m) return m[1];
@@ -190,20 +275,31 @@ function normalizeRow_(row) {
   HEADER.forEach((h, i) => obj[h] = row[i] ?? '');
   obj.exp1Date = toIso_(obj.exp1Date);
   obj.exp2Date = toIso_(obj.exp2Date);
+  const exp1Stored = obj.exp1Status;
+  const exp2Stored = obj.exp2Status;
+  const overallStored = obj.status;
   const status = computeStatus_(obj.exp1Date, obj.exp2Date);
-  const overall = status.overall || { type: 'Active', label: 'Active', daysUntil: null, withinThreshold: false, mode: 'none' };
-  obj.exp1Status = status.exp1;
-  obj.exp2Status = status.exp2;
-  obj.status = overall.label;
-  obj.statusInfo = {
-    type: overall.type,
-    label: overall.label,
-    daysUntil: overall.daysUntil,
-    withinThreshold: !!overall.withinThreshold,
-    mode: overall.mode
+  const mergedExp1 = mergeStoredStatus_(status.exp1, exp1Stored);
+  const mergedExp2 = mergeStoredStatus_(status.exp2, exp2Stored);
+  const mergedOverall = mergeStoredStatus_(status.overall, overallStored);
+  const defaultOverall = {
+    type: 'Active',
+    label: 'Active',
+    daysUntil: null,
+    withinThreshold: false,
+    mode: 'none'
   };
-  obj.statusType = overall.type;
-  obj.statusDaysUntil = overall.daysUntil;
+  const exp1Info = formatStatusInfo_(mergedExp1);
+  const exp2Info = formatStatusInfo_(mergedExp2);
+  const overallInfo = formatStatusInfo_(mergedOverall, defaultOverall) || Object.assign({}, defaultOverall);
+  obj.exp1StatusInfo = exp1Info;
+  obj.exp2StatusInfo = exp2Info;
+  obj.exp1Status = sanitizeString_(exp1Stored);
+  obj.exp2Status = sanitizeString_(exp2Stored);
+  obj.status = overallInfo.label;
+  obj.statusInfo = overallInfo;
+  obj.statusType = overallInfo.type;
+  obj.statusDaysUntil = overallInfo.daysUntil;
   obj.name = sanitizeString_(obj.name);
   obj.nameAr = sanitizeString_(obj.nameAr);
   obj.description = sanitizeString_(obj.description);
@@ -290,22 +386,25 @@ function getDashboardData(q) {
 
   const statusTypeOf = r => {
     const candidates = [];
-    const pushCandidate = status => {
-      if (status && status.type) {
+    const considerStatus = (statusObj, label) => {
+      if (statusObj && statusObj.type) {
         candidates.push({
-          type: status.type,
-          daysUntil: status.daysUntil
+          type: statusObj.type,
+          daysUntil: statusObj.daysUntil
         });
+      } else if (label) {
+        const inferred = inferStatusType_(label);
+        if (inferred) {
+          candidates.push({ type: inferred, daysUntil: null });
+        }
       }
     };
 
-    pushCandidate(r.exp1Status);
-    pushCandidate(r.exp2Status);
-    if (r.statusInfo && r.statusInfo.type) {
-      pushCandidate(r.statusInfo);
-    }
+    considerStatus(r.exp1StatusInfo, r.exp1Status);
+    considerStatus(r.exp2StatusInfo, r.exp2Status);
+    considerStatus(r.statusInfo, r.status);
     if (r.statusType && !candidates.length) {
-      pushCandidate({ type: r.statusType, daysUntil: r.statusDaysUntil });
+      considerStatus({ type: r.statusType, daysUntil: r.statusDaysUntil }, null);
     }
     if (!candidates.length) {
       const raw = String(r.status || '').toLowerCase();
@@ -388,9 +487,11 @@ function uploadDocument(obj) {
       data.exp1Label,
       data.exp1LabelAr,
       data.exp1Date,
+      status.exp1 && status.exp1.label ? status.exp1.label : '',
       data.exp2Label,
       data.exp2LabelAr,
       data.exp2Date,
+      status.exp2 && status.exp2.label ? status.exp2.label : '',
       overall.label,
       fileUrl,
       fileName || data.name,
