@@ -300,6 +300,10 @@ function makePreviewUrl_(fileUrl) {
   if (!id) return safeUrl;
 
   const allowedQueryKeys = ['resourcekey', 'usp', 'export'];
+  const allowedQueryLookup = allowedQueryKeys.reduce((acc, key) => {
+    acc[key] = true;
+    return acc;
+  }, {});
   let preservedQuery = '';
 
   if (safeUrl) {
@@ -326,7 +330,9 @@ function makePreviewUrl_(fileUrl) {
         } catch (err) {
           key = String(rawKey || '').trim();
         }
-        if (allowedQueryKeys.indexOf(key) === -1) return;
+        if (!key) return;
+        const normalizedKey = key.toLowerCase();
+        if (!allowedQueryLookup[normalizedKey]) return;
         let value = '';
         if (rawValue) {
           try {
@@ -360,19 +366,29 @@ function makePreviewUrl_(fileUrl) {
 
 (function previewUrlRegressionCheck_() {
   const sampleId = 'SAMPLE_ID';
-  const resourceKey = 'resourcekey=1-testKey';
-  const sampleUrl = `https://drive.google.com/file/d/${sampleId}/view?usp=drivesdk&${resourceKey}`;
-  const preview = makePreviewUrl_(sampleUrl);
-  if (typeof console !== 'undefined') {
-    if (typeof console.assert === 'function') {
-      console.assert(
-        preview.indexOf(resourceKey) !== -1,
-        'makePreviewUrl_ should retain resourcekey query parameter for preview URLs.'
-      );
-    } else if (preview.indexOf(resourceKey) === -1 && typeof console.warn === 'function') {
-      console.warn('makePreviewUrl_ failed to retain resourcekey during regression check.', preview);
+  const resourceKeySamples = [
+    { query: 'resourcekey=1-testKey', label: 'resourcekey' },
+    { query: 'resourceKey=1-testKeyCamel', label: 'resourceKey' }
+  ];
+
+  resourceKeySamples.forEach(sample => {
+    const sampleUrl = `https://drive.google.com/file/d/${sampleId}/view?usp=drivesdk&${sample.query}`;
+    const preview = makePreviewUrl_(sampleUrl);
+    if (typeof console !== 'undefined') {
+      const containsResourceKey = preview.indexOf(sample.query) !== -1;
+      if (typeof console.assert === 'function') {
+        console.assert(
+          containsResourceKey,
+          `makePreviewUrl_ should retain ${sample.label} query parameter for preview URLs.`
+        );
+      } else if (!containsResourceKey && typeof console.warn === 'function') {
+        console.warn(
+          `makePreviewUrl_ failed to retain ${sample.label} during regression check.`,
+          preview
+        );
+      }
     }
-  }
+  });
 })();
 function getAllRows_() {
   const sh = getSheet_();
