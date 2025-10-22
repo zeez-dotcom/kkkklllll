@@ -470,6 +470,173 @@
       box-shadow: 0 10px 22px rgba(37, 99, 235, 0.16);
     }
 
+    .form-buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    .record-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .record-action-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.04);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition), transform var(--transition), box-shadow var(--transition);
+    }
+
+    .record-action-button.edit {
+      color: var(--primary-strong);
+      border-color: rgba(37, 99, 235, 0.32);
+      background: rgba(37, 99, 235, 0.08);
+    }
+
+    .record-action-button.renew {
+      color: var(--accent);
+      border-color: rgba(249, 115, 22, 0.35);
+      background: var(--accent-soft);
+    }
+
+    .record-action-button.history {
+      color: var(--muted);
+      border-color: rgba(148, 163, 184, 0.4);
+      background: rgba(148, 163, 184, 0.12);
+    }
+
+    .record-action-button:hover {
+      transform: translateY(-1px);
+      background: rgba(37, 99, 235, 0.1);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.15);
+    }
+
+    .record-action-button.renew:hover {
+      background: rgba(249, 115, 22, 0.22);
+      box-shadow: 0 10px 22px rgba(249, 115, 22, 0.22);
+    }
+
+    .record-action-button.history:hover {
+      background: rgba(148, 163, 184, 0.2);
+      box-shadow: 0 10px 22px rgba(148, 163, 184, 0.2);
+    }
+
+    .record-action-button:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.3);
+      outline-offset: 2px;
+    }
+
+    .history-panel {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: min(420px, calc(100% - 32px));
+      max-height: calc(100vh - 120px);
+      z-index: 30;
+    }
+
+    .history-panel-inner {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: inherit;
+    }
+
+    .history-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .history-panel-titles {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .history-panel-title {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .btn-history-close {
+      margin-left: auto;
+    }
+
+    .history-status {
+      min-height: 20px;
+    }
+
+    .history-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: auto;
+    }
+
+    .history-entry {
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      background: var(--surface-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .history-entry-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .history-entry-body {
+      display: grid;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+
+    .history-entry-body span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .history-entry a {
+      color: var(--primary-strong);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .history-entry a:hover {
+      text-decoration: underline;
+    }
+
     .doc-action-button svg {
       width: 18px;
       height: 18px;
@@ -629,6 +796,8 @@
       .btn { width: 100%; }
       .form-actions { flex-direction: column; align-items: stretch; }
       .form-actions .btn { width: 100%; }
+      .form-buttons { align-items: stretch; }
+      .history-panel { left: 16px; right: 16px; bottom: 16px; width: auto; }
       .preview-body { padding-inline: 16px; padding-bottom: 16px; }
     }
 
@@ -642,6 +811,7 @@
     html[dir="rtl"] .search-group input { padding-inline-start: 16px; padding-inline-end: 48px; }
     html[dir="rtl"] .search-icon { inset-inline-start: auto; inset-inline-end: 16px; }
     html[dir="rtl"] .doc-actions { justify-content: flex-end; flex-direction: row-reverse; }
+    html[dir="rtl"] .record-actions { justify-content: flex-end; flex-direction: row-reverse; }
   </style>
 </head>
 <body>
@@ -735,6 +905,7 @@
                 <th id="thExpiry2"></th>
                 <th id="thStatus"></th>
                 <th id="thFile"></th>
+                <th id="thActions"></th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -803,7 +974,10 @@
               <input id="uploadFile" type="file" name="file" accept="image/*,application/pdf" />
               <div class="muted" id="documentHelp"></div>
             </div>
-            <button type="submit" id="btnUpload" class="btn btn-primary btn-upload" aria-busy="false"></button>
+            <div class="form-buttons">
+              <button type="button" id="btnCancelEdit" class="btn btn-ghost hidden"></button>
+              <button type="submit" id="btnUpload" class="btn btn-primary btn-upload" aria-busy="false"></button>
+            </div>
           </div>
         </form>
         <div id="uploadResult" class="muted" role="status" aria-live="polite"></div>
@@ -811,6 +985,20 @@
     </section>
 
   </main>
+
+  <aside id="historyPanel" class="history-panel hidden" aria-hidden="true">
+    <div class="history-panel-inner">
+      <div class="history-panel-header">
+        <div class="history-panel-titles">
+          <h2 id="historyTitle" class="history-panel-title"></h2>
+          <div id="historySubtitle" class="history-panel-subtitle muted"></div>
+        </div>
+        <button type="button" id="historyClose" class="btn btn-ghost btn-history-close"></button>
+      </div>
+      <div id="historyStatus" class="history-status muted"></div>
+      <ul id="historyList" class="history-list"></ul>
+    </div>
+  </aside>
 
   <div id="preview-card" class="preview-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="preview-title">
     <div class="preview-dialog">
@@ -860,7 +1048,8 @@
           exp1: 'Expiry 1',
           exp2: 'Expiry 2',
           status: 'Status',
-          file: 'File'
+          file: 'File',
+          actions: 'Actions'
         },
         preview: {
           title: 'Preview',
@@ -870,6 +1059,14 @@
         },
         noRecords: 'No matching records.',
         fileLinks: { open: 'Open', preview: 'Preview', none: '—' },
+        rowActions: {
+          edit: 'Edit',
+          editTooltip: 'Edit this record',
+          renew: 'Renew',
+          renewTooltip: 'Renew this record',
+          history: 'History',
+          historyTooltip: 'Show change history'
+        },
         uploadForm: {
           nameLabel: 'Name',
           nameLabelAr: 'Name (Arabic)',
@@ -889,15 +1086,44 @@
           exp2Date: 'Expiry 2 Date',
           documentLabel: 'Document (Image or PDF)',
           documentHelp: 'Optional. Files up to ~5MB recommended.',
-          submit: 'Save'
+          submit: 'Save',
+          update: 'Update',
+          renew: 'Renew',
+          cancelEdit: 'Cancel edit'
         },
         uploadStatus: {
           uploading: 'Uploading…',
           saved: 'Saved. ID: {id}',
+          updated: 'Updated. ID: {id}',
+          renewed: 'Renewed. ID: {id}',
           link: 'Open file',
           errorWithMessage: 'Error: {message}',
           generic: 'Error saving record.',
           failedWithMessage: 'Failed: {message}'
+        },
+        history: {
+          title: 'Change History',
+          titleFor: 'History — {name}',
+          subtitle: 'Record ID: {id}',
+          close: 'Hide history',
+          loading: 'Loading history…',
+          empty: 'No history entries yet.',
+          error: 'Unable to load history.',
+          errorWithMessage: 'Unable to load history: {message}',
+          noFile: 'No file available',
+          labels: {
+            timestamp: 'Timestamp',
+            exp1: 'Expiry 1',
+            exp2: 'Expiry 2',
+            file: 'File',
+            status: 'Status',
+            none: '—'
+          },
+          actions: {
+            update: 'Updated',
+            renew: 'Renewed',
+            create: 'Created'
+          }
         },
         errors: {
           loadFail: 'Failed to load: {message}',
@@ -942,7 +1168,8 @@
           exp1: 'الانتهاء 1',
           exp2: 'الانتهاء 2',
           status: 'الحالة',
-          file: 'الملف'
+          file: 'الملف',
+          actions: 'الإجراءات'
         },
         preview: {
           title: 'معاينة',
@@ -952,6 +1179,14 @@
         },
         noRecords: 'لا توجد سجلات مطابقة.',
         fileLinks: { open: 'فتح', preview: 'معاينة', none: '—' },
+        rowActions: {
+          edit: 'تعديل',
+          editTooltip: 'تعديل السجل',
+          renew: 'تجديد',
+          renewTooltip: 'تجديد السجل',
+          history: 'السجل',
+          historyTooltip: 'عرض سجل التعديلات'
+        },
         uploadForm: {
           nameLabel: 'الاسم',
           nameLabelAr: 'الاسم (بالعربية)',
@@ -971,15 +1206,44 @@
           exp2Date: 'تاريخ الانتهاء 2',
           documentLabel: 'المستند (صورة أو PDF)',
           documentHelp: 'اختياري. يفضل ملفات حتى 5 ميجابايت تقريبًا.',
-          submit: 'حفظ'
+          submit: 'حفظ',
+          update: 'تحديث',
+          renew: 'تجديد',
+          cancelEdit: 'إلغاء التعديل'
         },
         uploadStatus: {
           uploading: 'جارٍ الرفع…',
           saved: 'تم الحفظ. المعرّف: {id}',
+          updated: 'تم التحديث. المعرّف: {id}',
+          renewed: 'تم التجديد. المعرّف: {id}',
           link: 'فتح الملف',
           errorWithMessage: 'خطأ: {message}',
           generic: 'حدث خطأ أثناء حفظ السجل.',
           failedWithMessage: 'فشل: {message}'
+        },
+        history: {
+          title: 'سجل التغييرات',
+          titleFor: 'سجل التغييرات — {name}',
+          subtitle: 'معرف السجل: {id}',
+          close: 'إخفاء السجل',
+          loading: 'جاري تحميل السجل…',
+          empty: 'لا توجد تغييرات مسجلة.',
+          error: 'تعذر تحميل السجل.',
+          errorWithMessage: 'تعذر تحميل السجل: {message}',
+          noFile: 'لا يوجد ملف',
+          labels: {
+            timestamp: 'الوقت',
+            exp1: 'الانتهاء 1',
+            exp2: 'الانتهاء 2',
+            file: 'الملف',
+            status: 'الحالة',
+            none: '—'
+          },
+          actions: {
+            update: 'تم التحديث',
+            renew: 'تم التجديد',
+            create: 'تم الإنشاء'
+          }
         },
         errors: {
           loadFail: 'فشل التحميل: {message}',
@@ -1028,9 +1292,16 @@
     const labelDocument = document.getElementById('labelDocument');
     const documentHelp = document.getElementById('documentHelp');
     const btnUpload = document.getElementById('btnUpload');
+    const btnCancelEdit = document.getElementById('btnCancelEdit');
     const uploadResult = document.getElementById('uploadResult');
     const languageLabel = document.getElementById('languageLabel');
     const uploadForm = document.getElementById('uploadForm');
+    const historyPanel = document.getElementById('historyPanel');
+    const historyTitle = document.getElementById('historyTitle');
+    const historySubtitle = document.getElementById('historySubtitle');
+    const historyStatus = document.getElementById('historyStatus');
+    const historyList = document.getElementById('historyList');
+    const historyClose = document.getElementById('historyClose');
 
     const inputName = document.getElementById('uploadName');
     const inputDescription = document.getElementById('uploadDescription');
@@ -1047,12 +1318,15 @@
 
     const state = {
       rows: [],
+      rowsById: new Map(),
       countsAll: createEmptyCounts(),
       countsFiltered: createEmptyCounts()
     };
     let hasLoaded = false;
     let lastUploadState = { type: 'idle', payload: null };
     let resultState = { type: 'count' };
+    let formMode = { type: 'create', id: null, record: null };
+    const historyState = { open: false, id: null, record: null, entries: [], loading: false, error: null };
 
     function t(path) {
       const langTable = translations[currentLang] || translations.en;
@@ -1153,6 +1427,267 @@
       });
     }
 
+    function updateFormModeUi() {
+      const langTable = translations[currentLang] || translations.en;
+      const formStrings = langTable.uploadForm || translations.en.uploadForm;
+      const mode = formMode && formMode.type ? formMode.type : 'create';
+      let key = 'submit';
+      if (mode === 'edit') key = 'update';
+      if (mode === 'renew') key = 'renew';
+      const submitLabel = formStrings[key] || formStrings.submit || '';
+      btnUpload.textContent = submitLabel;
+      if (btnCancelEdit) {
+        const cancelLabel = formStrings.cancelEdit || '';
+        btnCancelEdit.textContent = cancelLabel;
+        btnCancelEdit.classList.toggle('hidden', mode === 'create');
+      }
+    }
+
+    function setFormMode(type, options = {}) {
+      const normalizedType = type === 'edit' || type === 'renew' ? type : 'create';
+      formMode = {
+        type: normalizedType,
+        id: options && options.id != null ? String(options.id) : null,
+        record: options && options.record ? options.record : null
+      };
+      if (uploadForm) {
+        if (normalizedType === 'create') {
+          delete uploadForm.dataset.mode;
+          delete uploadForm.dataset.recordId;
+        } else {
+          uploadForm.dataset.mode = normalizedType;
+          uploadForm.dataset.recordId = formMode.id || '';
+        }
+      }
+      updateFormModeUi();
+    }
+
+    function populateFormFromRecord(record) {
+      if (!record || !uploadForm) return;
+      uploadForm.reset();
+      if (inputName) inputName.value = record.name || '';
+      if (inputDescription) inputDescription.value = record.description || '';
+      if (inputNameAr) inputNameAr.value = record.nameAr || '';
+      if (inputDescriptionAr) inputDescriptionAr.value = record.descriptionAr || '';
+      if (exp1LabelInputEn) exp1LabelInputEn.value = record.exp1Label || '';
+      if (exp1LabelInputAr) exp1LabelInputAr.value = record.exp1LabelAr || '';
+      if (exp2LabelInputEn) exp2LabelInputEn.value = record.exp2Label || '';
+      if (exp2LabelInputAr) exp2LabelInputAr.value = record.exp2LabelAr || '';
+      const exp1DateInput = uploadForm.querySelector('input[name="exp1Date"]');
+      const exp2DateInput = uploadForm.querySelector('input[name="exp2Date"]');
+      if (exp1DateInput) exp1DateInput.value = record.exp1Date || '';
+      if (exp2DateInput) exp2DateInput.value = record.exp2Date || '';
+      if (uploadForm.file) {
+        try { uploadForm.file.value = ''; } catch (err) {}
+      }
+    }
+
+    function goToUploadTab() {
+      if (tabUpload && !tabUpload.classList.contains('active')) {
+        tabUpload.click();
+      }
+    }
+
+    function enterFormMode(type, record) {
+      if (!record) return;
+      populateFormFromRecord(record);
+      setFormMode(type, { id: record.id, record });
+      goToUploadTab();
+      setUploadStatus('idle');
+      if (inputName && typeof inputName.focus === 'function') {
+        setTimeout(() => inputName.focus(), 0);
+      }
+    }
+
+    function cancelEditMode() {
+      if (uploadForm) uploadForm.reset();
+      setFormMode('create');
+      setUploadStatus('idle');
+    }
+
+    function getHistoryStrings() {
+      return (translations[currentLang] && translations[currentLang].history) || translations.en.history;
+    }
+
+    function updateHistoryTitles() {
+      if (!historyPanel) return;
+      const hist = getHistoryStrings();
+      if (historyClose) historyClose.textContent = hist.close || '';
+      if (!historyState.open || !historyState.record) {
+        historyTitle.textContent = hist.title || '';
+        historySubtitle.textContent = '';
+        return;
+      }
+      const name = getLocalizedField(historyState.record, 'name') || historyState.record.name || historyState.record.id || '';
+      const title = name && hist.titleFor ? format(hist.titleFor, { name }) : hist.title;
+      historyTitle.textContent = title || '';
+      const subtitle = hist.subtitle ? format(hist.subtitle, { id: historyState.id || '' }) : '';
+      historySubtitle.textContent = subtitle || '';
+    }
+
+    function updateHistoryUi() {
+      if (!historyPanel) return;
+      if (historyState.open) {
+        historyPanel.classList.remove('hidden');
+        historyPanel.setAttribute('aria-hidden', 'false');
+        updateHistoryTitles();
+      } else {
+        historyPanel.classList.add('hidden');
+        historyPanel.setAttribute('aria-hidden', 'true');
+      }
+      renderHistoryEntries();
+      if (!historyState.open) {
+        updateHistoryTitles();
+      }
+    }
+
+    function renderHistoryEntries() {
+      if (!historyPanel) return;
+      const hist = getHistoryStrings();
+      if (!historyState.open) {
+        historyStatus.textContent = '';
+        historyList.innerHTML = '';
+        return;
+      }
+      if (historyState.loading) {
+        historyStatus.textContent = hist.loading || '';
+        historyList.innerHTML = '';
+        return;
+      }
+      if (historyState.error) {
+        historyStatus.textContent = historyState.error;
+        historyList.innerHTML = '';
+        return;
+      }
+      if (!historyState.entries.length) {
+        historyStatus.textContent = hist.empty || '';
+        historyList.innerHTML = '';
+        return;
+      }
+      historyStatus.textContent = '';
+      const noneLabel = (hist.labels && hist.labels.none) || t('fileLinks.none');
+      historyList.innerHTML = historyState.entries.map(entry => {
+        const actionLabel = (hist.actions && hist.actions[entry.action]) || entry.action || '';
+        const timestampText = formatHistoryTimestamp(entry.timestamp);
+        const exp1Value = entry.prevExp1Date
+          ? escapeHtml(entry.prevExp1Date)
+          : `<span class="muted">${escapeHtml(noneLabel)}</span>`;
+        const exp2Value = entry.prevExp2Date
+          ? escapeHtml(entry.prevExp2Date)
+          : `<span class="muted">${escapeHtml(noneLabel)}</span>`;
+        const statusValue = entry.prevStatus
+          ? escapeHtml(entry.prevStatus)
+          : `<span class="muted">${escapeHtml(noneLabel)}</span>`;
+        const fileHtml = entry.prevFileUrl
+          ? `<a href="${escapeAttr(entry.prevFileUrl)}" target="_blank" rel="noopener">${escapeHtml(entry.prevFileName || entry.prevFileUrl)}</a>`
+          : `<span class="muted">${escapeHtml(hist.noFile || noneLabel)}</span>`;
+        return `
+          <li class="history-entry">
+            <div class="history-entry-header">
+              <span>${escapeHtml(actionLabel)}</span>
+              <time>${escapeHtml(timestampText)}</time>
+            </div>
+            <div class="history-entry-body">
+              <span><strong>${escapeHtml(hist.labels.exp1)}</strong> ${exp1Value}</span>
+              <span><strong>${escapeHtml(hist.labels.exp2)}</strong> ${exp2Value}</span>
+              <span><strong>${escapeHtml(hist.labels.status)}</strong> ${statusValue}</span>
+              <span><strong>${escapeHtml(hist.labels.file)}</strong> ${fileHtml}</span>
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+
+    function closeHistoryPanel() {
+      historyState.open = false;
+      historyState.id = null;
+      historyState.record = null;
+      historyState.entries = [];
+      historyState.error = null;
+      historyState.loading = false;
+      updateHistoryUi();
+    }
+
+    function fetchHistory(recordId) {
+      if (!recordId) {
+        historyState.loading = false;
+        historyState.error = getHistoryStrings().error || '';
+        renderHistoryEntries();
+        return;
+      }
+      historyState.loading = true;
+      historyState.error = null;
+      historyState.entries = [];
+      renderHistoryEntries();
+      try {
+        if (typeof google === 'undefined' || !google.script || !google.script.run) {
+          throw new Error(t('errors.runtimeUnavailable'));
+        }
+        google.script.run.withSuccessHandler(entries => {
+          historyState.loading = false;
+          historyState.error = null;
+          historyState.entries = Array.isArray(entries) ? entries : [];
+          renderHistoryEntries();
+        }).withFailureHandler(err => {
+          historyState.loading = false;
+          const message = err && err.message ? err.message : err;
+          const hist = getHistoryStrings();
+          historyState.error = hist.errorWithMessage
+            ? format(hist.errorWithMessage, { message: String(message || '') })
+            : (hist.error || String(message || ''));
+          renderHistoryEntries();
+        }).getDocumentHistory(recordId);
+      } catch (err) {
+        historyState.loading = false;
+        const hist = getHistoryStrings();
+        historyState.error = hist.errorWithMessage
+          ? format(hist.errorWithMessage, { message: String((err && err.message) || err || '') })
+          : (hist.error || String((err && err.message) || err || ''));
+        renderHistoryEntries();
+      }
+    }
+
+    function toggleHistory(record) {
+      if (!record) return;
+      const recordId = record.id != null ? String(record.id) : '';
+      if (!recordId) return;
+      if (historyState.open && historyState.id === recordId) {
+        closeHistoryPanel();
+        return;
+      }
+      historyState.open = true;
+      historyState.id = recordId;
+      historyState.record = record;
+      historyState.entries = [];
+      historyState.error = null;
+      historyState.loading = true;
+      updateHistoryUi();
+      fetchHistory(recordId);
+    }
+
+    function formatHistoryTimestamp(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (!isNaN(date)) {
+        try {
+          const locale = currentLang === 'ar' ? 'ar' : 'en';
+          return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+        } catch (err) {
+          return date.toISOString();
+        }
+      }
+      return String(value);
+    }
+
+    function getRowByIdLocal(id) {
+      if (id == null) return null;
+      const key = String(id);
+      if (state.rowsById && typeof state.rowsById.get === 'function' && state.rowsById.has(key)) {
+        return state.rowsById.get(key);
+      }
+      return state.rows.find(r => String(r.id) === key) || null;
+    }
+
     function applyTranslations() {
       const langTable = translations[currentLang] || translations.en;
       document.documentElement.lang = currentLang;
@@ -1177,6 +1712,7 @@
       document.getElementById('thExpiry2').textContent = langTable.tableHeaders.exp2;
       document.getElementById('thStatus').textContent = langTable.tableHeaders.status;
       document.getElementById('thFile').textContent = langTable.tableHeaders.file;
+      document.getElementById('thActions').textContent = langTable.tableHeaders.actions;
       previewTitle.textContent = previewCard.classList.contains('hidden') ? langTable.preview.title : previewTitle.textContent;
       previewFrame.title = langTable.preview.iframeTitle;
       btnClosePreview.textContent = langTable.preview.close;
@@ -1192,7 +1728,6 @@
       if (labelExp2Ar) labelExp2Ar.textContent = langTable.uploadForm.exp2LabelAr;
       labelDocument.textContent = langTable.uploadForm.documentLabel;
       documentHelp.textContent = langTable.uploadForm.documentHelp;
-      btnUpload.textContent = langTable.uploadForm.submit;
       exp1LabelInputEn.placeholder = langTable.uploadForm.exp1Placeholder;
       exp2LabelInputEn.placeholder = langTable.uploadForm.exp2Placeholder;
       if (inputNameAr) inputNameAr.placeholder = langTable.uploadForm.namePlaceholderAr;
@@ -1205,6 +1740,8 @@
         const option = languageSelect.querySelector(`option[value="${value}"]`);
         if (option) option.textContent = label;
       });
+      updateFormModeUi();
+      updateHistoryUi();
       renderUploadStatus();
       renderTable(state.rows);
       updateStatsDisplay();
@@ -1257,10 +1794,15 @@
         case 'uploading':
           uploadResult.textContent = t('uploadStatus.uploading');
           break;
-        case 'saved': {
+        case 'saved':
+        case 'updated':
+        case 'renewed': {
           const payload = lastUploadState.payload || {};
           const openUrl = safeHref(payload.fileUrl);
-          const savedText = format(t('uploadStatus.saved'), { id: payload.id != null ? payload.id : '' });
+          let key = 'uploadStatus.saved';
+          if (lastUploadState.type === 'updated') key = 'uploadStatus.updated';
+          if (lastUploadState.type === 'renewed') key = 'uploadStatus.renewed';
+          const savedText = format(t(key), { id: payload.id != null ? payload.id : '' });
           const linkHtml = openUrl
             ? ` · <a class="link" target="_blank" rel="noopener" href="${escapeAttr(openUrl)}">${escapeHtml(t('uploadStatus.link'))}</a>`
             : '';
@@ -1415,7 +1957,7 @@
         return;
       }
       if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="muted">${escapeHtml(t('noRecords'))}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="muted">${escapeHtml(t('noRecords'))}</td></tr>`;
         return;
       }
 
@@ -1426,6 +1968,7 @@
         const exp2Label = getLocalizedField(r, 'exp2Label');
         const exp1 = renderExpiryCell(exp1Label, r.exp1Date, r.exp1StatusInfo || r.exp1Status || null);
         const exp2 = renderExpiryCell(exp2Label, r.exp2Date, r.exp2StatusInfo || r.exp2Status || null);
+        const rowId = r.id != null ? r.id : '';
         const fileUrl = safeHref(r.fileUrl);
         const previewUrl = safeHref(r.filePreviewUrl);
         const previewTitleText = r.fileName || displayName || t('preview.defaultTitle');
@@ -1444,15 +1987,29 @@
         const fileCell = openButton || previewButton
           ? `<div class="doc-actions">${openButton}${previewButton}</div>`
           : `<span class="muted doc-action-empty">${escapeHtml(t('fileLinks.none'))}</span>`;
+        const actionEditLabel = t('rowActions.edit');
+        const actionRenewLabel = t('rowActions.renew');
+        const actionHistoryLabel = t('rowActions.history');
+        const actionEditTooltip = t('rowActions.editTooltip');
+        const actionRenewTooltip = t('rowActions.renewTooltip');
+        const actionHistoryTooltip = t('rowActions.historyTooltip');
+        const actionsCell = `
+          <div class="record-actions" data-id="${escapeAttr(rowId)}">
+            <button type="button" class="record-action-button edit" data-action="edit" data-id="${escapeAttr(rowId)}" title="${escapeAttr(actionEditTooltip)}">${escapeHtml(actionEditLabel)}</button>
+            <button type="button" class="record-action-button renew" data-action="renew" data-id="${escapeAttr(rowId)}" title="${escapeAttr(actionRenewTooltip)}">${escapeHtml(actionRenewLabel)}</button>
+            <button type="button" class="record-action-button history" data-action="history" data-id="${escapeAttr(rowId)}" title="${escapeAttr(actionHistoryTooltip)}">${escapeHtml(actionHistoryLabel)}</button>
+          </div>
+        `;
         return `
-          <tr>
-            <td>${escapeHtml(r.id)}</td>
+          <tr data-record-id="${escapeAttr(rowId)}">
+            <td>${escapeHtml(rowId)}</td>
             <td>${escapeHtml(displayName)}</td>
             <td>${escapeHtml(displayDescription)}</td>
             <td>${exp1}</td>
             <td>${exp2}</td>
             <td>${statusPill(r.statusInfo || r.status)}</td>
             <td>${fileCell}</td>
+            <td>${actionsCell}</td>
           </tr>
         `;
       }).join('');
@@ -1463,6 +2020,25 @@
           preview(link.getAttribute('data-preview-url'), link.getAttribute('data-preview-title'));
         });
       });
+      tbody.querySelectorAll('.record-action-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.getAttribute('data-action');
+          const id = btn.getAttribute('data-id');
+          handleRecordAction(action, id);
+        });
+      });
+    }
+
+    function handleRecordAction(action, id) {
+      const record = getRowByIdLocal(id);
+      if (!record) return;
+      if (action === 'edit') {
+        enterFormMode('edit', record);
+      } else if (action === 'renew') {
+        enterFormMode('renew', record);
+      } else if (action === 'history') {
+        toggleHistory(record);
+      }
     }
 
     function updateCounts(data) {
@@ -1497,6 +2073,18 @@
       previewFrame.src = '';
       previewTitle.textContent = t('preview.title');
     });
+
+    if (btnCancelEdit) {
+      btnCancelEdit.addEventListener('click', () => {
+        cancelEditMode();
+      });
+    }
+
+    if (historyClose) {
+      historyClose.addEventListener('click', () => {
+        closeHistoryPanel();
+      });
+    }
 
     document.querySelectorAll('.tab').forEach(t=>{
       t.addEventListener('click', ()=>{
@@ -1541,6 +2129,14 @@
             }
 
             state.rows = rows;
+            state.rowsById = new Map(rows.map(r => [String(r.id), r]));
+            if (historyState.open && historyState.id) {
+              const updatedRecord = state.rowsById.get(String(historyState.id));
+              if (updatedRecord) {
+                historyState.record = updatedRecord;
+                updateHistoryTitles();
+              }
+            }
             updateCounts(countsAll);
             updateFilteredCounts(countsFiltered);
             hasLoaded = true;
@@ -1577,6 +2173,9 @@
       setUploadStatus('uploading');
       setLoading(btnUpload, true);
 
+      const currentMode = formMode && formMode.type ? formMode.type : 'create';
+      const currentId = formMode && formMode.id != null ? formMode.id : null;
+
       try {
         const fd = new FormData(uploadForm);
         const obj = {};
@@ -1597,14 +2196,40 @@
           obj.fileB64 = await readAsBase64_(file);
         }
 
-        google.script.run.withSuccessHandler(res=>{
+        if (currentMode !== 'create') {
+          if (!currentId) {
+            throw new Error('Record ID is required for updates.');
+          }
+          obj.id = currentId;
+          obj.mode = currentMode;
+        }
+
+        if (typeof google === 'undefined' || !google.script || !google.script.run) {
+          throw new Error(t('errors.runtimeUnavailable'));
+        }
+
+        const runner = google.script.run.withSuccessHandler(res=>{
           setLoading(btnUpload, false);
           if (res && res.ok) {
             const openUrl = res.fileUrl ? safeHref(res.fileUrl) : '';
-            setUploadStatus('saved', { id: res.id, fileUrl: openUrl });
-            uploadForm.reset();
-            searchEl.value = '';
-            refresh({ query: '' });
+            const responseId = res.id != null ? res.id : currentId;
+            const payload = { id: responseId, fileUrl: openUrl };
+            if (currentMode === 'create') {
+              setUploadStatus('saved', payload);
+              uploadForm.reset();
+              setFormMode('create');
+              searchEl.value = '';
+              refresh({ query: '' });
+            } else {
+              const statusType = currentMode === 'renew' ? 'renewed' : 'updated';
+              setUploadStatus(statusType, payload);
+              uploadForm.reset();
+              setFormMode('create');
+              refresh({ query: searchEl.value || '' });
+              if (historyState.open && responseId != null && String(historyState.id) === String(responseId)) {
+                fetchHistory(String(responseId));
+              }
+            }
           } else {
             const message = res && res.error ? res.error : '';
             setUploadStatus('error', { message: String(message || '') });
@@ -1613,7 +2238,13 @@
           setLoading(btnUpload, false);
           const message = err && err.message ? err.message : err;
           setUploadStatus('failed', { message: String(message || '') });
-        }).uploadDocument(obj);
+        });
+
+        if (currentMode === 'create') {
+          runner.uploadDocument(obj);
+        } else {
+          runner.updateDocument(obj);
+        }
       } catch (err) {
         setLoading(btnUpload, false);
         const message = err && err.message ? err.message : err;

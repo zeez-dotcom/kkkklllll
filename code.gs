@@ -14,6 +14,17 @@ const HEADER = [
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
 const SHARE_FILES_PUBLIC = true;    // auto "Anyone with link → Viewer"
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB safety limit
+const HISTORY_SHEET_NAME = 'LicenseHistory';
+const HISTORY_HEADER = [
+  'id',
+  'timestamp',
+  'action',
+  'prevExp1Date',
+  'prevExp2Date',
+  'prevFileUrl',
+  'prevFileName',
+  'prevStatus'
+];
 
 /**********************
  * WEB APP ENTRY
@@ -59,6 +70,19 @@ function getFolder_() {
   FOLDER_ID = folder.getId();
   return folder;
 }
+function getHistorySheet_() {
+  const sh = getSheet_(); // ensure spreadsheet exists
+  const ss = sh.getParent();
+  let history = ss.getSheetByName(HISTORY_SHEET_NAME);
+  if (!history) {
+    history = ss.insertSheet(HISTORY_SHEET_NAME);
+  }
+  const first = history.getRange(1, 1, 1, HISTORY_HEADER.length).getValues()[0];
+  if (first.length !== HISTORY_HEADER.length || HISTORY_HEADER.some((h, i) => first[i] !== h)) {
+    history.getRange(1, 1, 1, HISTORY_HEADER.length).setValues([HISTORY_HEADER]);
+  }
+  return history;
+}
 function sanitizeString_(value) {
   return String(value == null ? '' : value).trim();
 }
@@ -75,6 +99,13 @@ function toIso_(d) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const parsed = new Date(s);
   return isNaN(parsed) ? '' : Utilities.formatDate(parsed, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+function formatTimestamp_(value) {
+  if (!value) return '';
+  const date = Object.prototype.toString.call(value) === '[object Date]' ? value : new Date(value);
+  if (isNaN(date)) return '';
+  const tz = Session.getScriptTimeZone();
+  return Utilities.formatDate(date, tz, "yyyy-MM-dd'T'HH:mm:ssXXX");
 }
 function daysUntil_(iso) {
   if (!iso) return null;
@@ -270,6 +301,25 @@ function getAllRows_() {
     .filter(r => String(r[0]||'').trim() !== '' || String(r[1]||'').trim() !== '')
     .map(normalizeRow_);
 }
+function findRowById_(id) {
+  const target = String(id || '').trim();
+  if (!target) return null;
+  const sh = getSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return null;
+  const range = sh.getRange(2, 1, last - 1, HEADER.length);
+  const values = range.getValues();
+  for (let i = 0; i < values.length; i++) {
+    if (String(values[i][0]) === target) {
+      return {
+        rowNumber: i + 2,
+        values: values[i],
+        object: normalizeRow_(values[i])
+      };
+    }
+  }
+  return null;
+}
 function normalizeRow_(row) {
   const obj = {};
   HEADER.forEach((h, i) => obj[h] = row[i] ?? '');
@@ -362,6 +412,21 @@ function normalizeUploadInput_(obj) {
   }
 
   return normalized;
+}
+function recordHistoryEntry_(id, existingObj, action) {
+  if (!existingObj) return;
+  const history = getHistorySheet_();
+  const timestamp = new Date();
+  history.appendRow([
+    sanitizeString_(id),
+    timestamp,
+    sanitizeString_(action) || 'update',
+    toIso_(existingObj.exp1Date),
+    toIso_(existingObj.exp2Date),
+    sanitizeUrl_(existingObj.fileUrl),
+    sanitizeString_(existingObj.fileName || existingObj.name),
+    sanitizeString_(existingObj.statusInfo && existingObj.statusInfo.label ? existingObj.statusInfo.label : existingObj.status)
+  ]);
 }
 
 /**********************
@@ -519,4 +584,119 @@ function uploadDocument(obj) {
   } catch (err) {
     return { ok:false, error:String(err && err.message || err) };
   }
+}
+function updateDocument(obj) {
+  try {
+    const id = sanitizeString_(obj && obj.id);
+    if (!id) {
+      throw new Error('Record ID is required.');
+    }
+    const found = findRowById_(id);
+    if (!found) {
+      throw new Error('Record not found.');
+    }
+
+    const sh = getSheet_();
+    const data = normalizeUploadInput_(obj);
+    const action = String(obj && obj.mode).toLowerCase() === 'renew' ? 'renew' : 'update';
+
+    let fileUrl = sanitizeUrl_(found.object.fileUrl);
+    let fileName = sanitizeString_(found.object.fileName || data.name);
+
+    if (data.file) {
+      const folder = getFolder_();
+      const bytes = Utilities.base64Decode(data.file.b64);
+      const mime = data.file.type || MimeType.PDF;
+      const blob = Utilities.newBlob(bytes, mime, data.file.name);
+      const created = folder.createFile(blob).setName(data.file.name);
+      if (SHARE_FILES_PUBLIC) created.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      fileUrl = sanitizeUrl_(created.getUrl());
+      fileName = data.file.name;
+    }
+
+    const status = computeStatus_(data.exp1Date, data.exp2Date);
+    const overall = status.overall || { label: 'Active' };
+
+    const createdAtIndex = HEADER.indexOf('createdAt');
+    const existingCreated = createdAtIndex >= 0 ? found.values[createdAtIndex] : new Date();
+
+    const rowValues = [
+      id,
+      data.name,
+      data.nameAr,
+      data.description,
+      data.descriptionAr,
+      data.exp1Label,
+      data.exp1LabelAr,
+      data.exp1Date,
+      status.exp1 && status.exp1.label ? status.exp1.label : '',
+      data.exp2Label,
+      data.exp2LabelAr,
+      data.exp2Date,
+      status.exp2 && status.exp2.label ? status.exp2.label : '',
+      overall.label,
+      fileUrl,
+      fileName || data.name,
+      existingCreated
+    ];
+
+    sh.getRange(found.rowNumber, 1, 1, HEADER.length).setValues([rowValues]);
+    recordHistoryEntry_(id, found.object, action);
+
+    const safeFileUrl = sanitizeUrl_(fileUrl);
+    return {
+      ok: true,
+      id,
+      fileUrl: safeFileUrl,
+      filePreviewUrl: makePreviewUrl_(safeFileUrl),
+      name: data.name,
+      nameAr: data.nameAr,
+      description: data.description,
+      descriptionAr: data.descriptionAr,
+      exp1Label: data.exp1Label,
+      exp1LabelAr: data.exp1LabelAr,
+      exp2Label: data.exp2Label,
+      exp2LabelAr: data.exp2LabelAr,
+      exp1Date: data.exp1Date,
+      exp2Date: data.exp2Date,
+      action
+    };
+  } catch (err) {
+    return { ok:false, error:String(err && err.message || err) };
+  }
+}
+function getDocumentHistory(id) {
+  const target = sanitizeString_(id);
+  if (!target) {
+    throw new Error('Record ID is required.');
+  }
+  const sheet = getHistorySheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) {
+    return [];
+  }
+  const values = sheet.getRange(2, 1, last - 1, HISTORY_HEADER.length).getValues();
+  const filtered = values.filter(row => String(row[0]) === target);
+  filtered.sort((a, b) => {
+    const da = new Date(a[1]);
+    const db = new Date(b[1]);
+    if (isNaN(db) && isNaN(da)) return 0;
+    if (isNaN(db)) return -1;
+    if (isNaN(da)) return 1;
+    return db.getTime() - da.getTime();
+  });
+  return filtered.map(row => {
+    const fileUrl = sanitizeUrl_(row[5]);
+    return {
+      id: target,
+      timestamp: formatTimestamp_(row[1]),
+      action: sanitizeString_(row[2] || ''),
+      prevExp1Date: toIso_(row[3]),
+      prevExp2Date: toIso_(row[4]),
+      prevFileUrl: fileUrl,
+      prevFilePreviewUrl: makePreviewUrl_(fileUrl),
+      prevFileName: sanitizeString_(row[6]),
+      prevStatus: sanitizeString_(row[7])
+    };
+  });
 }
