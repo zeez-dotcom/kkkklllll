@@ -794,6 +794,16 @@
 
     .hidden { display: none !important; }
 
+    .debug-banner {
+      margin: 8px 0 16px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #facc15;
+      background: #fef9c3;
+      color: #713f12;
+      font-size: 0.9rem;
+    }
+
     .loading { pointer-events: none; }
 
     @media (max-width: 720px) {
@@ -850,6 +860,7 @@
   </header>
 
   <main class="container" role="main">
+    <div id="debugBanner" class="debug-banner hidden" role="status" aria-live="polite"></div>
 
     <!-- DASHBOARD -->
     <section id="dashboard">
@@ -1037,6 +1048,10 @@
         tablistLabel: 'Sections',
         tableAria: 'Licenses table',
         tabs: { dashboard: 'Dashboard', upload: 'Upload' },
+        debug: {
+          coercedRows: 'Loaded array-like rows (coerced to array).',
+          invalidPayload: 'Dashboard payload was invalid; using defaults.'
+        },
         stats: { expired: 'Expired', upcoming: 'Upcoming (≤ 30 days)', active: 'Active' },
         searchPlaceholder: 'Search by name, description, labels…',
         searchAria: 'Search',
@@ -1157,6 +1172,10 @@
         tablistLabel: 'الأقسام',
         tableAria: 'جدول التراخيص',
         tabs: { dashboard: 'لوحة المعلومات', upload: 'رفع' },
+        debug: {
+          coercedRows: 'تم تحميل صفوف تشبه المصفوفة (تم تحويلها إلى مصفوفة).',
+          invalidPayload: 'استجابة لوحة المعلومات غير صالحة؛ تم استخدام القيم الافتراضية.'
+        },
         stats: { expired: 'منتهي', upcoming: 'قادم (≤ 30 يوم)', active: 'ساري' },
         searchPlaceholder: 'ابحث بالاسم أو الوصف أو التصنيفات…',
         searchAria: 'بحث',
@@ -1369,6 +1388,27 @@
     function safeHref(url) {
       const value = String(url || '').trim();
       return /^https?:\/\//i.test(value) ? value : '';
+    }
+
+    function toArray(value) {
+      if (Array.isArray(value)) return value;
+      if (value && typeof value.length === 'number') {
+        try { return Array.prototype.slice.call(value); } catch (e) {}
+      }
+      return [];
+    }
+
+    function setDebugBanner(text) {
+      const el = document.getElementById('debugBanner');
+      if (!el) return;
+      const msg = String(text || '').trim();
+      if (msg) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+      } else {
+        el.textContent = '';
+        el.classList.add('hidden');
+      }
     }
 
     function createEmptyStatusCounts() {
@@ -2137,25 +2177,17 @@
             const safePayload = isObjectPayload ? payload : null;
             if (!safePayload) {
               console.warn('Dashboard payload was empty or invalid; using defaults.', payload);
+              try { setDebugBanner(t('debug.invalidPayload')); } catch (e) {}
               resultType = 'failed';
             }
 
-            const rowsAreArray = safePayload && Array.isArray(safePayload.rows);
-            if (safePayload && !rowsAreArray && safePayload.rows != null) {
-              console.warn('Dashboard payload rows must be an array; defaulting to empty list.', safePayload.rows);
-              resultType = 'failed';
-            }
-
-            if (resultType === 'failed') {
-              setResultState('failed');
-              return;
-            }
-
-            const rows = rowsAreArray ? safePayload.rows : [];
-
-            if (resultType === 'failed') {
-              setResultState('failed');
-              return;
+            // Be tolerant of array-like payloads from Apps Script
+            const wasArray = safePayload && Array.isArray(safePayload.rows);
+            const rows = safePayload ? toArray(safePayload.rows) : [];
+            if (safePayload && !wasArray && safePayload.rows != null) {
+              try { setDebugBanner(t('debug.coercedRows')); } catch (e) {}
+            } else if (safePayload) {
+              setDebugBanner('');
             }
 
             const countsAll = normalizeCountsPayload(safePayload.countsAll, rows.length);
@@ -2187,6 +2219,7 @@
           console.error('Failed to load dashboard data', err);
           setLoading(btnRefresh, false);
           const message = err && err.message ? err.message : err;
+          try { setDebugBanner(t('debug.invalidPayload')); } catch (e) {}
           alert(format(t('errors.loadFail'), { message: String(message || '') }));
           setResultState('failed');
         }).getDashboardData(q);
