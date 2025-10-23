@@ -2190,8 +2190,14 @@
               setDebugBanner('');
             }
 
-            const countsAll = normalizeCountsPayload(safePayload.countsAll, rows.length);
-            const countsFiltered = normalizeCountsPayload(safePayload.countsFiltered, rows.length);
+            const countsAll = normalizeCountsPayload(
+              safePayload ? safePayload.countsAll : null,
+              rows.length
+            );
+            const countsFiltered = normalizeCountsPayload(
+              safePayload ? safePayload.countsFiltered : null,
+              rows.length
+            );
 
             state.rows = rows;
             state.rowsById = new Map(rows.map(r => [String(r.id), r]));
