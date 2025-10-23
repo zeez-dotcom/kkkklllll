@@ -553,41 +553,59 @@ function getLicenseHistoryIndex_() {
  * READ API
  **********************/
 function getDashboardData(q) {
-  const all = getAllRows_();
-
-  let historyIds;
   try {
-    historyIds = getLicenseHistoryIndex_();
-  } catch (err) {
-    historyIds = new Set();
-  }
-  all.forEach(row => {
-    const key = sanitizeString_(row.id);
-    row.hasHistory = key ? historyIds.has(key) : false;
-  });
-
-  const query = (q || '').trim().toLowerCase();
-  const filtered = !query ? all : all.filter(r => {
-    return [
-      r.id,
-      r.name, r.nameAr,
-      r.description, r.descriptionAr,
-      r.exp1Label, r.exp1LabelAr,
-      r.exp2Label, r.exp2LabelAr,
-      r.fileName
-    ]
-      .map(x => String(x||'').toLowerCase())
-      .some(s => s.includes(query));
-  });
-
-  const stats = arr => {
-    const makeBucket = () => ({ total: 0, exp1: 0, exp2: 0, overall: 0 });
-    const counts = {
-      total: arr.length,
-      expired: makeBucket(),
-      upcoming: makeBucket(),
-      active: makeBucket()
+    const safeLogValue = value => {
+      try {
+        return JSON.stringify(value);
+      } catch (jsonErr) {
+        return String(value);
+      }
     };
+
+    const all = getAllRows_();
+    if (!Array.isArray(all)) {
+      Logger.log('Unexpected getAllRows_() result: %s', safeLogValue(all));
+      throw new Error('Unable to serialise dashboard data: rows is not an array');
+    }
+
+    let historyIds;
+    try {
+      historyIds = getLicenseHistoryIndex_();
+    } catch (err) {
+      historyIds = new Set();
+    }
+    all.forEach(row => {
+      const key = sanitizeString_(row.id);
+      row.hasHistory = key ? historyIds.has(key) : false;
+    });
+
+    const query = (q || '').trim().toLowerCase();
+    const filtered = !query ? all : all.filter(r => {
+      return [
+        r.id,
+        r.name, r.nameAr,
+        r.description, r.descriptionAr,
+        r.exp1Label, r.exp1LabelAr,
+        r.exp2Label, r.exp2LabelAr,
+        r.fileName
+      ]
+        .map(x => String(x||'').toLowerCase())
+        .some(s => s.includes(query));
+    });
+
+    if (!Array.isArray(filtered)) {
+      Logger.log('Unexpected filtered rows result: %s', safeLogValue(filtered));
+      throw new Error('Unable to serialise dashboard data: filtered rows is not an array');
+    }
+
+    const stats = arr => {
+      const makeBucket = () => ({ total: 0, exp1: 0, exp2: 0, overall: 0 });
+      const counts = {
+        total: arr.length,
+        expired: makeBucket(),
+        upcoming: makeBucket(),
+        active: makeBucket()
+      };
 
     const bucketKeyForType = type => {
       if (type === 'Expired') return 'expired';
@@ -647,18 +665,38 @@ function getDashboardData(q) {
     });
 
     return counts;
-  };
+    };
 
-  const countsAll = stats(all);
-  const countsFiltered = stats(filtered);
+    const countsAll = stats(all);
+    const countsFiltered = stats(filtered);
 
-  const key = r => {
-    const ds = [r.exp1Date, r.exp2Date].filter(Boolean).sort();
-    return (ds[0] || '9999-12-31') + '|' + (r.name||'');
-  };
-  filtered.sort((a,b)=> key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
+    const isPlainObject = value => {
+      if (!value || typeof value !== 'object') return false;
+      const proto = Object.getPrototypeOf(value);
+      return proto === Object.prototype || proto === null;
+    };
 
-  return { rows: filtered, countsAll, countsFiltered };
+    if (!isPlainObject(countsAll)) {
+      Logger.log('Unexpected countsAll result: %s', safeLogValue(countsAll));
+      throw new Error('Unable to serialise dashboard data: countsAll is not a plain object');
+    }
+
+    if (!isPlainObject(countsFiltered)) {
+      Logger.log('Unexpected countsFiltered result: %s', safeLogValue(countsFiltered));
+      throw new Error('Unable to serialise dashboard data: countsFiltered is not a plain object');
+    }
+
+    const key = r => {
+      const ds = [r.exp1Date, r.exp2Date].filter(Boolean).sort();
+      return (ds[0] || '9999-12-31') + '|' + (r.name||'');
+    };
+    filtered.sort((a,b)=> key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
+
+    return { rows: filtered, countsAll, countsFiltered };
+  } catch (err) {
+    Logger.log('getDashboardData error: %s', err && err.stack ? err.stack : err);
+    throw err;
+  }
 }
 
 /**********************
