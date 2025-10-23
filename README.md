@@ -41,3 +41,11 @@ To confirm the dashboard tallies mixed status rows correctly, add a record whose
 | `exp2Date` | `2099-01-01` |
 
 Leave the status columns blank so the script recomputes them. After refreshing the dashboard, the Expired card increases by two (expired primary date and overall status) while the Active card increases by one (secondary expiry), demonstrating that a single row contributes to every applicable bucket.
+
+### Invalid payload fallback
+
+To guard against regressions where the Apps Script response is missing or malformed:
+
+1. Open the deployed web app in a browser tab and launch the developer tools console.
+2. Run `google.script.run.withSuccessHandler(cb => cb({})).getDashboardData('')` in the console to simulate a refresh that returns an empty object.
+3. Confirm the dashboard displays the fallback/debug banner instead of throwing an exception and that the rest of the UI remains interactive.
