@@ -2134,22 +2134,23 @@
           let resultType = 'count';
           try {
             const isObjectPayload = payload && typeof payload === 'object' && !Array.isArray(payload);
-            let safePayload = isObjectPayload ? payload : null;
+            const safePayload = isObjectPayload ? payload : null;
             if (!safePayload) {
               console.warn('Dashboard payload was empty or invalid; using defaults.', payload);
-              safePayload = {
-                rows: [],
-                countsAll: createEmptyCounts(),
-                countsFiltered: createEmptyCounts()
-              };
               resultType = 'failed';
             }
 
-            const rowsAreArray = Array.isArray(safePayload.rows);
-            if (!rowsAreArray && safePayload.rows != null) {
+            const rowsAreArray = safePayload && Array.isArray(safePayload.rows);
+            if (safePayload && !rowsAreArray && safePayload.rows != null) {
               console.warn('Dashboard payload rows must be an array; defaulting to empty list.', safePayload.rows);
               resultType = 'failed';
             }
+
+            if (resultType === 'failed') {
+              setResultState('failed');
+              return;
+            }
+
             const rows = rowsAreArray ? safePayload.rows : [];
             const countsAll = normalizeCountsPayload(safePayload.countsAll, rows.length);
             const countsFiltered = normalizeCountsPayload(safePayload.countsFiltered, rows.length);
