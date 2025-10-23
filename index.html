@@ -2151,6 +2151,12 @@
               resultType = 'failed';
             }
             const rows = rowsAreArray ? safePayload.rows : [];
+
+            if (resultType === 'failed') {
+              setResultState('failed');
+              return;
+            }
+
             const countsAll = normalizeCountsPayload(safePayload.countsAll, rows.length);
             const countsFiltered = normalizeCountsPayload(safePayload.countsFiltered, rows.length);
 
