@@ -2131,14 +2131,28 @@
           throw new Error(t('errors.runtimeUnavailable'));
         }
         google.script.run.withSuccessHandler((payload = {})=>{
+          let resultType = 'count';
           try {
-            if (!payload || typeof payload !== 'object') {
-              throw new Error('Invalid dashboard payload.');
+            const isObjectPayload = payload && typeof payload === 'object' && !Array.isArray(payload);
+            let safePayload = isObjectPayload ? payload : null;
+            if (!safePayload) {
+              console.warn('Dashboard payload was empty or invalid; using defaults.', payload);
+              safePayload = {
+                rows: [],
+                countsAll: createEmptyCounts(),
+                countsFiltered: createEmptyCounts()
+              };
+              resultType = 'failed';
             }
-            const { rows = [], countsAll, countsFiltered } = payload;
-            if (!Array.isArray(rows)) {
-              throw new Error('Payload rows must be an array.');
+
+            const rowsAreArray = Array.isArray(safePayload.rows);
+            if (!rowsAreArray && safePayload.rows != null) {
+              console.warn('Dashboard payload rows must be an array; defaulting to empty list.', safePayload.rows);
+              resultType = 'failed';
             }
+            const rows = rowsAreArray ? safePayload.rows : [];
+            const countsAll = normalizeCountsPayload(safePayload.countsAll, rows.length);
+            const countsFiltered = normalizeCountsPayload(safePayload.countsFiltered, rows.length);
 
             state.rows = rows;
             state.rowsById = new Map(rows.map(r => [String(r.id), r]));
@@ -2153,7 +2167,7 @@
             updateFilteredCounts(countsFiltered);
             hasLoaded = true;
             renderTable(state.rows);
-            setResultState('count');
+            setResultState(resultType);
           } catch (err) {
             console.error('Unexpected dashboard payload', err, payload);
             const message = err && err.message ? err.message : t('results.unable');
