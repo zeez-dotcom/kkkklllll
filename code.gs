@@ -476,6 +476,15 @@ function estimateBase64Bytes_(b64) {
   const cleaned = sanitizeString_(b64).replace(/=+$/, '');
   return Math.ceil(cleaned.length * 3 / 4);
 }
+function decodeBase64Safely_(b64, context) {
+  try {
+    return Utilities.base64Decode(b64);
+  } catch (err) {
+    const label = context ? ` (${context})` : '';
+    Logger.log('base64 decode failed%s: %s', label, err && err.stack ? err.stack : err);
+    throw new Error('Uploaded file data is invalid or corrupted. Please reselect the file and try again.');
+  }
+}
 function normalizeUploadInput_(obj) {
   const normalized = {
     name: sanitizeString_(obj && obj.name),
@@ -714,7 +723,7 @@ function uploadDocument(obj) {
 
     if (data.file) {
       const folder = getFolder_();
-      const bytes = Utilities.base64Decode(data.file.b64);
+      const bytes = decodeBase64Safely_(data.file.b64, 'uploadDocument');
       const mime = data.file.type || MimeType.PDF;
       const blob = Utilities.newBlob(bytes, mime, data.file.name);
       const created = folder.createFile(blob).setName(data.file.name);
@@ -794,7 +803,7 @@ function updateLicense(obj) {
 
     if (data.file) {
       const folder = getFolder_();
-      const bytes = Utilities.base64Decode(data.file.b64);
+      const bytes = decodeBase64Safely_(data.file.b64, 'updateLicense');
       const mime = data.file.type || MimeType.PDF;
       const blob = Utilities.newBlob(bytes, mime, data.file.name);
       const created = folder.createFile(blob).setName(data.file.name);
