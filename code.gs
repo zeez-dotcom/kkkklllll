@@ -465,43 +465,43 @@ function ensureDate_(value, fallback) {
 }
 function migrateLegacySheet_(sh) {
   const totalColumns = sh.getLastColumn();
-  if (totalColumns <= HEADER.length) {
-    return;
-  }
   const lastRow = sh.getLastRow();
-  if (lastRow >= 2) {
-    const legacyValues = sh.getRange(2, 1, lastRow - 1, totalColumns).getValues();
-    const migrated = legacyValues.map(legacyRowToCurrent_);
-    if (migrated.length) {
-      sh.getRange(2, 1, migrated.length, HEADER.length).setValues(migrated);
-    }
-  }
-  const extra = sh.getLastColumn() - HEADER.length;
-  if (extra > 0) {
-    sh.deleteColumns(HEADER.length + 1, extra);
-  }
+  if (lastRow < 2) return;
+
+  const lastColumn = sh.getLastColumn();
+  const width = Math.min(lastColumn, HEADER.length);
+  const rows = sh.getRange(2, 1, lastRow - 1, width).getValues();
+  const migrated = rows.map(row => legacyRowToCurrent_(row));
+  sh.getRange(2, 1, migrated.length, HEADER.length).setValues(migrated);
 }
 function legacyRowToCurrent_(row) {
-  const empty = row.every(value => value === '' || value == null);
-  if (empty) {
-    return new Array(HEADER.length).fill('');
-  }
-  const id = sanitizeString_(row[0]);
-  const name = sanitizeString_(row[1]);
-  const nameAr = sanitizeString_(row[2]);
-  const description = sanitizeString_(row[3]);
-  const descriptionAr = sanitizeString_(row[4]);
-  const expiryLabel = sanitizeString_(row[5]);
-  const expiryLabelAr = sanitizeString_(row[6]);
-  const expiryDate = toIso_(row[7]);
+  if (!Array.isArray(row)) row = [];
+  const valueAt = (idx, fallback) => {
+    if (row[idx] == null || row[idx] === '') return fallback;
+    return row[idx];
+  };
+  const id = sanitizeString_(valueAt(0, ''));
+  const name = sanitizeString_(valueAt(1, ''));
+  const nameAr = sanitizeString_(valueAt(2, ''));
+  const description = sanitizeString_(valueAt(3, ''));
+  const descriptionAr = sanitizeString_(valueAt(4, ''));
+  const rawLabels = [
+    valueAt(5, ''),
+    valueAt(9, ''),
+    valueAt(10, ''),
+    valueAt(11, '')
+  ].map(sanitizeString_).filter(Boolean);
+  const expiryLabel = rawLabels.length ? rawLabels[0] : '';
+  const expiryLabelAr = sanitizeString_(valueAt(6, ''));
+  const expiryDate = toIso_(valueAt(7, ''));
   const statusInfo = computeStatus_(expiryDate);
-  const legacyExpiryStatus = sanitizeString_(row[8]);
-  const expiryStatus = statusInfo.expiry && statusInfo.expiry.label ? statusInfo.expiry.label : legacyExpiryStatus;
-  const legacyOverallStatus = sanitizeString_(row[13]);
-  const overallStatus = statusInfo.overall && statusInfo.overall.label ? statusInfo.overall.label : legacyOverallStatus;
-  const fileUrl = sanitizeUrl_(row[14] != null ? row[14] : row[10]);
-  const fileName = sanitizeString_((row[15] != null ? row[15] : row[11]) || name);
-  const createdAt = ensureDate_(row[16], new Date());
+  const legacyExpiryStatus = sanitizeString_(valueAt(8, ''));
+  const expiryStatus = legacyExpiryStatus || (statusInfo.expiry && statusInfo.expiry.label ? statusInfo.expiry.label : '');
+  const legacyOverallStatus = sanitizeString_(valueAt(13, ''));
+  const overallStatus = legacyOverallStatus || (statusInfo.overall && statusInfo.overall.label ? statusInfo.overall.label : '');
+  const fileUrl = sanitizeUrl_(valueAt(14, ''));
+  const fileName = sanitizeString_(valueAt(15, '') || name);
+  const createdAt = ensureDate_(valueAt(16, new Date()), new Date());
   return [
     id,
     name,
@@ -520,36 +520,32 @@ function legacyRowToCurrent_(row) {
 }
 function migrateLegacyHistory_(history) {
   const totalColumns = history.getLastColumn();
-  if (totalColumns <= LICENSE_HISTORY_HEADER.length) {
-    return;
-  }
   const last = history.getLastRow();
-  if (last >= 2) {
-    const values = history.getRange(2, 1, last - 1, totalColumns).getValues();
-    const migrated = values.map(legacyHistoryRowToCurrent_);
-    if (migrated.length) {
-      history.getRange(2, 1, migrated.length, LICENSE_HISTORY_HEADER.length).setValues(migrated);
-    }
-  }
-  const extra = history.getLastColumn() - LICENSE_HISTORY_HEADER.length;
-  if (extra > 0) {
-    history.deleteColumns(LICENSE_HISTORY_HEADER.length + 1, extra);
-  }
+  if (last < 2) return;
+  const width = Math.min(history.getLastColumn(), LICENSE_HISTORY_HEADER.length + 4);
+  const values = history.getRange(2, 1, last - 1, width).getValues();
+  const migrated = values.map(legacyHistoryRowToCurrent_);
+  history.getRange(2, 1, migrated.length, LICENSE_HISTORY_HEADER.length).setValues(migrated);
 }
 function legacyHistoryRowToCurrent_(row) {
+  if (!Array.isArray(row)) row = [];
+  const valueAt = (idx, fallback) => {
+    if (row[idx] == null || row[idx] === '') return fallback;
+    return row[idx];
+  };
   const timestamp = ensureDate_(row[1], new Date());
-  const expiryLabel = sanitizeString_(row[3] || row[7]);
-  const expiryLabelAr = sanitizeString_(row[4] || row[8]);
-  const expiryDate = toIso_(row[5] || row[9]);
+  const expiryLabel = sanitizeString_(valueAt(3, valueAt(7, '')));
+  const expiryLabelAr = sanitizeString_(valueAt(4, valueAt(8, '')));
+  const expiryDate = toIso_(valueAt(5, valueAt(9, '')));
   const statusInfo = computeStatus_(expiryDate);
-  const legacyExpiryStatus = sanitizeString_(row[6] || row[10]);
+  const legacyExpiryStatus = sanitizeString_(valueAt(6, valueAt(10, '')));
   const expiryStatus = legacyExpiryStatus || (statusInfo.expiry && statusInfo.expiry.label ? statusInfo.expiry.label : '');
-  const legacyOverallStatus = sanitizeString_(row[11]);
-  const legacyOverallType = sanitizeString_(row[12]);
+  const legacyOverallStatus = sanitizeString_(valueAt(11, ''));
+  const legacyOverallType = sanitizeString_(valueAt(12, ''));
   const overallStatus = legacyOverallStatus || (statusInfo.overall && statusInfo.overall.label ? statusInfo.overall.label : '');
   const overallType = legacyOverallType || (statusInfo.overall && statusInfo.overall.type ? statusInfo.overall.type : '');
-  const fileUrl = sanitizeUrl_(row[13]);
-  const fileName = sanitizeString_(row[14] || '');
+  const fileUrl = sanitizeUrl_(valueAt(13, ''));
+  const fileName = sanitizeString_(valueAt(14, ''));
   return [
     sanitizeString_(row[0]),
     timestamp,
