@@ -1436,7 +1436,6 @@
     }
 
     function createEmptyStatusCounts() {
-    function createEmptyStatusCounts() {
       return { total: 0 };
     }
 
@@ -1795,6 +1794,7 @@
       tablist.setAttribute('aria-label', langTable.tablistLabel);
       statLabelExpired.textContent = langTable.stats.expired;
       statLabelUpcoming.textContent = langTable.stats.upcoming;
+      if (statLabelValidity) statLabelValidity.textContent = langTable.stats.validity;
       statLabelActive.textContent = langTable.stats.active;
       searchEl.placeholder = langTable.searchPlaceholder;
       searchEl.setAttribute('aria-label', langTable.searchAria);
@@ -1870,7 +1870,6 @@
     }
 
     function updateStatsDisplay() {
-    function updateStatsDisplay() {
       const counts = state.countsAll || createEmptyCounts();
       const expired = counts.expired || createEmptyStatusCounts();
       const upcoming = counts.upcoming || createEmptyStatusCounts();
@@ -1884,9 +1883,6 @@
         statValidityValue.textContent = toCountNumber(validityUpcoming.total, 0);
       }
       document.getElementById('stat-active').textContent = toCountNumber(active.total, 0);
-    }
-
-      renderUploadStatus();
     }
 
     function renderUploadStatus() {
