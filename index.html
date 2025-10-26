@@ -220,6 +220,7 @@
     .stat-icon.expired { background: linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(248, 113, 113, 0.9)); }
     .stat-icon.upcoming { background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(253, 230, 138, 0.9)); color: #7c2d12; }
     .stat-icon.active { background: linear-gradient(135deg, rgba(5, 150, 105, 0.95), rgba(16, 185, 129, 0.9)); }
+    .stat-icon.validity { background: linear-gradient(135deg, rgba(190, 24, 93, 0.95), rgba(244, 114, 182, 0.9)); }
 
     .stat-body { flex: 1; min-width: 0; }
 
@@ -892,6 +893,17 @@
           </div>
         </article>
         <article class="stat-card">
+          <div class="stat-icon validity" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 2a1 1 0 011 1v2.09A7 7 0 1111 20.93V21a1 1 0 01-2 0v-2a1 1 0 011-1 5 5 0 10-.21-10V11a1 1 0 01-2 0V3a1 1 0 011-1z" />
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label" id="statLabelValidity"></span>
+            <p class="stat-value" id="stat-validity">0</p>
+          </div>
+        </article>
+        <article class="stat-card">
           <div class="stat-icon active" aria-hidden="true">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm-1.12 13.42l-2.8-2.8a1 1 0 011.42-1.42l2.08 2.08 4.21-4.21a1 1 0 011.42 1.42l-4.92 4.93a1 1 0 01-1.42 0z" />
@@ -1060,7 +1072,7 @@
           coercedRows: 'Loaded array-like rows (coerced to array).',
           invalidPayload: 'Dashboard payload was invalid; using defaults.'
         },
-        stats: { expired: 'Expired', upcoming: 'Upcoming (= 30 days)', active: 'Active' },
+        stats: { expired: 'Expired', upcoming: 'Upcoming (= 30 days)', validity: 'Validity (= 30 days)', active: 'Active' },
         searchPlaceholder: 'Search by name, description, labels...',
         searchAria: 'Search',
         refresh: 'Refresh',
@@ -1173,126 +1185,126 @@
         }
       },
       ar: {
-        languageLabel: '?????',
-        languages: { en: '??????????', ar: '???????' },
-        pageTitle: '??? ?????? ???????',
-        headerTitle: '??? ?????? ???????',
-        tablistLabel: '???????',
-        tableAria: '???? ?????',
-        tabs: { dashboard: '???? ??????', upload: '?????' },
+        languageLabel: 'اللغة',
+        languages: { en: 'الإنجليزية', ar: 'العربية' },
+        pageTitle: 'رخص المكتب الإداري',
+        headerTitle: 'رخص المكتب الإداري',
+        tablistLabel: 'الأقسام',
+        tableAria: 'جدول التراخيص',
+        tabs: { dashboard: 'لوحة التحكم', upload: 'رفع' },
         debug: {
-          coercedRows: '?? ????? ???? ????? ?????? (?? ??????? ??? ??????).',
-          invalidPayload: '?????? ?????? ??? ?????? ?? ??????? ????? ??????????.'
+          coercedRows: 'تم تحميل صفوف بصيغة شبيهة بالمصفوفة (تم تحويلها إلى مصفوفة).',
+          invalidPayload: 'بيانات لوحة التحكم غير صالحة؛ تم استخدام القيم الافتراضية.'
         },
-        stats: { expired: '??????', upcoming: '????? (= 30 ?????)', active: '?????' },
-        searchPlaceholder: '???? ?????? ?? ????? ?? ??????...',
-        searchAria: '???',
-        refresh: '?????',
+        stats: { expired: 'منتهية', upcoming: 'مقتربة (≤ 30 يوماً)', validity: 'الصلاحية (≤ 30 يوماً)', active: 'سارية' },
+        searchPlaceholder: 'ابحث بالاسم أو الوصف أو التسميات...',
+        searchAria: 'بحث',
+        refresh: 'تحديث',
         results: {
-          countSingular: '{count} ?????',
-          countPlural: '{count} ?????',
-          filteredSingular: '{count} ????? ?? ??? {total}',
-          filteredPlural: '{count} ????? ?? ??? {total}',
-          failed: '???? ????? ????????.',
-          unable: '????? ????? ????????.'
+          countSingular: '{count} نتيجة',
+          countPlural: '{count} نتائج',
+          filteredSingular: '{count} نتيجة من أصل {total}',
+          filteredPlural: '{count} نتائج من أصل {total}',
+          failed: 'فشل تحميل البيانات.',
+          unable: 'تعذّر تحميل البيانات.'
         },
         tableHeaders: {
-          id: '??????',
-          name: '?????',
-          description: '?????',
-          expiry: '????????',
-          validity: '????????',
-          status: '??????',
-          file: '?????',
-          actions: '?????????'
+          id: 'المعرف',
+          name: 'الاسم',
+          description: 'الوصف',
+          expiry: 'الانتهاء',
+          validity: 'الصلاحية',
+          status: 'الحالة',
+          file: 'الملف',
+          actions: 'الإجراءات'
         },
         preview: {
-          title: '??????',
-          defaultTitle: '??????',
-          close: '?????',
-          iframeTitle: '?????? ?????'
+          title: 'معاينة',
+          defaultTitle: 'معاينة',
+          close: 'إغلاق',
+          iframeTitle: 'معاينة الملف'
         },
-        noRecords: '?? ???? ????? ??????.',
-        fileLinks: { open: '???', preview: '??????', none: '?? ????' },
+        noRecords: 'لا توجد سجلات مطابقة.',
+        fileLinks: { open: 'فتح', preview: 'معاينة', none: 'لا يوجد' },
         rowActions: {
-          edit: '?????',
-          editTooltip: '????? ??? ?????',
-          renew: '?????',
-          renewTooltip: '????? ??? ?????',
-          history: '?????',
-          historyTooltip: '??? ??? ?????????'
+          edit: 'تعديل',
+          editTooltip: 'تعديل هذا السجل',
+          renew: 'تجديد',
+          renewTooltip: 'تجديد هذا السجل',
+          history: 'السجل',
+          historyTooltip: 'عرض سجل التغييرات'
         },
         uploadForm: {
-          nameLabel: '?????',
-          nameLabelAr: '????? (????????)',
-          namePlaceholderAr: '????? ???????? (???????)',
-          descriptionLabel: '?????',
-          descriptionLabelAr: '????? (????????)',
-          descriptionPlaceholderAr: '????? ???????? (???????)',
-          expiryLabel: '??? ????? ????????',
-          expiryPlaceholder: '????: ?????? ???????',
-          expiryLabelAr: '??? ????? ???????? (????????)',
-          expiryPlaceholderAr: '????? ???????? (???????)',
-          expiryDate: '????? ????????',
-          validityLabel: '??? ????? ????????',
-          validityPlaceholder: '????: ?????? ???????',
-          validityLabelAr: '??? ????? ???????? (????????)',
-          validityPlaceholderAr: '??? ???????? ???????? (???????)',
-          validityDate: '????? ????????',
-          documentLabel: '??????? (???? ?? PDF)',
-          documentHelp: '???????. ???? ??? ?????? ????? 5 ????????.',
-          submit: '???',
-          update: '?????',
-          renew: '?????',
-          cancelEdit: '????? ???????'
+          nameLabel: 'الاسم',
+          nameLabelAr: 'الاسم (بالعربية)',
+          namePlaceholderAr: 'اسم عربي اختياري',
+          descriptionLabel: 'الوصف',
+          descriptionLabelAr: 'الوصف (بالعربية)',
+          descriptionPlaceholderAr: 'وصف عربي اختياري',
+          expiryLabel: 'تسمية الانتهاء',
+          expiryPlaceholder: 'مثال: انتهاء الرخصة',
+          expiryLabelAr: 'تسمية الانتهاء (بالعربية)',
+          expiryPlaceholderAr: 'تسمية عربية اختيارية',
+          expiryDate: 'تاريخ الانتهاء',
+          validityLabel: 'تسمية الصلاحية',
+          validityPlaceholder: 'مثال: صلاحية التصريح',
+          validityLabelAr: 'تسمية الصلاحية (بالعربية)',
+          validityPlaceholderAr: 'تسمية عربية للصلاحية (اختيارية)',
+          validityDate: 'تاريخ الصلاحية',
+          documentLabel: 'المستند (صورة أو PDF)',
+          documentHelp: 'اختياري. يُفضّل ألا تتجاوز الملفات 5 ميجابايت.',
+          submit: 'حفظ',
+          update: 'تحديث',
+          renew: 'تجديد',
+          cancelEdit: 'إلغاء التعديل'
         },
         uploadStatus: {
-          uploading: '???? ?????...',
-          saved: '?? ?????. ??????: {id}',
-          updated: '?? ???????. ??????: {id}',
-          renewed: '?? ???????. ??????: {id}',
-          link: '??? ?????',
-          errorWithMessage: '???: {message}',
-          generic: '??? ??? ????? ??? ?????.',
-          failedWithMessage: '???: {message}'
+          uploading: 'جاري الرفع...',
+          saved: 'تم الحفظ. المعرف: {id}',
+          updated: 'تم التحديث. المعرف: {id}',
+          renewed: 'تم التجديد. المعرف: {id}',
+          link: 'فتح الملف',
+          errorWithMessage: 'خطأ: {message}',
+          generic: 'حدث خطأ أثناء حفظ السجل.',
+          failedWithMessage: 'فشل: {message}'
         },
         history: {
-          title: '??? ?????????',
-          titleFor: '????? - {name}',
-          subtitle: '???? ?????: {id}',
-          close: '????? ?????',
-          loading: '???? ????? ?????...',
-          empty: '?? ???? ??????? ?????.',
-          error: '???? ????? ?????.',
-          errorWithMessage: '???? ????? ?????: {message}',
-          noFile: '?? ???? ???',
+          title: 'سجل التغييرات',
+          titleFor: 'السجل - {name}',
+          subtitle: 'معرف السجل: {id}',
+          close: 'إخفاء السجل',
+          loading: 'جاري تحميل السجل...',
+          empty: 'لا توجد إدخالات في السجل بعد.',
+          error: 'تعذر تحميل السجل.',
+          errorWithMessage: 'تعذر تحميل السجل: {message}',
+          noFile: 'لا يوجد ملف',
           labels: {
-            timestamp: '???????',
-            expiry: '????????',
-            validity: '????????',
-            file: '?????',
-            status: '??????',
-            none: '?? ????'
+            timestamp: 'الطابع الزمني',
+            expiry: 'الانتهاء',
+            validity: 'الصلاحية',
+            file: 'الملف',
+            status: 'الحالة',
+            none: 'لا يوجد'
           },
           actions: {
-            update: '?? ???????',
-            renew: '?? ???????',
-            create: '?? ???????'
+            update: 'تم التحديث',
+            renew: 'تم التجديد',
+            create: 'تم الإنشاء'
           }
         },
         errors: {
-          loadFail: '??? ???????: {message}',
-          runtimeUnavailable: '???? Google Apps Script ??? ?????.'
+          loadFail: 'فشل التحميل: {message}',
+          runtimeUnavailable: 'بيئة Google Apps Script غير متاحة.'
         },
         status: {
-          expired: '??????',
-          active: '?????',
+          expired: 'منتهية',
+          active: 'سارية',
           upcoming: {
-            label: '?????',
-            withinThreshold: '????? (= 30 ?????)',
-            inOneDay: '????? (???? ??? ????)',
-            inDays: '????? (???? {days} ???)',
-            today: '????? (?????)'
+            label: 'مقتربة',
+            withinThreshold: 'مقتربة (≤ 30 يوماً)',
+            inOneDay: 'مقتربة (خلال يوم واحد)',
+            inDays: 'مقتربة (خلال {days} أيام)',
+            today: 'مقتربة (اليوم)'
           }
         }
       }
@@ -1306,7 +1318,9 @@
     const tablist = document.getElementById('tablist');
     const statLabelExpired = document.getElementById('statLabelExpired');
     const statLabelUpcoming = document.getElementById('statLabelUpcoming');
+    const statLabelValidity = document.getElementById('statLabelValidity');
     const statLabelActive = document.getElementById('statLabelActive');
+    const statValidityValue = document.getElementById('stat-validity');
     const searchEl = document.getElementById('search');
     const btnRefresh = document.getElementById('btnRefresh');
     const resultCountEl = document.getElementById('result-count');
@@ -1356,7 +1370,8 @@
       rows: [],
       rowsById: new Map(),
       countsAll: createEmptyCounts(),
-      countsFiltered: createEmptyCounts()
+      countsFiltered: createEmptyCounts(),
+      validityCounts: createEmptyValidityCounts()
     };
     let hasLoaded = false;
     let lastUploadState = { type: 'idle', payload: null };
@@ -1421,6 +1436,7 @@
     }
 
     function createEmptyStatusCounts() {
+    function createEmptyStatusCounts() {
       return { total: 0 };
     }
 
@@ -1430,6 +1446,14 @@
         expired: createEmptyStatusCounts(),
         upcoming: createEmptyStatusCounts(),
         active: createEmptyStatusCounts()
+      };
+    }
+
+    function createEmptyValidityCounts() {
+      return {
+        expired: { total: 0 },
+        upcoming: { total: 0 },
+        active: { total: 0 }
       };
     }
 
@@ -1461,6 +1485,18 @@
       base.expired = normalizeStatusCounts(payload.expired);
       base.upcoming = normalizeStatusCounts(payload.upcoming);
       base.active = normalizeStatusCounts(payload.active);
+      return base;
+    }
+
+    function normalizeValidityCounts(payload) {
+      const base = createEmptyValidityCounts();
+      if (!payload || typeof payload !== 'object') {
+        return base;
+      }
+      ['expired', 'upcoming', 'active'].forEach(key => {
+        const bucket = payload[key];
+        base[key].total = toCountNumber(bucket && bucket.total, 0);
+      });
       return base;
     }
 
@@ -1834,18 +1870,22 @@
     }
 
     function updateStatsDisplay() {
+    function updateStatsDisplay() {
       const counts = state.countsAll || createEmptyCounts();
       const expired = counts.expired || createEmptyStatusCounts();
       const upcoming = counts.upcoming || createEmptyStatusCounts();
       const active = counts.active || createEmptyStatusCounts();
+      const validityCounts = state.validityCounts || createEmptyValidityCounts();
+      const validityUpcoming = validityCounts.upcoming || { total: 0 };
 
       document.getElementById('stat-expired').textContent = toCountNumber(expired.total, 0);
       document.getElementById('stat-upcoming').textContent = toCountNumber(upcoming.total, 0);
+      if (statValidityValue) {
+        statValidityValue.textContent = toCountNumber(validityUpcoming.total, 0);
+      }
       document.getElementById('stat-active').textContent = toCountNumber(active.total, 0);
     }
 
-    function setUploadStatus(type, payload) {
-      lastUploadState = { type, payload };
       renderUploadStatus();
     }
 
@@ -2113,13 +2153,18 @@
       }
     }
 
-    function updateCounts(data) {
+    function updateCounts(data, validityData) {
       const prevTotal = state.countsAll && Number.isFinite(state.countsAll.total)
         ? state.countsAll.total
         : null;
       const fallbackTotal = prevTotal && prevTotal > 0 ? prevTotal : state.rows.length;
       state.countsAll = normalizeCountsPayload(data, fallbackTotal);
+      updateValidityCounts(validityData);
       updateStatsDisplay();
+    }
+
+    function updateValidityCounts(data) {
+      state.validityCounts = normalizeValidityCounts(data);
     }
 
     function updateFilteredCounts(countsFiltered) {
@@ -2228,7 +2273,7 @@
                 updateHistoryTitles();
               }
             }
-            updateCounts(countsAll);
+            updateCounts(countsAll, safePayload ? safePayload.validityCounts : null);
             updateFilteredCounts(countsFiltered);
             hasLoaded = true;
             renderTable(state.rows);
@@ -2367,6 +2412,7 @@
   </script>
 </body>
 </html>
+
 
 
 

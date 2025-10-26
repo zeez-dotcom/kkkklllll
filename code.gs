@@ -938,10 +938,22 @@ function getDashboardData(q) {
     filtered.sort((a,b)=> key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
 
     const rowsForClient = filtered.map(serializeRecordForClient_);
+    const validityStats = {
+      expired: { total: 0 },
+      upcoming: { total: 0 },
+      active: { total: 0 }
+    };
+    rowsForClient.forEach(row => {
+      const type = (row.validityStatusInfo && row.validityStatusInfo.type) || inferStatusType_(row.validityStatus);
+      if (type === 'Expired') validityStats.expired.total += 1;
+      else if (type === 'Upcoming') validityStats.upcoming.total += 1;
+      else validityStats.active.total += 1;
+    });
     const payload = {
       rows: rowsForClient,
       countsAll: JSON.parse(JSON.stringify(countsAll)),
-      countsFiltered: JSON.parse(JSON.stringify(countsFiltered))
+      countsFiltered: JSON.parse(JSON.stringify(countsFiltered)),
+      validityCounts: validityStats
     };
     return payload;
   } catch (err) {
