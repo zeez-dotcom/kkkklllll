@@ -368,12 +368,20 @@ function makePreviewUrl_(fileUrl) {
 })();
 function getAllRows_() {
   const sh = getSheet_();
-  const last = sh.getLastRow();
-  if (last < 2) return [];
-  const values = sh.getRange(2, 1, last-1, HEADER.length).getValues();
-  return values
-    .filter(r => String(r[0]||'').trim() !== '' || String(r[1]||'').trim() !== '')
-    .map(normalizeRow_);
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+  const lastColumn = sh.getLastColumn();
+  const headers = sh.getRange(1, 1, 1, lastColumn).getValues()[0];
+  const indexMap = buildHeaderIndex_(headers);
+  const values = sh.getRange(2, 1, lastRow - 1, lastColumn).getValues();
+  const records = [];
+  values.forEach((row, idx) => {
+    const record = buildRecordFromRow_(row, indexMap, idx);
+    if (record && (record.id || record.name)) {
+      records.push(record);
+    }
+  });
+  return records;
 }
 function findRowById_(id) {
   const target = String(id || '').trim();
@@ -381,53 +389,24 @@ function findRowById_(id) {
   const sh = getSheet_();
   const last = sh.getLastRow();
   if (last < 2) return null;
-  const range = sh.getRange(2, 1, last - 1, HEADER.length);
+  const lastColumn = sh.getLastColumn();
+  const headers = sh.getRange(1, 1, 1, lastColumn).getValues()[0];
+  const indexMap = buildHeaderIndex_(headers);
+  const range = sh.getRange(2, 1, last - 1, lastColumn);
   const values = range.getValues();
   for (let i = 0; i < values.length; i++) {
-    if (String(values[i][0]) === target) {
+    const row = values[i];
+    const record = buildRecordFromRow_(row, indexMap, i);
+    if (record && String(record.id) === target) {
+      const normalizedRow = HEADER.map((_, idx) => row[idx] != null ? row[idx] : '');
       return {
         rowNumber: i + 2,
-        values: values[i],
-        object: normalizeRow_(values[i])
+        values: normalizedRow,
+        object: record
       };
     }
   }
   return null;
-}
-function normalizeRow_(row) {
-  const obj = {};
-  HEADER.forEach((h, i) => obj[h] = row[i] ?? '');
-  obj.expiryDate = toIso_(obj.expiryDate);
-  const expiryStored = obj.expiryStatus;
-  const overallStored = obj.status;
-  const status = computeStatus_(obj.expiryDate);
-  const mergedExpiry = mergeStoredStatus_(status.expiry, expiryStored);
-  const mergedOverall = mergeStoredStatus_(status.overall, overallStored);
-  const defaultOverall = {
-    type: 'Active',
-    label: 'Active',
-    daysUntil: null,
-    withinThreshold: false,
-    mode: 'none'
-  };
-  const expiryInfo = formatStatusInfo_(mergedExpiry);
-  const overallInfo = formatStatusInfo_(mergedOverall, defaultOverall) || Object.assign({}, defaultOverall);
-  obj.expiryStatusInfo = expiryInfo;
-  obj.expiryStatus = sanitizeString_(expiryStored);
-  obj.status = overallInfo.label;
-  obj.statusInfo = overallInfo;
-  obj.statusType = overallInfo.type;
-  obj.statusDaysUntil = overallInfo.daysUntil;
-  obj.name = sanitizeString_(obj.name);
-  obj.nameAr = sanitizeString_(obj.nameAr);
-  obj.description = sanitizeString_(obj.description);
-  obj.descriptionAr = sanitizeString_(obj.descriptionAr);
-  obj.expiryLabel = sanitizeString_(obj.expiryLabel);
-  obj.expiryLabelAr = sanitizeString_(obj.expiryLabelAr);
-  obj.fileUrl = sanitizeUrl_(obj.fileUrl);
-  obj.filePreviewUrl = makePreviewUrl_(obj.fileUrl);
-  obj.fileName = sanitizeString_(obj.fileName || obj.name);
-  return obj;
 }
 function nextId_() {
   const sh = getSheet_();
@@ -462,6 +441,101 @@ function ensureDate_(value, fallback) {
     if (!isNaN(parsed)) return parsed;
   }
   return fallback instanceof Date && !isNaN(fallback) ? fallback : new Date();
+}
+function buildHeaderIndex_(headers) {
+  const index = {};
+  headers.forEach((raw, i) => {
+    const key = sanitizeString_(raw);
+    if (key && !(key in index)) {
+      index[key] = i;
+    }
+  });
+  return index;
+}
+function valueFromRow_(row, indexMap, candidates, fallback) {
+  for (let i = 0; i < candidates.length; i++) {
+    const key = sanitizeString_(candidates[i]);
+    if (!key) continue;
+    const idx = indexMap.hasOwnProperty(key) ? indexMap[key] : -1;
+    if (idx != null && idx >= 0 && idx < row.length) {
+      const value = row[idx];
+      if (value !== '' && value != null) {
+        return value;
+      }
+    }
+  }
+  return fallback;
+}
+function buildRecordFromRow_(row, indexMap, rowIndex) {
+  const idRaw = valueFromRow_(row, indexMap, ['id'], '');
+  const id = sanitizeString_(idRaw) || String(rowIndex + 1);
+  const name = sanitizeString_(valueFromRow_(row, indexMap, ['name'], ''));
+  const nameAr = sanitizeString_(valueFromRow_(row, indexMap, ['nameAr'], ''));
+  const description = sanitizeString_(valueFromRow_(row, indexMap, ['description'], ''));
+  const descriptionAr = sanitizeString_(valueFromRow_(row, indexMap, ['descriptionAr'], ''));
+  const expiryLabel = sanitizeString_(valueFromRow_(row, indexMap, ['expiryLabel', 'exp1Label', 'expiry'], ''));
+  const expiryLabelAr = sanitizeString_(valueFromRow_(row, indexMap, ['expiryLabelAr', 'exp1LabelAr'], ''));
+  const expiryDate = toIso_(valueFromRow_(row, indexMap, ['expiryDate', 'exp1Date', 'expiry'], ''));
+  const statusSnapshot = computeStatus_(expiryDate);
+  const storedExpiryStatus = sanitizeString_(valueFromRow_(row, indexMap, ['expiryStatus', 'exp1Status'], ''));
+  const storedOverallStatus = sanitizeString_(valueFromRow_(row, indexMap, ['status', 'overallStatus'], ''));
+  const mergedExpiry = mergeStoredStatus_(statusSnapshot.expiry, storedExpiryStatus);
+  const mergedOverall = mergeStoredStatus_(statusSnapshot.overall, storedOverallStatus);
+  const expiryStatusInfo = formatStatusInfo_(mergedExpiry);
+  const overallInfo = formatStatusInfo_(mergedOverall, statusSnapshot.overall) || formatStatusInfo_(statusSnapshot.overall);
+  const fileUrl = sanitizeUrl_(valueFromRow_(row, indexMap, ['fileUrl', 'file', 'documentUrl', 'document'], ''));
+  const fileName = sanitizeString_(valueFromRow_(row, indexMap, ['fileName', 'documentName', 'filename'], '')) || name;
+  const createdAt = ensureDate_(valueFromRow_(row, indexMap, ['createdAt', 'created', 'timestamp'], new Date()), new Date());
+
+  return {
+    id,
+    name,
+    nameAr,
+    description,
+    descriptionAr,
+    expiryLabel,
+    expiryLabelAr,
+    expiryDate,
+    expiryStatus: expiryStatusInfo && expiryStatusInfo.label ? expiryStatusInfo.label : '',
+    expiryStatusInfo,
+    status: overallInfo && overallInfo.label ? overallInfo.label : '',
+    statusInfo: overallInfo,
+    statusType: overallInfo && overallInfo.type ? overallInfo.type : '',
+    statusDaysUntil: overallInfo && overallInfo.daysUntil != null ? overallInfo.daysUntil : null,
+    fileUrl,
+    filePreviewUrl: makePreviewUrl_(fileUrl),
+    fileName,
+    createdAt
+  };
+}
+function buildHistoryRecordFromRow_(row, indexMap) {
+  const id = sanitizeString_(valueFromRow_(row, indexMap, ['id'], ''));
+  if (!id) return null;
+  const timestamp = ensureDate_(valueFromRow_(row, indexMap, ['timestamp', 'date'], new Date()), new Date());
+  const action = sanitizeString_(valueFromRow_(row, indexMap, ['action'], ''));
+  const prevExpiryLabel = sanitizeString_(valueFromRow_(row, indexMap, ['prevExpiryLabel', 'expiryLabel', 'exp1Label'], ''));
+  const prevExpiryLabelAr = sanitizeString_(valueFromRow_(row, indexMap, ['prevExpiryLabelAr', 'expiryLabelAr', 'exp1LabelAr'], ''));
+  const prevExpiryDate = toIso_(valueFromRow_(row, indexMap, ['prevExpiryDate', 'expiryDate', 'exp1Date'], ''));
+  const prevExpiryStatus = sanitizeString_(valueFromRow_(row, indexMap, ['prevExpiryStatus', 'expiryStatus', 'exp1Status'], ''));
+  const prevStatus = sanitizeString_(valueFromRow_(row, indexMap, ['prevStatus', 'status'], ''));
+  const prevStatusType = sanitizeString_(valueFromRow_(row, indexMap, ['prevStatusType', 'statusType'], ''));
+  const prevFileUrl = sanitizeUrl_(valueFromRow_(row, indexMap, ['prevFileUrl', 'fileUrl', 'documentUrl'], ''));
+  const prevFileName = sanitizeString_(valueFromRow_(row, indexMap, ['prevFileName', 'fileName', 'documentName'], ''));
+
+  return {
+    id,
+    timestamp: formatTimestamp_(timestamp),
+    action,
+    prevExpiryLabel,
+    prevExpiryLabelAr,
+    prevExpiryDate,
+    prevExpiryStatus,
+    prevStatus,
+    prevStatusType,
+    prevFileUrl,
+    prevFilePreviewUrl: makePreviewUrl_(prevFileUrl),
+    prevFileName
+  };
 }
 function migrateLegacySheet_(sh) {
   const totalColumns = sh.getLastColumn();
@@ -940,33 +1014,22 @@ function getLicenseHistory(id) {
   if (last < 2) {
     return [];
   }
-  const values = sheet.getRange(2, 1, last - 1, LICENSE_HISTORY_HEADER.length).getValues();
-  const filtered = values.filter(row => String(row[0]) === target);
+  const lastColumn = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+  const indexMap = buildHeaderIndex_(headers);
+  const values = sheet.getRange(2, 1, last - 1, lastColumn).getValues();
+  const filtered = values
+    .map(row => buildHistoryRecordFromRow_(row, indexMap))
+    .filter(entry => entry && sanitizeString_(entry.id) === target);
   filtered.sort((a, b) => {
-    const da = new Date(a[1]);
-    const db = new Date(b[1]);
+    const da = new Date(a.timestamp);
+    const db = new Date(b.timestamp);
     if (isNaN(db) && isNaN(da)) return 0;
     if (isNaN(db)) return -1;
     if (isNaN(da)) return 1;
     return db.getTime() - da.getTime();
   });
-  return filtered.map(row => {
-    const fileUrl = sanitizeUrl_(row[13]);
-    return {
-      id: target,
-      timestamp: formatTimestamp_(row[1]),
-      action: sanitizeString_(row[2] || ''),
-      prevExpiryLabel: sanitizeString_(row[3]),
-      prevExpiryLabelAr: sanitizeString_(row[4]),
-      prevExpiryDate: toIso_(row[5]),
-      prevExpiryStatus: sanitizeString_(row[6]),
-      prevStatus: sanitizeString_(row[7]),
-      prevStatusType: sanitizeString_(row[8]),
-      prevFileUrl: fileUrl,
-      prevFilePreviewUrl: makePreviewUrl_(fileUrl),
-      prevFileName: sanitizeString_(row[10])
-    };
-  });
+  return filtered;
 }
 
 // Backward compatible aliases for existing client integrations.
