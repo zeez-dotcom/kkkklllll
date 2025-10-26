@@ -469,10 +469,13 @@ function migrateLegacySheet_(sh) {
   if (lastRow < 2) return;
 
   const lastColumn = sh.getLastColumn();
-  const width = Math.min(lastColumn, HEADER.length);
+  const width = lastColumn;
   const rows = sh.getRange(2, 1, lastRow - 1, width).getValues();
   const migrated = rows.map(row => legacyRowToCurrent_(row));
   sh.getRange(2, 1, migrated.length, HEADER.length).setValues(migrated);
+  if (lastColumn > HEADER.length) {
+    sh.deleteColumns(HEADER.length + 1, lastColumn - HEADER.length);
+  }
 }
 function legacyRowToCurrent_(row) {
   if (!Array.isArray(row)) row = [];
@@ -522,10 +525,14 @@ function migrateLegacyHistory_(history) {
   const totalColumns = history.getLastColumn();
   const last = history.getLastRow();
   if (last < 2) return;
-  const width = Math.min(history.getLastColumn(), LICENSE_HISTORY_HEADER.length + 4);
+  const lastColumn = history.getLastColumn();
+  const width = lastColumn;
   const values = history.getRange(2, 1, last - 1, width).getValues();
   const migrated = values.map(legacyHistoryRowToCurrent_);
   history.getRange(2, 1, migrated.length, LICENSE_HISTORY_HEADER.length).setValues(migrated);
+  if (lastColumn > LICENSE_HISTORY_HEADER.length) {
+    history.deleteColumns(LICENSE_HISTORY_HEADER.length + 1, lastColumn - LICENSE_HISTORY_HEADER.length);
+  }
 }
 function legacyHistoryRowToCurrent_(row) {
   if (!Array.isArray(row)) row = [];
