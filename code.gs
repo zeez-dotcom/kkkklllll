@@ -375,9 +375,9 @@ function getAllRows_() {
   const indexMap = buildHeaderIndex_(headers);
   const values = sh.getRange(2, 1, lastRow - 1, lastColumn).getValues();
   const records = [];
-  values.forEach((row, idx) => {
-    const record = buildRecordFromRow_(row, indexMap, idx);
-    if (record && (record.id || record.name)) {
+  values.forEach(row => {
+    const record = buildRecordFromRow_(row, indexMap);
+    if (record && (record.id || record.name || record.description || record.expiryLabel)) {
       records.push(record);
     }
   });
@@ -396,7 +396,7 @@ function findRowById_(id) {
   const values = range.getValues();
   for (let i = 0; i < values.length; i++) {
     const row = values[i];
-    const record = buildRecordFromRow_(row, indexMap, i);
+    const record = buildRecordFromRow_(row, indexMap);
     if (record && String(record.id) === target) {
       const normalizedRow = HEADER.map((_, idx) => row[idx] != null ? row[idx] : '');
       return {
@@ -466,9 +466,64 @@ function valueFromRow_(row, indexMap, candidates, fallback) {
   }
   return fallback;
 }
-function buildRecordFromRow_(row, indexMap, rowIndex) {
-  const idRaw = valueFromRow_(row, indexMap, ['id'], '');
-  const id = sanitizeString_(idRaw) || String(rowIndex + 1);
+function serializeStatusInfo_(info) {
+  const base = {
+    type: '',
+    label: '',
+    daysUntil: null,
+    withinThreshold: false,
+    mode: ''
+  };
+  if (!info || typeof info !== 'object') return base;
+  if (info.type) base.type = String(info.type);
+  if (info.label != null) base.label = sanitizeString_(info.label);
+  if (info.daysUntil != null && isFinite(info.daysUntil)) base.daysUntil = Number(info.daysUntil);
+  if (info.withinThreshold != null) base.withinThreshold = !!info.withinThreshold;
+  if (info.mode != null) base.mode = String(info.mode);
+  return base;
+}
+function serializeRecordForClient_(record) {
+  return {
+    id: sanitizeString_(record.id),
+    name: sanitizeString_(record.name),
+    nameAr: sanitizeString_(record.nameAr),
+    description: sanitizeString_(record.description),
+    descriptionAr: sanitizeString_(record.descriptionAr),
+    expiryLabel: sanitizeString_(record.expiryLabel),
+    expiryLabelAr: sanitizeString_(record.expiryLabelAr),
+    expiryDate: toIso_(record.expiryDate),
+    expiryStatus: sanitizeString_(record.expiryStatus),
+    expiryStatusInfo: serializeStatusInfo_(record.expiryStatusInfo),
+    status: sanitizeString_(record.status),
+    statusInfo: serializeStatusInfo_(record.statusInfo),
+    statusType: sanitizeString_(record.statusType),
+    statusDaysUntil: record.statusDaysUntil != null && isFinite(record.statusDaysUntil)
+      ? Number(record.statusDaysUntil)
+      : null,
+    fileUrl: sanitizeUrl_(record.fileUrl),
+    filePreviewUrl: sanitizeUrl_(record.filePreviewUrl),
+    fileName: sanitizeString_(record.fileName),
+    createdAt: record.createdAt ? formatTimestamp_(record.createdAt) : ''
+  };
+}
+function serializeHistoryEntry_(entry) {
+  return {
+    id: sanitizeString_(entry.id),
+    timestamp: entry.timestamp || '',
+    action: sanitizeString_(entry.action),
+    prevExpiryLabel: sanitizeString_(entry.prevExpiryLabel),
+    prevExpiryLabelAr: sanitizeString_(entry.prevExpiryLabelAr),
+    prevExpiryDate: toIso_(entry.prevExpiryDate),
+    prevExpiryStatus: sanitizeString_(entry.prevExpiryStatus),
+    prevStatus: sanitizeString_(entry.prevStatus),
+    prevStatusType: sanitizeString_(entry.prevStatusType),
+    prevFileUrl: sanitizeUrl_(entry.prevFileUrl),
+    prevFilePreviewUrl: sanitizeUrl_(entry.prevFilePreviewUrl),
+    prevFileName: sanitizeString_(entry.prevFileName)
+  };
+}
+function buildRecordFromRow_(row, indexMap) {
+  const id = sanitizeString_(valueFromRow_(row, indexMap, ['id'], ''));
   const name = sanitizeString_(valueFromRow_(row, indexMap, ['name'], ''));
   const nameAr = sanitizeString_(valueFromRow_(row, indexMap, ['nameAr'], ''));
   const description = sanitizeString_(valueFromRow_(row, indexMap, ['description'], ''));
@@ -486,6 +541,9 @@ function buildRecordFromRow_(row, indexMap, rowIndex) {
   const fileUrl = sanitizeUrl_(valueFromRow_(row, indexMap, ['fileUrl', 'file', 'documentUrl', 'document'], ''));
   const fileName = sanitizeString_(valueFromRow_(row, indexMap, ['fileName', 'documentName', 'filename'], '')) || name;
   const createdAt = ensureDate_(valueFromRow_(row, indexMap, ['createdAt', 'created', 'timestamp'], new Date()), new Date());
+  if (!id && !name && !description && !expiryLabel && !fileUrl) {
+    return null;
+  }
 
   return {
     id,
@@ -834,7 +892,13 @@ function getDashboardData(q) {
     };
     filtered.sort((a,b)=> key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
 
-    return { rows: filtered, countsAll, countsFiltered };
+    const rowsForClient = filtered.map(serializeRecordForClient_);
+    const payload = {
+      rows: rowsForClient,
+      countsAll: JSON.parse(JSON.stringify(countsAll)),
+      countsFiltered: JSON.parse(JSON.stringify(countsFiltered))
+    };
+    return payload;
   } catch (err) {
     Logger.log('getDashboardData error: %s', err && err.stack ? err.stack : err);
     throw err;
@@ -1029,7 +1093,7 @@ function getLicenseHistory(id) {
     if (isNaN(da)) return 1;
     return db.getTime() - da.getTime();
   });
-  return filtered;
+  return filtered.map(serializeHistoryEntry_);
 }
 
 // Backward compatible aliases for existing client integrations.
