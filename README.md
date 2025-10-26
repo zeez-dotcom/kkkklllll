@@ -12,6 +12,15 @@ The server code expects to read and write license data from a spreadsheet that c
    - Leave the constant blank only when the script is container-bound to the desired spreadsheet.
 3. Save the script changes before testing or deploying the web app.
 
+The `Licenses` sheet should expose these columns, in order:
+
+```
+id, name, nameAr, description, descriptionAr,
+expiryLabel, expiryLabelAr, expiryDate, expiryStatus,
+validityLabel, validityLabelAr, validityDate, validityStatus,
+status, fileUrl, fileName, createdAt
+```
+
 If the ID is missing and the script is not bound to a spreadsheet, calls to `getDashboardData` will throw an error instructing you to set `SPREADSHEET_ID`.
 
 ## Deployment notes
@@ -24,19 +33,21 @@ The backend exposes dedicated helpers for updating existing rows and for fetchin
 
 * `updateLicense(payload)` replaces the editable cells (expiry labels/dates, status, and file metadata) for a given `id`. When a replacement file is supplied it is uploaded to Drive before the sheet is updated. The function recomputes status columns with `computeStatus_` and stores a snapshot of the pre-update values in `LicenseHistory`.
 * `renewLicense(payload)` is a thin alias around `updateLicense` that always records the action as a renewal. Use this when the UI offers a “renew” workflow.
-* `getLicenseHistory(id)` reads the `LicenseHistory` sheet and returns the previous values ordered from newest to oldest. The payload includes timestamps, the previous expiry labels/dates, status labels, and file URLs so the frontend can render a detailed timeline.
+* `getLicenseHistory(id)` reads the `LicenseHistory` sheet and returns the previous values ordered from newest to oldest. The payload includes timestamps, the previous expiry and validity labels/dates, status labels, and file URLs so the frontend can render a detailed timeline.
 
-The history sheet is initialised automatically with the `LICENSE_HISTORY_HEADER` column order. Every update (or renewal) appends a new row capturing the prior expiry dates, status labels, Drive file link, and a timestamp of when the change occurred. Dashboard rows also include a `hasHistory` flag so the UI can disable or hide history toggles for licenses that have never been updated.
+The history sheet is initialised automatically with the `LICENSE_HISTORY_HEADER` column order. Every update (or renewal) appends a new row capturing the prior expiry/validity dates, status labels, Drive file link, and a timestamp of when the change occurred. Dashboard rows also include a `hasHistory` flag so the UI can disable or hide history toggles for licenses that have never been updated.
 
 ## Regression check
 
-To confirm the dashboard tallies status buckets correctly, seed the sheet with a couple of contrasting expiry dates and allow the script to recompute the status columns:
+To confirm the dashboard tallies status buckets correctly, seed the sheet with contrasting expiry/validity dates and allow the script to recompute the status columns:
 
 | Field | Record A (expired) | Record B (upcoming) |
 | --- | --- | --- |
 | `name` | `Expired sample` | `Upcoming sample` |
 | `expiryLabel` | `Trade license` | `Insurance renewal` |
 | `expiryDate` | `2023-01-01` | _30 days from today_ |
+| `validityLabel` | `Operating permit` | `Operating permit` |
+| `validityDate` | `2023-01-05` | _40 days from today_ |
 
 After refreshing the dashboard the Expired card increments by one (record A) and the Upcoming card increments by one (record B). Clearing the status cells keeps the calculation server driven and highlights any regressions in the bucketing logic.
 

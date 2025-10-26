@@ -8,6 +8,7 @@ const HEADER = [
   'name','nameAr',
   'description','descriptionAr',
   'expiryLabel','expiryLabelAr','expiryDate','expiryStatus',
+  'validityLabel','validityLabelAr','validityDate','validityStatus',
   'status','fileUrl','fileName','createdAt'
 ];
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
@@ -22,6 +23,10 @@ const LICENSE_HISTORY_HEADER = [
   'prevExpiryLabelAr',
   'prevExpiryDate',
   'prevExpiryStatus',
+  'prevValidityLabel',
+  'prevValidityLabelAr',
+  'prevValidityDate',
+  'prevValidityStatus',
   'prevStatus',
   'prevStatusType',
   'prevFileUrl',
@@ -161,9 +166,9 @@ function computeExpiryStatus_(iso) {
   };
 }
 
-function computeStatus_(expiryIso) {
+function computeStatus_(expiryIso, validityIso) {
   const expiryStatus = computeExpiryStatus_(expiryIso);
-
+  const validityStatus = computeExpiryStatus_(validityIso);
   const defaultOverall = {
     type: 'Active',
     label: 'Active',
@@ -172,11 +177,31 @@ function computeStatus_(expiryIso) {
     mode: 'none'
   };
 
-  const overall = expiryStatus
-    ? Object.assign({}, expiryStatus)
-    : Object.assign({}, defaultOverall);
+  const statuses = [expiryStatus, validityStatus].filter(Boolean);
+  if (!statuses.length) {
+    return { overall: Object.assign({}, defaultOverall), expiry: expiryStatus, validity: validityStatus };
+  }
 
-  return { overall, expiry: expiryStatus };
+  const severity = status => {
+    if (!status || !status.type) return 3;
+    if (status.type === 'Expired') return 0;
+    if (status.type === 'Upcoming') return 1;
+    if (status.type === 'Active') return 2;
+    return 3;
+  };
+
+  statuses.sort((a, b) => {
+    const sa = severity(a);
+    const sb = severity(b);
+    if (sa !== sb) return sa - sb;
+    const da = a && a.daysUntil != null ? a.daysUntil : Number.POSITIVE_INFINITY;
+    const db = b && b.daysUntil != null ? b.daysUntil : Number.POSITIVE_INFINITY;
+    return da - db;
+  });
+
+  const overall = Object.assign({}, statuses[0]);
+
+  return { overall, expiry: expiryStatus, validity: validityStatus };
 }
 
 function inferStatusType_(label) {
@@ -496,6 +521,11 @@ function serializeRecordForClient_(record) {
     expiryDate: toIso_(record.expiryDate),
     expiryStatus: sanitizeString_(record.expiryStatus),
     expiryStatusInfo: serializeStatusInfo_(record.expiryStatusInfo),
+    validityLabel: sanitizeString_(record.validityLabel),
+    validityLabelAr: sanitizeString_(record.validityLabelAr),
+    validityDate: toIso_(record.validityDate),
+    validityStatus: sanitizeString_(record.validityStatus),
+    validityStatusInfo: serializeStatusInfo_(record.validityStatusInfo),
     status: sanitizeString_(record.status),
     statusInfo: serializeStatusInfo_(record.statusInfo),
     statusType: sanitizeString_(record.statusType),
@@ -520,6 +550,10 @@ function serializeHistoryEntry_(entry) {
     prevExpiryLabelAr: sanitizeString_(entry.prevExpiryLabelAr),
     prevExpiryDate: toIso_(entry.prevExpiryDate),
     prevExpiryStatus: sanitizeString_(entry.prevExpiryStatus),
+    prevValidityLabel: sanitizeString_(entry.prevValidityLabel),
+    prevValidityLabelAr: sanitizeString_(entry.prevValidityLabelAr),
+    prevValidityDate: toIso_(entry.prevValidityDate),
+    prevValidityStatus: sanitizeString_(entry.prevValidityStatus),
     prevStatus: sanitizeString_(entry.prevStatus),
     prevStatusType: sanitizeString_(entry.prevStatusType),
     prevFileUrl: canonicalPrevUrl,
@@ -537,18 +571,24 @@ function buildRecordFromRow_(row, indexMap, rowIndex) {
   const expiryLabel = sanitizeString_(valueFromRow_(row, indexMap, ['expiryLabel', 'exp1Label', 'expiry'], ''));
   const expiryLabelAr = sanitizeString_(valueFromRow_(row, indexMap, ['expiryLabelAr', 'exp1LabelAr'], ''));
   const expiryDate = toIso_(valueFromRow_(row, indexMap, ['expiryDate', 'exp1Date', 'expiry'], ''));
-  const statusSnapshot = computeStatus_(expiryDate);
+  const validityLabel = sanitizeString_(valueFromRow_(row, indexMap, ['validityLabel', 'exp2Label', 'validity'], ''));
+  const validityLabelAr = sanitizeString_(valueFromRow_(row, indexMap, ['validityLabelAr', 'exp2LabelAr'], ''));
+  const validityDate = toIso_(valueFromRow_(row, indexMap, ['validityDate', 'exp2Date', 'validity'], ''));
+  const statusSnapshot = computeStatus_(expiryDate, validityDate);
   const storedExpiryStatus = sanitizeString_(valueFromRow_(row, indexMap, ['expiryStatus', 'exp1Status'], ''));
+  const storedValidityStatus = sanitizeString_(valueFromRow_(row, indexMap, ['validityStatus', 'exp2Status'], ''));
   const storedOverallStatus = sanitizeString_(valueFromRow_(row, indexMap, ['status', 'overallStatus'], ''));
   const mergedExpiry = mergeStoredStatus_(statusSnapshot.expiry, storedExpiryStatus);
+  const mergedValidity = mergeStoredStatus_(statusSnapshot.validity, storedValidityStatus);
   const mergedOverall = mergeStoredStatus_(statusSnapshot.overall, storedOverallStatus);
   const expiryStatusInfo = formatStatusInfo_(mergedExpiry);
+  const validityStatusInfo = formatStatusInfo_(mergedValidity);
   const overallInfo = formatStatusInfo_(mergedOverall, statusSnapshot.overall) || formatStatusInfo_(statusSnapshot.overall);
   const fileUrl = sanitizeUrl_(valueFromRow_(row, indexMap, ['fileUrl', 'file', 'documentUrl', 'document'], ''));
   const canonicalUrl = fileUrl || sanitizeUrl_(valueFromRow_(row, indexMap, ['filePreviewUrl'], ''));
   const fileName = sanitizeString_(valueFromRow_(row, indexMap, ['fileName', 'documentName', 'filename'], '')) || name;
   const createdAt = ensureDate_(valueFromRow_(row, indexMap, ['createdAt', 'created', 'timestamp'], new Date()), new Date());
-  if (!id && !name && !description && !expiryLabel && !canonicalUrl) {
+  if (!id && !name && !description && !expiryLabel && !validityLabel && !canonicalUrl) {
     return null;
   }
 
@@ -563,6 +603,11 @@ function buildRecordFromRow_(row, indexMap, rowIndex) {
     expiryDate,
     expiryStatus: expiryStatusInfo && expiryStatusInfo.label ? expiryStatusInfo.label : '',
     expiryStatusInfo,
+    validityLabel,
+    validityLabelAr,
+    validityDate,
+    validityStatus: validityStatusInfo && validityStatusInfo.label ? validityStatusInfo.label : '',
+    validityStatusInfo,
     status: overallInfo && overallInfo.label ? overallInfo.label : '',
     statusInfo: overallInfo,
     statusType: overallInfo && overallInfo.type ? overallInfo.type : '',
@@ -582,6 +627,10 @@ function buildHistoryRecordFromRow_(row, indexMap) {
   const prevExpiryLabelAr = sanitizeString_(valueFromRow_(row, indexMap, ['prevExpiryLabelAr', 'expiryLabelAr', 'exp1LabelAr'], ''));
   const prevExpiryDate = toIso_(valueFromRow_(row, indexMap, ['prevExpiryDate', 'expiryDate', 'exp1Date'], ''));
   const prevExpiryStatus = sanitizeString_(valueFromRow_(row, indexMap, ['prevExpiryStatus', 'expiryStatus', 'exp1Status'], ''));
+  const prevValidityLabel = sanitizeString_(valueFromRow_(row, indexMap, ['prevValidityLabel', 'validityLabel', 'exp2Label'], ''));
+  const prevValidityLabelAr = sanitizeString_(valueFromRow_(row, indexMap, ['prevValidityLabelAr', 'validityLabelAr', 'exp2LabelAr'], ''));
+  const prevValidityDate = toIso_(valueFromRow_(row, indexMap, ['prevValidityDate', 'validityDate', 'exp2Date'], ''));
+  const prevValidityStatus = sanitizeString_(valueFromRow_(row, indexMap, ['prevValidityStatus', 'validityStatus', 'exp2Status'], ''));
   const prevStatus = sanitizeString_(valueFromRow_(row, indexMap, ['prevStatus', 'status'], ''));
   const prevStatusType = sanitizeString_(valueFromRow_(row, indexMap, ['prevStatusType', 'statusType'], ''));
   const prevFileUrl = sanitizeUrl_(valueFromRow_(row, indexMap, ['prevFileUrl', 'fileUrl', 'documentUrl'], ''));
@@ -595,6 +644,10 @@ function buildHistoryRecordFromRow_(row, indexMap) {
     prevExpiryLabelAr,
     prevExpiryDate,
     prevExpiryStatus,
+    prevValidityLabel,
+    prevValidityLabelAr,
+    prevValidityDate,
+    prevValidityStatus,
     prevStatus,
     prevStatusType,
     prevFileUrl,
@@ -618,6 +671,10 @@ function recordToRow_(record) {
     sanitizeString_(record.expiryLabelAr),
     toIso_(record.expiryDate),
     sanitizeString_(record.expiryStatus),
+    sanitizeString_(record.validityLabel),
+    sanitizeString_(record.validityLabelAr),
+    toIso_(record.validityDate),
+    sanitizeString_(record.validityStatus),
     sanitizeString_(record.status),
     canonicalUrl,
     sanitizeString_(record.fileName),
@@ -636,6 +693,10 @@ function historyEntryToRow_(entry) {
     sanitizeString_(entry.prevExpiryLabelAr),
     toIso_(entry.prevExpiryDate),
     sanitizeString_(entry.prevExpiryStatus),
+    sanitizeString_(entry.prevValidityLabel),
+    sanitizeString_(entry.prevValidityLabelAr),
+    toIso_(entry.prevValidityDate),
+    sanitizeString_(entry.prevValidityStatus),
     sanitizeString_(entry.prevStatus),
     sanitizeString_(entry.prevStatusType),
     canonicalPrevUrl,
@@ -677,6 +738,9 @@ function normalizeUploadInput_(obj) {
     expiryLabel: sanitizeString_(obj && obj.expiryLabel),
     expiryLabelAr: sanitizeString_(obj && obj.expiryLabelAr),
     expiryDate: toIso_(obj && obj.expiryDate),
+    validityLabel: sanitizeString_(obj && obj.validityLabel),
+    validityLabelAr: sanitizeString_(obj && obj.validityLabelAr),
+    validityDate: toIso_(obj && obj.validityDate),
     file: null
   };
 
@@ -712,6 +776,10 @@ function recordHistoryEntry_(id, existingObj, action) {
     sanitizeString_(existingObj.expiryLabelAr),
     toIso_(existingObj.expiryDate),
     sanitizeString_(existingObj.expiryStatusInfo && existingObj.expiryStatusInfo.label ? existingObj.expiryStatusInfo.label : existingObj.expiryStatus),
+    sanitizeString_(existingObj.validityLabel),
+    sanitizeString_(existingObj.validityLabelAr),
+    toIso_(existingObj.validityDate),
+    sanitizeString_(existingObj.validityStatusInfo && existingObj.validityStatusInfo.label ? existingObj.validityStatusInfo.label : existingObj.validityStatus),
     sanitizeString_(existingObj.statusInfo && existingObj.statusInfo.label ? existingObj.statusInfo.label : existingObj.status),
     sanitizeString_(existingObj.statusInfo && existingObj.statusInfo.type ? existingObj.statusInfo.type : existingObj.statusType),
     sanitizeUrl_(existingObj.fileUrl),
@@ -771,6 +839,7 @@ function getDashboardData(q) {
         r.name, r.nameAr,
         r.description, r.descriptionAr,
         r.expiryLabel, r.expiryLabelAr,
+        r.validityLabel, r.validityLabelAr,
         r.fileName
       ]
         .map(x => String(x||'').toLowerCase())
@@ -812,6 +881,9 @@ function getDashboardData(q) {
 
       const resolveStatusType = row => {
         const candidates = [
+          row && row.validityStatusInfo && row.validityStatusInfo.type,
+          row && row.validityStatusInfo && row.validityStatusInfo.label,
+          row && row.validityStatus,
           row && row.expiryStatusInfo && row.expiryStatusInfo.type,
           row && row.expiryStatusInfo && row.expiryStatusInfo.label,
           row && row.expiryStatus,
@@ -856,8 +928,12 @@ function getDashboardData(q) {
     }
 
     const key = r => {
-      const date = r && r.expiryDate ? String(r.expiryDate) : '';
-      return (date || '9999-12-31') + '|' + (r.name||'');
+      const dates = [r && r.expiryDate, r && r.validityDate]
+        .map(v => v ? String(v) : '')
+        .filter(Boolean)
+        .sort();
+      const primary = dates.length ? dates[0] : '';
+      return (primary || '9999-12-31') + '|' + (r && r.name ? r.name : '');
     };
     filtered.sort((a,b)=> key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
 
@@ -898,7 +974,7 @@ function uploadDocument(obj) {
       fileName = data.file.name;
     }
 
-    const status = computeStatus_(data.expiryDate);
+    const status = computeStatus_(data.expiryDate, data.validityDate);
     const overall = status.overall || { label: 'Active' };
 
     sh.appendRow([
@@ -911,6 +987,10 @@ function uploadDocument(obj) {
       data.expiryLabelAr,
       data.expiryDate,
       status.expiry && status.expiry.label ? status.expiry.label : '',
+      data.validityLabel,
+      data.validityLabelAr,
+      data.validityDate,
+      status.validity && status.validity.label ? status.validity.label : '',
       overall.label,
       fileUrl,
       fileName || data.name,
@@ -930,7 +1010,11 @@ function uploadDocument(obj) {
       expiryLabel: data.expiryLabel,
       expiryLabelAr: data.expiryLabelAr,
       expiryDate: data.expiryDate,
-      expiryStatus: status.expiry && status.expiry.label ? status.expiry.label : ''
+      expiryStatus: status.expiry && status.expiry.label ? status.expiry.label : '',
+      validityLabel: data.validityLabel,
+      validityLabelAr: data.validityLabelAr,
+      validityDate: data.validityDate,
+      validityStatus: status.validity && status.validity.label ? status.validity.label : ''
     };
   } catch (err) {
     return { ok:false, error:String(err && err.message || err) };
@@ -974,9 +1058,10 @@ function updateLicense(obj) {
       fileName = data.file.name;
     }
 
-    const status = computeStatus_(data.expiryDate);
+    const status = computeStatus_(data.expiryDate, data.validityDate);
     const overall = status.overall || { label: 'Active', type: 'Active' };
     const expiryStatusLabel = status.expiry && status.expiry.label ? status.expiry.label : '';
+    const validityStatusLabel = status.validity && status.validity.label ? status.validity.label : '';
 
     const createdAtIndex = HEADER.indexOf('createdAt');
     const existingCreated = createdAtIndex >= 0 ? found.values[createdAtIndex] : new Date();
@@ -994,6 +1079,10 @@ function updateLicense(obj) {
       data.expiryLabelAr,
       data.expiryDate,
       expiryStatusLabel,
+      data.validityLabel,
+      data.validityLabelAr,
+      data.validityDate,
+      validityStatusLabel,
       overall.label,
       fileUrl,
       fileName || data.name,
@@ -1016,6 +1105,11 @@ function updateLicense(obj) {
       expiryLabel: data.expiryLabel,
       expiryLabelAr: data.expiryLabelAr,
       expiryDate: data.expiryDate,
+      expiryStatus: expiryStatusLabel,
+      validityLabel: data.validityLabel,
+      validityLabelAr: data.validityLabelAr,
+      validityDate: data.validityDate,
+      validityStatus: validityStatusLabel,
       hasHistory: true
     };
   } catch (err) {
