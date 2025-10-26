@@ -62,6 +62,7 @@ function getSheet_() {
   if (first.length !== HEADER.length || HEADER.some((h,i)=>first[i] !== h)) {
     sh.getRange(1,1,1,HEADER.length).setValues([HEADER]);
   }
+  migrateLegacySheet_(sh);
   return sh;
 }
 function getFolder_() {
@@ -83,6 +84,7 @@ function getHistorySheet_() {
   if (first.length !== LICENSE_HISTORY_HEADER.length || LICENSE_HISTORY_HEADER.some((h, i) => first[i] !== h)) {
     history.getRange(1, 1, 1, LICENSE_HISTORY_HEADER.length).setValues([LICENSE_HISTORY_HEADER]);
   }
+  migrateLegacyHistory_(history);
   return history;
 }
 function sanitizeString_(value) {
@@ -450,6 +452,117 @@ function decodeBase64Safely_(b64, context) {
     Logger.log('base64 decode failed%s: %s', label, err && err.stack ? err.stack : err);
     throw new Error('Uploaded file data is invalid or corrupted. Please reselect the file and try again.');
   }
+}
+function ensureDate_(value, fallback) {
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value)) {
+    return value;
+  }
+  if (value != null) {
+    const parsed = new Date(value);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return fallback instanceof Date && !isNaN(fallback) ? fallback : new Date();
+}
+function migrateLegacySheet_(sh) {
+  const totalColumns = sh.getLastColumn();
+  if (totalColumns <= HEADER.length) {
+    return;
+  }
+  const lastRow = sh.getLastRow();
+  if (lastRow >= 2) {
+    const legacyValues = sh.getRange(2, 1, lastRow - 1, totalColumns).getValues();
+    const migrated = legacyValues.map(legacyRowToCurrent_);
+    if (migrated.length) {
+      sh.getRange(2, 1, migrated.length, HEADER.length).setValues(migrated);
+    }
+  }
+  const extra = sh.getLastColumn() - HEADER.length;
+  if (extra > 0) {
+    sh.deleteColumns(HEADER.length + 1, extra);
+  }
+}
+function legacyRowToCurrent_(row) {
+  const empty = row.every(value => value === '' || value == null);
+  if (empty) {
+    return new Array(HEADER.length).fill('');
+  }
+  const id = sanitizeString_(row[0]);
+  const name = sanitizeString_(row[1]);
+  const nameAr = sanitizeString_(row[2]);
+  const description = sanitizeString_(row[3]);
+  const descriptionAr = sanitizeString_(row[4]);
+  const expiryLabel = sanitizeString_(row[5]);
+  const expiryLabelAr = sanitizeString_(row[6]);
+  const expiryDate = toIso_(row[7]);
+  const statusInfo = computeStatus_(expiryDate);
+  const legacyExpiryStatus = sanitizeString_(row[8]);
+  const expiryStatus = statusInfo.expiry && statusInfo.expiry.label ? statusInfo.expiry.label : legacyExpiryStatus;
+  const legacyOverallStatus = sanitizeString_(row[13]);
+  const overallStatus = statusInfo.overall && statusInfo.overall.label ? statusInfo.overall.label : legacyOverallStatus;
+  const fileUrl = sanitizeUrl_(row[14] != null ? row[14] : row[10]);
+  const fileName = sanitizeString_((row[15] != null ? row[15] : row[11]) || name);
+  const createdAt = ensureDate_(row[16], new Date());
+  return [
+    id,
+    name,
+    nameAr,
+    description,
+    descriptionAr,
+    expiryLabel,
+    expiryLabelAr,
+    expiryDate,
+    expiryStatus,
+    overallStatus,
+    fileUrl,
+    fileName,
+    createdAt
+  ];
+}
+function migrateLegacyHistory_(history) {
+  const totalColumns = history.getLastColumn();
+  if (totalColumns <= LICENSE_HISTORY_HEADER.length) {
+    return;
+  }
+  const last = history.getLastRow();
+  if (last >= 2) {
+    const values = history.getRange(2, 1, last - 1, totalColumns).getValues();
+    const migrated = values.map(legacyHistoryRowToCurrent_);
+    if (migrated.length) {
+      history.getRange(2, 1, migrated.length, LICENSE_HISTORY_HEADER.length).setValues(migrated);
+    }
+  }
+  const extra = history.getLastColumn() - LICENSE_HISTORY_HEADER.length;
+  if (extra > 0) {
+    history.deleteColumns(LICENSE_HISTORY_HEADER.length + 1, extra);
+  }
+}
+function legacyHistoryRowToCurrent_(row) {
+  const timestamp = ensureDate_(row[1], new Date());
+  const expiryLabel = sanitizeString_(row[3] || row[7]);
+  const expiryLabelAr = sanitizeString_(row[4] || row[8]);
+  const expiryDate = toIso_(row[5] || row[9]);
+  const statusInfo = computeStatus_(expiryDate);
+  const legacyExpiryStatus = sanitizeString_(row[6] || row[10]);
+  const expiryStatus = legacyExpiryStatus || (statusInfo.expiry && statusInfo.expiry.label ? statusInfo.expiry.label : '');
+  const legacyOverallStatus = sanitizeString_(row[11]);
+  const legacyOverallType = sanitizeString_(row[12]);
+  const overallStatus = legacyOverallStatus || (statusInfo.overall && statusInfo.overall.label ? statusInfo.overall.label : '');
+  const overallType = legacyOverallType || (statusInfo.overall && statusInfo.overall.type ? statusInfo.overall.type : '');
+  const fileUrl = sanitizeUrl_(row[13]);
+  const fileName = sanitizeString_(row[14] || '');
+  return [
+    sanitizeString_(row[0]),
+    timestamp,
+    sanitizeString_(row[2]),
+    expiryLabel,
+    expiryLabelAr,
+    expiryDate,
+    expiryStatus,
+    overallStatus,
+    overallType,
+    fileUrl,
+    fileName
+  ];
 }
 function normalizeUploadInput_(obj) {
   const normalized = {
