@@ -689,6 +689,10 @@
       flex-direction: column;
       gap: 8px;
     }
+    .form-field.spacer {
+      visibility: hidden;
+      pointer-events: none;
+    }
 
     .form-field label {
       font-weight: 600;
@@ -920,8 +924,7 @@
                 <th id="thId"></th>
                 <th id="thName"></th>
                 <th id="thDescription"></th>
-                <th id="thExpiry1"></th>
-                <th id="thExpiry2"></th>
+                <th id="thExpiry"></th>
                 <th id="thStatus"></th>
                 <th id="thFile"></th>
                 <th id="thActions"></th>
@@ -959,33 +962,20 @@
           </div>
           <div class="form-grid">
             <div class="form-field">
-              <label for="uploadExp1Label" id="labelExp1"></label>
-              <input id="uploadExp1Label" name="exp1Label" placeholder="" maxlength="200" />
+              <label for="uploadExpiryLabel" id="labelExpiryLabel"></label>
+              <input id="uploadExpiryLabel" name="expiryLabel" placeholder="" maxlength="200" />
             </div>
             <div class="form-field">
-              <label for="uploadExp1Date" id="labelExp1Date"></label>
-              <input id="uploadExp1Date" type="date" name="exp1Date" />
+              <label for="uploadExpiryDate" id="labelExpiryDate"></label>
+              <input id="uploadExpiryDate" type="date" name="expiryDate" />
             </div>
           </div>
           <div class="form-grid">
             <div class="form-field">
-              <label for="uploadExp2Label" id="labelExp2"></label>
-              <input id="uploadExp2Label" name="exp2Label" placeholder="" maxlength="200" />
+              <label for="uploadExpiryLabelAr" id="labelExpiryLabelAr"></label>
+              <input id="uploadExpiryLabelAr" name="expiryLabelAr" placeholder="" lang="ar" dir="rtl" maxlength="200" />
             </div>
-            <div class="form-field">
-              <label for="uploadExp2Date" id="labelExp2Date"></label>
-              <input id="uploadExp2Date" type="date" name="exp2Date" />
-            </div>
-          </div>
-          <div class="form-grid">
-            <div class="form-field">
-              <label for="uploadExp1LabelAr" id="labelExp1Ar"></label>
-              <input id="uploadExp1LabelAr" name="exp1LabelAr" placeholder="" lang="ar" dir="rtl" maxlength="200" />
-            </div>
-            <div class="form-field">
-              <label for="uploadExp2LabelAr" id="labelExp2Ar"></label>
-              <input id="uploadExp2LabelAr" name="exp2LabelAr" placeholder="" lang="ar" dir="rtl" maxlength="200" />
-            </div>
+            <div class="form-field spacer"></div>
           </div>
           <div class="form-actions">
             <div class="form-field">
@@ -1052,15 +1042,15 @@
           coercedRows: 'Loaded array-like rows (coerced to array).',
           invalidPayload: 'Dashboard payload was invalid; using defaults.'
         },
-        stats: { expired: 'Expired', upcoming: 'Upcoming (≤ 30 days)', active: 'Active' },
-        searchPlaceholder: 'Search by name, description, labels…',
+        stats: { expired: 'Expired', upcoming: 'Upcoming (<= 30 days)', active: 'Active' },
+        searchPlaceholder: 'Search by name, description, labels...',
         searchAria: 'Search',
         refresh: 'Refresh',
         results: {
           countSingular: '{count} result',
-          countPlural: '{count} result(s)',
+          countPlural: '{count} results',
           filteredSingular: '{count} result of {total} total',
-          filteredPlural: '{count} result(s) of {total} total',
+          filteredPlural: '{count} results of {total} total',
           failed: 'Failed to load data.',
           unable: 'Unable to load data.'
         },
@@ -1068,8 +1058,7 @@
           id: 'ID',
           name: 'Name',
           description: 'Description',
-          exp1: 'Expiry 1',
-          exp2: 'Expiry 2',
+          expiry: 'Expiry',
           status: 'Status',
           file: 'File',
           actions: 'Actions'
@@ -1081,7 +1070,7 @@
           iframeTitle: 'File preview'
         },
         noRecords: 'No matching records.',
-        fileLinks: { open: 'Open', preview: 'Preview', none: '—' },
+        fileLinks: { open: 'Open', preview: 'Preview', none: 'None' },
         rowActions: {
           edit: 'Edit',
           editTooltip: 'Edit this record',
@@ -1097,16 +1086,11 @@
           descriptionLabel: 'Description',
           descriptionLabelAr: 'Description (Arabic)',
           descriptionPlaceholderAr: 'Optional Arabic description',
-          exp1Label: 'Expiry 1 Label',
-          exp1Placeholder: 'e.g., License Expiry',
-          exp1LabelAr: 'Expiry 1 Label (Arabic)',
-          exp1PlaceholderAr: 'Arabic label (optional)',
-          exp1Date: 'Expiry 1 Date',
-          exp2Label: 'Expiry 2 Label',
-          exp2Placeholder: 'e.g., Insurance Expiry',
-          exp2LabelAr: 'Expiry 2 Label (Arabic)',
-          exp2PlaceholderAr: 'Arabic label (optional)',
-          exp2Date: 'Expiry 2 Date',
+          expiryLabel: 'Expiry Label',
+          expiryPlaceholder: 'e.g., License Expiry',
+          expiryLabelAr: 'Expiry Label (Arabic)',
+          expiryPlaceholderAr: 'Arabic label (optional)',
+          expiryDate: 'Expiry Date',
           documentLabel: 'Document (Image or PDF)',
           documentHelp: 'Optional. Files up to ~5MB recommended.',
           submit: 'Save',
@@ -1115,7 +1099,7 @@
           cancelEdit: 'Cancel edit'
         },
         uploadStatus: {
-          uploading: 'Uploading…',
+          uploading: 'Uploading...',
           saved: 'Saved. ID: {id}',
           updated: 'Updated. ID: {id}',
           renewed: 'Renewed. ID: {id}',
@@ -1126,21 +1110,20 @@
         },
         history: {
           title: 'Change History',
-          titleFor: 'History — {name}',
+          titleFor: 'History - {name}',
           subtitle: 'Record ID: {id}',
           close: 'Hide history',
-          loading: 'Loading history…',
+          loading: 'Loading history...',
           empty: 'No history entries yet.',
           error: 'Unable to load history.',
           errorWithMessage: 'Unable to load history: {message}',
           noFile: 'No file available',
           labels: {
             timestamp: 'Timestamp',
-            exp1: 'Expiry 1',
-            exp2: 'Expiry 2',
+            expiry: 'Expiry',
             file: 'File',
             status: 'Status',
-            none: '—'
+            none: 'None'
           },
           actions: {
             update: 'Updated',
@@ -1157,7 +1140,7 @@
           active: 'Active',
           upcoming: {
             label: 'Upcoming',
-            withinThreshold: 'Upcoming (≤ 30 days)',
+            withinThreshold: 'Upcoming (<= 30 days)',
             inOneDay: 'Upcoming (in 1 day)',
             inDays: 'Upcoming (in {days} days)',
             today: 'Upcoming (today)'
@@ -1166,25 +1149,25 @@
       },
       ar: {
         languageLabel: 'اللغة',
-        languages: { en: 'الإنجليزية', ar: 'العربية' },
-        pageTitle: 'تراخيص مكتب الإدارة',
-        headerTitle: 'تراخيص مكتب الإدارة',
+        languages: { en: 'English', ar: 'العربية' },
+        pageTitle: 'رخص المكتب الإداري',
+        headerTitle: 'رخص المكتب الإداري',
         tablistLabel: 'الأقسام',
-        tableAria: 'جدول التراخيص',
-        tabs: { dashboard: 'لوحة المعلومات', upload: 'رفع' },
+        tableAria: 'جدول الرخص',
+        tabs: { dashboard: 'لوحة التحكم', upload: 'إضافة' },
         debug: {
-          coercedRows: 'تم تحميل صفوف تشبه المصفوفة (تم تحويلها إلى مصفوفة).',
-          invalidPayload: 'استجابة لوحة المعلومات غير صالحة؛ تم استخدام القيم الافتراضية.'
+          coercedRows: 'تم تحميل صفوف بأشكال مختلفة (تم تحويلها إلى مصفوفة).',
+          invalidPayload: 'البيانات المستلمة غير صالحة، تم استخدام القيم الافتراضية.'
         },
-        stats: { expired: 'منتهي', upcoming: 'قادم (≤ 30 يوم)', active: 'ساري' },
-        searchPlaceholder: 'ابحث بالاسم أو الوصف أو التصنيفات…',
+        stats: { expired: 'منتهي', upcoming: 'قادم (<= 30 يوم)', active: 'ساري' },
+        searchPlaceholder: 'ابحث بالاسم أو الوصف أو الوسوم...',
         searchAria: 'بحث',
         refresh: 'تحديث',
         results: {
           countSingular: '{count} نتيجة',
-          countPlural: '{count} نتيجة',
-          filteredSingular: '{count} نتيجة من إجمالي {total}',
-          filteredPlural: '{count} نتيجة من إجمالي {total}',
+          countPlural: '{count} نتائج',
+          filteredSingular: '{count} نتيجة من أصل {total}',
+          filteredPlural: '{count} نتائج من أصل {total}',
           failed: 'فشل تحميل البيانات.',
           unable: 'تعذر تحميل البيانات.'
         },
@@ -1192,8 +1175,7 @@
           id: 'المعرف',
           name: 'الاسم',
           description: 'الوصف',
-          exp1: 'الانتهاء 1',
-          exp2: 'الانتهاء 2',
+          expiry: 'تاريخ الانتهاء',
           status: 'الحالة',
           file: 'الملف',
           actions: 'الإجراءات'
@@ -1205,44 +1187,39 @@
           iframeTitle: 'معاينة الملف'
         },
         noRecords: 'لا توجد سجلات مطابقة.',
-        fileLinks: { open: 'فتح', preview: 'معاينة', none: '—' },
+        fileLinks: { open: 'فتح', preview: 'معاينة', none: 'لا يوجد' },
         rowActions: {
           edit: 'تعديل',
-          editTooltip: 'تعديل السجل',
+          editTooltip: 'تعديل هذا السجل',
           renew: 'تجديد',
-          renewTooltip: 'تجديد السجل',
+          renewTooltip: 'تجديد هذا السجل',
           history: 'السجل',
-          historyTooltip: 'عرض سجل التعديلات'
+          historyTooltip: 'عرض سجل التغييرات'
         },
         uploadForm: {
           nameLabel: 'الاسم',
           nameLabelAr: 'الاسم (بالعربية)',
-          namePlaceholderAr: 'اسم عربي اختياري',
+          namePlaceholderAr: 'الاسم بالعربية (اختياري)',
           descriptionLabel: 'الوصف',
           descriptionLabelAr: 'الوصف (بالعربية)',
-          descriptionPlaceholderAr: 'وصف عربي اختياري',
-          exp1Label: 'تسمية الانتهاء 1',
-          exp1Placeholder: 'مثال: انتهاء الترخيص',
-          exp1LabelAr: 'تسمية الانتهاء 1 (بالعربية)',
-          exp1PlaceholderAr: 'تسمية عربية اختيارية',
-          exp1Date: 'تاريخ الانتهاء 1',
-          exp2Label: 'تسمية الانتهاء 2',
-          exp2Placeholder: 'مثال: انتهاء التأمين',
-          exp2LabelAr: 'تسمية الانتهاء 2 (بالعربية)',
-          exp2PlaceholderAr: 'تسمية عربية اختيارية',
-          exp2Date: 'تاريخ الانتهاء 2',
+          descriptionPlaceholderAr: 'الوصف بالعربية (اختياري)',
+          expiryLabel: 'وصف تاريخ الانتهاء',
+          expiryPlaceholder: 'مثال: انتهاء الرخصة',
+          expiryLabelAr: 'وصف تاريخ الانتهاء (بالعربية)',
+          expiryPlaceholderAr: 'الوصف بالعربية (اختياري)',
+          expiryDate: 'تاريخ الانتهاء',
           documentLabel: 'المستند (صورة أو PDF)',
-          documentHelp: 'اختياري. يفضل ملفات حتى 5 ميجابايت تقريبًا.',
+          documentHelp: 'اختياري. يفضل ألا يتجاوز الحجم 5 ميغابايت.',
           submit: 'حفظ',
           update: 'تحديث',
           renew: 'تجديد',
           cancelEdit: 'إلغاء التعديل'
         },
         uploadStatus: {
-          uploading: 'جارٍ الرفع…',
-          saved: 'تم الحفظ. المعرّف: {id}',
-          updated: 'تم التحديث. المعرّف: {id}',
-          renewed: 'تم التجديد. المعرّف: {id}',
+          uploading: 'جاري الرفع...',
+          saved: 'تم الحفظ. المعرف: {id}',
+          updated: 'تم التحديث. المعرف: {id}',
+          renewed: 'تم التجديد. المعرف: {id}',
           link: 'فتح الملف',
           errorWithMessage: 'خطأ: {message}',
           generic: 'حدث خطأ أثناء حفظ السجل.',
@@ -1250,21 +1227,20 @@
         },
         history: {
           title: 'سجل التغييرات',
-          titleFor: 'سجل التغييرات — {name}',
+          titleFor: 'السجل - {name}',
           subtitle: 'معرف السجل: {id}',
           close: 'إخفاء السجل',
-          loading: 'جاري تحميل السجل…',
-          empty: 'لا توجد تغييرات مسجلة.',
+          loading: 'جاري تحميل السجل...',
+          empty: 'لا توجد تغييرات سابقة.',
           error: 'تعذر تحميل السجل.',
           errorWithMessage: 'تعذر تحميل السجل: {message}',
           noFile: 'لا يوجد ملف',
           labels: {
-            timestamp: 'الوقت',
-            exp1: 'الانتهاء 1',
-            exp2: 'الانتهاء 2',
+            timestamp: 'التاريخ',
+            expiry: 'تاريخ الانتهاء',
             file: 'الملف',
             status: 'الحالة',
-            none: '—'
+            none: 'لا يوجد'
           },
           actions: {
             update: 'تم التحديث',
@@ -1274,14 +1250,14 @@
         },
         errors: {
           loadFail: 'فشل التحميل: {message}',
-          runtimeUnavailable: 'بيئة Google Apps Script غير متاحة.'
+          runtimeUnavailable: 'خدمة Google Apps Script غير متاحة.'
         },
         status: {
           expired: 'منتهي',
           active: 'ساري',
           upcoming: {
             label: 'قادم',
-            withinThreshold: 'قادم (≤ 30 يوم)',
+            withinThreshold: 'قادم (<= 30 يوم)',
             inOneDay: 'قادم (خلال يوم واحد)',
             inDays: 'قادم (خلال {days} يوم)',
             today: 'قادم (اليوم)'
@@ -1289,6 +1265,7 @@
         }
       }
     };
+
 
     const languageSelect = document.getElementById('languageSelect');
     const headerTitle = document.getElementById('headerTitle');
@@ -1310,12 +1287,9 @@
     const labelDescription = document.getElementById('labelDescription');
     const labelNameAr = document.getElementById('labelNameAr');
     const labelDescriptionAr = document.getElementById('labelDescriptionAr');
-    const labelExp1 = document.getElementById('labelExp1');
-    const labelExp1Date = document.getElementById('labelExp1Date');
-    const labelExp2 = document.getElementById('labelExp2');
-    const labelExp2Date = document.getElementById('labelExp2Date');
-    const labelExp1Ar = document.getElementById('labelExp1Ar');
-    const labelExp2Ar = document.getElementById('labelExp2Ar');
+    const labelExpiryLabel = document.getElementById('labelExpiryLabel');
+    const labelExpiryDate = document.getElementById('labelExpiryDate');
+    const labelExpiryLabelAr = document.getElementById('labelExpiryLabelAr');
     const labelDocument = document.getElementById('labelDocument');
     const documentHelp = document.getElementById('documentHelp');
     const btnUpload = document.getElementById('btnUpload');
@@ -1334,10 +1308,8 @@
     const inputDescription = document.getElementById('uploadDescription');
     const inputNameAr = document.getElementById('uploadNameAr');
     const inputDescriptionAr = document.getElementById('uploadDescriptionAr');
-    const exp1LabelInputEn = document.getElementById('uploadExp1Label');
-    const exp1LabelInputAr = document.getElementById('uploadExp1LabelAr');
-    const exp2LabelInputEn = document.getElementById('uploadExp2Label');
-    const exp2LabelInputAr = document.getElementById('uploadExp2LabelAr');
+    const expiryLabelInputEn = document.getElementById('uploadExpiryLabel');
+    const expiryLabelInputAr = document.getElementById('uploadExpiryLabelAr');
 
     let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || 'en';
     if (!translations[currentLang]) currentLang = 'en';
@@ -1412,7 +1384,7 @@
     }
 
     function createEmptyStatusCounts() {
-      return { total: 0, exp1: 0, exp2: 0, overall: 0 };
+      return { total: 0 };
     }
 
     function createEmptyCounts() {
@@ -1436,11 +1408,9 @@
       if (!bucket || typeof bucket !== 'object') {
         return base;
       }
-      ['total', 'exp1', 'exp2', 'overall'].forEach(key => {
-        if (bucket[key] != null) {
-          base[key] = toCountNumber(bucket[key], base[key]);
-        }
-      });
+      if (bucket.total != null) {
+        base.total = toCountNumber(bucket.total, base.total);
+      }
       return base;
     }
 
@@ -1463,10 +1433,8 @@
         inputDescription,
         inputNameAr,
         inputDescriptionAr,
-        exp1LabelInputEn,
-        exp1LabelInputAr,
-        exp2LabelInputEn,
-        exp2LabelInputAr
+        expiryLabelInputEn,
+        expiryLabelInputAr
       ].forEach(input => {
         if (!input) return;
         if (typeof input.value === 'string') {
@@ -1517,14 +1485,10 @@
       if (inputDescription) inputDescription.value = record.description || '';
       if (inputNameAr) inputNameAr.value = record.nameAr || '';
       if (inputDescriptionAr) inputDescriptionAr.value = record.descriptionAr || '';
-      if (exp1LabelInputEn) exp1LabelInputEn.value = record.exp1Label || '';
-      if (exp1LabelInputAr) exp1LabelInputAr.value = record.exp1LabelAr || '';
-      if (exp2LabelInputEn) exp2LabelInputEn.value = record.exp2Label || '';
-      if (exp2LabelInputAr) exp2LabelInputAr.value = record.exp2LabelAr || '';
-      const exp1DateInput = uploadForm.querySelector('input[name="exp1Date"]');
-      const exp2DateInput = uploadForm.querySelector('input[name="exp2Date"]');
-      if (exp1DateInput) exp1DateInput.value = record.exp1Date || '';
-      if (exp2DateInput) exp2DateInput.value = record.exp2Date || '';
+      if (expiryLabelInputEn) expiryLabelInputEn.value = record.expiryLabel || '';
+      if (expiryLabelInputAr) expiryLabelInputAr.value = record.expiryLabelAr || '';
+      const expiryDateInput = uploadForm.querySelector('input[name="expiryDate"]');
+      if (expiryDateInput) expiryDateInput.value = record.expiryDate || '';
       if (uploadForm.file) {
         try { uploadForm.file.value = ''; } catch (err) {}
       }
@@ -1617,12 +1581,17 @@
       historyList.innerHTML = historyState.entries.map(entry => {
         const actionLabel = (hist.actions && hist.actions[entry.action]) || entry.action || '';
         const timestampText = formatHistoryTimestamp(entry.timestamp);
-        const exp1Value = entry.prevExp1Date
-          ? escapeHtml(entry.prevExp1Date)
-          : `<span class="muted">${escapeHtml(noneLabel)}</span>`;
-        const exp2Value = entry.prevExp2Date
-          ? escapeHtml(entry.prevExp2Date)
-          : `<span class="muted">${escapeHtml(noneLabel)}</span>`;
+        let expiryValue;
+        const expiryLabel = entry.prevExpiryLabel || '';
+        const expiryDate = entry.prevExpiryDate || '';
+        if (expiryLabel || expiryDate) {
+          const parts = [];
+          if (expiryLabel) parts.push(escapeHtml(expiryLabel));
+          if (expiryDate) parts.push(`<span class="muted">(${escapeHtml(expiryDate)})</span>`);
+          expiryValue = parts.join(' ');
+        } else {
+          expiryValue = `<span class="muted">${escapeHtml(noneLabel)}</span>`;
+        }
         const statusValue = entry.prevStatus
           ? escapeHtml(entry.prevStatus)
           : `<span class="muted">${escapeHtml(noneLabel)}</span>`;
@@ -1636,8 +1605,7 @@
               <time>${escapeHtml(timestampText)}</time>
             </div>
             <div class="history-entry-body">
-              <span><strong>${escapeHtml(hist.labels.exp1)}</strong> ${exp1Value}</span>
-              <span><strong>${escapeHtml(hist.labels.exp2)}</strong> ${exp2Value}</span>
+              <span><strong>${escapeHtml(hist.labels.expiry)}</strong> ${expiryValue}</span>
               <span><strong>${escapeHtml(hist.labels.status)}</strong> ${statusValue}</span>
               <span><strong>${escapeHtml(hist.labels.file)}</strong> ${fileHtml}</span>
             </div>
@@ -1756,8 +1724,7 @@
       document.getElementById('thId').textContent = langTable.tableHeaders.id;
       document.getElementById('thName').textContent = langTable.tableHeaders.name;
       document.getElementById('thDescription').textContent = langTable.tableHeaders.description;
-      document.getElementById('thExpiry1').textContent = langTable.tableHeaders.exp1;
-      document.getElementById('thExpiry2').textContent = langTable.tableHeaders.exp2;
+      document.getElementById('thExpiry').textContent = langTable.tableHeaders.expiry;
       document.getElementById('thStatus').textContent = langTable.tableHeaders.status;
       document.getElementById('thFile').textContent = langTable.tableHeaders.file;
       document.getElementById('thActions').textContent = langTable.tableHeaders.actions;
@@ -1768,20 +1735,15 @@
       labelDescription.textContent = langTable.uploadForm.descriptionLabel;
       if (labelNameAr) labelNameAr.textContent = langTable.uploadForm.nameLabelAr;
       if (labelDescriptionAr) labelDescriptionAr.textContent = langTable.uploadForm.descriptionLabelAr;
-      labelExp1.textContent = langTable.uploadForm.exp1Label;
-      labelExp1Date.textContent = langTable.uploadForm.exp1Date;
-      labelExp2.textContent = langTable.uploadForm.exp2Label;
-      labelExp2Date.textContent = langTable.uploadForm.exp2Date;
-      if (labelExp1Ar) labelExp1Ar.textContent = langTable.uploadForm.exp1LabelAr;
-      if (labelExp2Ar) labelExp2Ar.textContent = langTable.uploadForm.exp2LabelAr;
+      labelExpiryLabel.textContent = langTable.uploadForm.expiryLabel;
+      labelExpiryDate.textContent = langTable.uploadForm.expiryDate;
+      if (labelExpiryLabelAr) labelExpiryLabelAr.textContent = langTable.uploadForm.expiryLabelAr;
       labelDocument.textContent = langTable.uploadForm.documentLabel;
       documentHelp.textContent = langTable.uploadForm.documentHelp;
-      exp1LabelInputEn.placeholder = langTable.uploadForm.exp1Placeholder;
-      exp2LabelInputEn.placeholder = langTable.uploadForm.exp2Placeholder;
+      expiryLabelInputEn.placeholder = langTable.uploadForm.expiryPlaceholder;
       if (inputNameAr) inputNameAr.placeholder = langTable.uploadForm.namePlaceholderAr;
       if (inputDescriptionAr) inputDescriptionAr.placeholder = langTable.uploadForm.descriptionPlaceholderAr;
-      if (exp1LabelInputAr) exp1LabelInputAr.placeholder = langTable.uploadForm.exp1PlaceholderAr;
-      if (exp2LabelInputAr) exp2LabelInputAr.placeholder = langTable.uploadForm.exp2PlaceholderAr;
+      if (expiryLabelInputAr) expiryLabelInputAr.placeholder = langTable.uploadForm.expiryPlaceholderAr;
       languageLabel.textContent = langTable.languageLabel;
       languageSelect.setAttribute('aria-label', langTable.languageLabel);
       Object.entries(langTable.languages).forEach(([value, label]) => {
@@ -1926,7 +1888,7 @@
             if (Number.isFinite(parsed)) days = parsed;
           }
         }
-        if (!withinThreshold && /≤\s*30/.test(raw)) {
+        if (!withinThreshold && /(?:<=|\u2264)\s*30/.test(raw)) {
           withinThreshold = true;
           if (!mode) mode = 'threshold';
         }
@@ -2005,17 +1967,19 @@
         return;
       }
       if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="muted">${escapeHtml(t('noRecords'))}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="muted">${escapeHtml(t('noRecords'))}</td></tr>`;
         return;
       }
 
       tbody.innerHTML = rows.map(r => {
         const displayName = getLocalizedField(r, 'name');
         const displayDescription = getLocalizedField(r, 'description');
-        const exp1Label = getLocalizedField(r, 'exp1Label');
-        const exp2Label = getLocalizedField(r, 'exp2Label');
-        const exp1 = renderExpiryCell(exp1Label, r.exp1Date, r.exp1StatusInfo || r.exp1Status || null);
-        const exp2 = renderExpiryCell(exp2Label, r.exp2Date, r.exp2StatusInfo || r.exp2Status || null);
+        const expiryLabel = getLocalizedField(r, 'expiryLabel');
+        const expiry = renderExpiryCell(
+          expiryLabel,
+          r.expiryDate,
+          r.expiryStatusInfo || r.expiryStatus || null
+        );
         const rowId = r.id != null ? r.id : '';
         const fileUrl = safeHref(r.fileUrl);
         const previewUrl = safeHref(r.filePreviewUrl);
@@ -2056,8 +2020,7 @@
             <td>${escapeHtml(rowId)}</td>
             <td>${escapeHtml(displayName)}</td>
             <td>${escapeHtml(displayDescription)}</td>
-            <td>${exp1}</td>
-            <td>${exp2}</td>
+            <td>${expiry}</td>
             <td>${statusPill(r.statusInfo || r.status)}</td>
             <td>${fileCell}</td>
             <td>${actionsCell}</td>
@@ -2347,3 +2310,5 @@
   </script>
 </body>
 </html>
+
+

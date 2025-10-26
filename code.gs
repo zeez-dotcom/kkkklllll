@@ -7,8 +7,7 @@ const HEADER = [
   'id',
   'name','nameAr',
   'description','descriptionAr',
-  'exp1Label','exp1LabelAr','exp1Date','exp1Status',
-  'exp2Label','exp2LabelAr','exp2Date','exp2Status',
+  'expiryLabel','expiryLabelAr','expiryDate','expiryStatus',
   'status','fileUrl','fileName','createdAt'
 ];
 let FOLDER_ID = '';                 // optional: preset Drive folder ID
@@ -19,14 +18,10 @@ const LICENSE_HISTORY_HEADER = [
   'id',
   'timestamp',
   'action',
-  'prevExp1Label',
-  'prevExp1LabelAr',
-  'prevExp1Date',
-  'prevExp1Status',
-  'prevExp2Label',
-  'prevExp2LabelAr',
-  'prevExp2Date',
-  'prevExp2Status',
+  'prevExpiryLabel',
+  'prevExpiryLabelAr',
+  'prevExpiryDate',
+  'prevExpiryStatus',
   'prevStatus',
   'prevStatusType',
   'prevFileUrl',
@@ -164,11 +159,9 @@ function computeExpiryStatus_(iso) {
   };
 }
 
-function computeStatus_(exp1Iso, exp2Iso) {
-  const exp1Status = computeExpiryStatus_(exp1Iso);
-  const exp2Status = computeExpiryStatus_(exp2Iso);
+function computeStatus_(expiryIso) {
+  const expiryStatus = computeExpiryStatus_(expiryIso);
 
-  const statuses = [exp1Status, exp2Status].filter(Boolean);
   const defaultOverall = {
     type: 'Active',
     label: 'Active',
@@ -177,30 +170,11 @@ function computeStatus_(exp1Iso, exp2Iso) {
     mode: 'none'
   };
 
-  if (!statuses.length) {
-    return { overall: defaultOverall, exp1: exp1Status, exp2: exp2Status };
-  }
+  const overall = expiryStatus
+    ? Object.assign({}, expiryStatus)
+    : Object.assign({}, defaultOverall);
 
-  const severity = status => {
-    if (!status || !status.type) return 3;
-    if (status.type === 'Expired') return 0;
-    if (status.type === 'Upcoming') return 1;
-    if (status.type === 'Active') return 2;
-    return 3;
-  };
-
-  statuses.sort((a, b) => {
-    const sa = severity(a);
-    const sb = severity(b);
-    if (sa !== sb) return sa - sb;
-    const da = a && a.daysUntil != null ? a.daysUntil : Number.POSITIVE_INFINITY;
-    const db = b && b.daysUntil != null ? b.daysUntil : Number.POSITIVE_INFINITY;
-    return da - db;
-  });
-
-  const overall = Object.assign({}, statuses[0]);
-
-  return { overall, exp1: exp1Status, exp2: exp2Status };
+  return { overall, expiry: expiryStatus };
 }
 
 function inferStatusType_(label) {
@@ -421,14 +395,11 @@ function findRowById_(id) {
 function normalizeRow_(row) {
   const obj = {};
   HEADER.forEach((h, i) => obj[h] = row[i] ?? '');
-  obj.exp1Date = toIso_(obj.exp1Date);
-  obj.exp2Date = toIso_(obj.exp2Date);
-  const exp1Stored = obj.exp1Status;
-  const exp2Stored = obj.exp2Status;
+  obj.expiryDate = toIso_(obj.expiryDate);
+  const expiryStored = obj.expiryStatus;
   const overallStored = obj.status;
-  const status = computeStatus_(obj.exp1Date, obj.exp2Date);
-  const mergedExp1 = mergeStoredStatus_(status.exp1, exp1Stored);
-  const mergedExp2 = mergeStoredStatus_(status.exp2, exp2Stored);
+  const status = computeStatus_(obj.expiryDate);
+  const mergedExpiry = mergeStoredStatus_(status.expiry, expiryStored);
   const mergedOverall = mergeStoredStatus_(status.overall, overallStored);
   const defaultOverall = {
     type: 'Active',
@@ -437,13 +408,10 @@ function normalizeRow_(row) {
     withinThreshold: false,
     mode: 'none'
   };
-  const exp1Info = formatStatusInfo_(mergedExp1);
-  const exp2Info = formatStatusInfo_(mergedExp2);
+  const expiryInfo = formatStatusInfo_(mergedExpiry);
   const overallInfo = formatStatusInfo_(mergedOverall, defaultOverall) || Object.assign({}, defaultOverall);
-  obj.exp1StatusInfo = exp1Info;
-  obj.exp2StatusInfo = exp2Info;
-  obj.exp1Status = sanitizeString_(exp1Stored);
-  obj.exp2Status = sanitizeString_(exp2Stored);
+  obj.expiryStatusInfo = expiryInfo;
+  obj.expiryStatus = sanitizeString_(expiryStored);
   obj.status = overallInfo.label;
   obj.statusInfo = overallInfo;
   obj.statusType = overallInfo.type;
@@ -452,10 +420,8 @@ function normalizeRow_(row) {
   obj.nameAr = sanitizeString_(obj.nameAr);
   obj.description = sanitizeString_(obj.description);
   obj.descriptionAr = sanitizeString_(obj.descriptionAr);
-  obj.exp1Label = sanitizeString_(obj.exp1Label);
-  obj.exp1LabelAr = sanitizeString_(obj.exp1LabelAr);
-  obj.exp2Label = sanitizeString_(obj.exp2Label);
-  obj.exp2LabelAr = sanitizeString_(obj.exp2LabelAr);
+  obj.expiryLabel = sanitizeString_(obj.expiryLabel);
+  obj.expiryLabelAr = sanitizeString_(obj.expiryLabelAr);
   obj.fileUrl = sanitizeUrl_(obj.fileUrl);
   obj.filePreviewUrl = makePreviewUrl_(obj.fileUrl);
   obj.fileName = sanitizeString_(obj.fileName || obj.name);
@@ -491,12 +457,9 @@ function normalizeUploadInput_(obj) {
     nameAr: sanitizeString_(obj && obj.nameAr),
     description: sanitizeString_(obj && obj.description),
     descriptionAr: sanitizeString_(obj && obj.descriptionAr),
-    exp1Label: sanitizeString_(obj && obj.exp1Label),
-    exp1LabelAr: sanitizeString_(obj && obj.exp1LabelAr),
-    exp2Label: sanitizeString_(obj && obj.exp2Label),
-    exp2LabelAr: sanitizeString_(obj && obj.exp2LabelAr),
-    exp1Date: toIso_(obj && obj.exp1Date),
-    exp2Date: toIso_(obj && obj.exp2Date),
+    expiryLabel: sanitizeString_(obj && obj.expiryLabel),
+    expiryLabelAr: sanitizeString_(obj && obj.expiryLabelAr),
+    expiryDate: toIso_(obj && obj.expiryDate),
     file: null
   };
 
@@ -528,14 +491,10 @@ function recordHistoryEntry_(id, existingObj, action) {
     sanitizeString_(id),
     timestamp,
     sanitizeString_(action) || 'update',
-    sanitizeString_(existingObj.exp1Label),
-    sanitizeString_(existingObj.exp1LabelAr),
-    toIso_(existingObj.exp1Date),
-    sanitizeString_(existingObj.exp1StatusInfo && existingObj.exp1StatusInfo.label ? existingObj.exp1StatusInfo.label : existingObj.exp1Status),
-    sanitizeString_(existingObj.exp2Label),
-    sanitizeString_(existingObj.exp2LabelAr),
-    toIso_(existingObj.exp2Date),
-    sanitizeString_(existingObj.exp2StatusInfo && existingObj.exp2StatusInfo.label ? existingObj.exp2StatusInfo.label : existingObj.exp2Status),
+    sanitizeString_(existingObj.expiryLabel),
+    sanitizeString_(existingObj.expiryLabelAr),
+    toIso_(existingObj.expiryDate),
+    sanitizeString_(existingObj.expiryStatusInfo && existingObj.expiryStatusInfo.label ? existingObj.expiryStatusInfo.label : existingObj.expiryStatus),
     sanitizeString_(existingObj.statusInfo && existingObj.statusInfo.label ? existingObj.statusInfo.label : existingObj.status),
     sanitizeString_(existingObj.statusInfo && existingObj.statusInfo.type ? existingObj.statusInfo.type : existingObj.statusType),
     sanitizeUrl_(existingObj.fileUrl),
@@ -594,8 +553,7 @@ function getDashboardData(q) {
         r.id,
         r.name, r.nameAr,
         r.description, r.descriptionAr,
-        r.exp1Label, r.exp1LabelAr,
-        r.exp2Label, r.exp2LabelAr,
+        r.expiryLabel, r.expiryLabelAr,
         r.fileName
       ]
         .map(x => String(x||'').toLowerCase())
@@ -608,72 +566,57 @@ function getDashboardData(q) {
     }
 
     const stats = arr => {
-      const makeBucket = () => ({ total: 0, exp1: 0, exp2: 0, overall: 0 });
       const counts = {
-        total: arr.length,
-        expired: makeBucket(),
-        upcoming: makeBucket(),
-        active: makeBucket()
+        total: Array.isArray(arr) ? arr.length : 0,
+        expired: { total: 0 },
+        upcoming: { total: 0 },
+        active: { total: 0 }
       };
 
-    const bucketKeyForType = type => {
-      if (type === 'Expired') return 'expired';
-      if (type === 'Upcoming') return 'upcoming';
-      if (type === 'Active') return 'active';
-      return '';
-    };
+      const bucketKeyForType = type => {
+        if (type === 'Expired') return 'expired';
+        if (type === 'Upcoming') return 'upcoming';
+        if (type === 'Active') return 'active';
+        return '';
+      };
 
-    const normalizeType = value => {
-      if (!value) return '';
-      const inferred = inferStatusType_(value);
-      if (inferred) return inferred;
-      const sanitized = sanitizeString_(value);
-      if (!sanitized) return '';
-      const lowered = sanitized.toLowerCase();
-      if (lowered === 'expired') return 'Expired';
-      if (lowered === 'upcoming') return 'Upcoming';
-      if (lowered === 'active') return 'Active';
-      return '';
-    };
+      const normalizeType = value => {
+        if (!value) return '';
+        const inferred = inferStatusType_(value);
+        if (inferred) return inferred;
+        const sanitized = sanitizeString_(value);
+        if (!sanitized) return '';
+        const lowered = sanitized.toLowerCase();
+        if (lowered === 'expired') return 'Expired';
+        if (lowered === 'upcoming') return 'Upcoming';
+        if (lowered === 'active') return 'Active';
+        return '';
+      };
 
-    const consider = (rowState, slot, statusObj, label, fallbackType) => {
-      let type = normalizeType(statusObj && statusObj.type);
-      if (!type && fallbackType) type = normalizeType(fallbackType);
-      if (!type && statusObj && statusObj.label) type = normalizeType(statusObj.label);
-      if (!type && label) type = normalizeType(label);
-      if (!type) return;
+      const resolveStatusType = row => {
+        const candidates = [
+          row && row.expiryStatusInfo && row.expiryStatusInfo.type,
+          row && row.expiryStatusInfo && row.expiryStatusInfo.label,
+          row && row.expiryStatus,
+          row && row.statusInfo && row.statusInfo.type,
+          row && row.statusInfo && row.statusInfo.label,
+          row && row.status
+        ];
+        for (let i = 0; i < candidates.length; i++) {
+          const type = normalizeType(candidates[i]);
+          if (type) return type;
+        }
+        return 'Active';
+      };
 
-      const bucketKey = bucketKeyForType(type);
-      if (!bucketKey || !counts[bucketKey]) return;
+      (Array.isArray(arr) ? arr : []).forEach(r => {
+        const type = resolveStatusType(r);
+        const bucketKey = bucketKeyForType(type) || 'active';
+        if (!counts[bucketKey]) counts[bucketKey] = { total: 0 };
+        counts[bucketKey].total += 1;
+      });
 
-      const bucket = counts[bucketKey];
-      if (!Object.prototype.hasOwnProperty.call(bucket, slot)) {
-        bucket[slot] = 0;
-      }
-      bucket[slot] += 1;
-
-      rowState.touchedBuckets.add(bucketKey);
-      if (slot === 'overall') {
-        rowState.overallBucket = bucketKey;
-      }
-    };
-
-    arr.forEach(r => {
-      const rowState = { touchedBuckets: new Set(), overallBucket: '' };
-      consider(rowState, 'exp1', r.exp1StatusInfo, r.exp1Status, null);
-      consider(rowState, 'exp2', r.exp2StatusInfo, r.exp2Status, null);
-      consider(rowState, 'overall', r.statusInfo, r.status, r.statusType);
-
-      if (rowState.overallBucket) {
-        counts[rowState.overallBucket].total += 1;
-      } else {
-        rowState.touchedBuckets.forEach(key => {
-          counts[key].total += 1;
-        });
-      }
-    });
-
-    return counts;
+      return counts;
     };
 
     const countsAll = stats(all);
@@ -696,8 +639,8 @@ function getDashboardData(q) {
     }
 
     const key = r => {
-      const ds = [r.exp1Date, r.exp2Date].filter(Boolean).sort();
-      return (ds[0] || '9999-12-31') + '|' + (r.name||'');
+      const date = r && r.expiryDate ? String(r.expiryDate) : '';
+      return (date || '9999-12-31') + '|' + (r.name||'');
     };
     filtered.sort((a,b)=> key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
 
@@ -732,7 +675,7 @@ function uploadDocument(obj) {
       fileName = data.file.name;
     }
 
-    const status = computeStatus_(data.exp1Date, data.exp2Date);
+    const status = computeStatus_(data.expiryDate);
     const overall = status.overall || { label: 'Active' };
 
     sh.appendRow([
@@ -741,14 +684,10 @@ function uploadDocument(obj) {
       data.nameAr,
       data.description,
       data.descriptionAr,
-      data.exp1Label,
-      data.exp1LabelAr,
-      data.exp1Date,
-      status.exp1 && status.exp1.label ? status.exp1.label : '',
-      data.exp2Label,
-      data.exp2LabelAr,
-      data.exp2Date,
-      status.exp2 && status.exp2.label ? status.exp2.label : '',
+      data.expiryLabel,
+      data.expiryLabelAr,
+      data.expiryDate,
+      status.expiry && status.expiry.label ? status.expiry.label : '',
       overall.label,
       fileUrl,
       fileName || data.name,
@@ -765,12 +704,10 @@ function uploadDocument(obj) {
       nameAr: data.nameAr,
       description: data.description,
       descriptionAr: data.descriptionAr,
-      exp1Label: data.exp1Label,
-      exp1LabelAr: data.exp1LabelAr,
-      exp2Label: data.exp2Label,
-      exp2LabelAr: data.exp2LabelAr,
-      exp1Date: data.exp1Date,
-      exp2Date: data.exp2Date
+      expiryLabel: data.expiryLabel,
+      expiryLabelAr: data.expiryLabelAr,
+      expiryDate: data.expiryDate,
+      expiryStatus: status.expiry && status.expiry.label ? status.expiry.label : ''
     };
   } catch (err) {
     return { ok:false, error:String(err && err.message || err) };
@@ -814,10 +751,9 @@ function updateLicense(obj) {
       fileName = data.file.name;
     }
 
-    const status = computeStatus_(data.exp1Date, data.exp2Date);
+    const status = computeStatus_(data.expiryDate);
     const overall = status.overall || { label: 'Active', type: 'Active' };
-    const exp1StatusLabel = status.exp1 && status.exp1.label ? status.exp1.label : '';
-    const exp2StatusLabel = status.exp2 && status.exp2.label ? status.exp2.label : '';
+    const expiryStatusLabel = status.expiry && status.expiry.label ? status.expiry.label : '';
 
     const createdAtIndex = HEADER.indexOf('createdAt');
     const existingCreated = createdAtIndex >= 0 ? found.values[createdAtIndex] : new Date();
@@ -831,14 +767,10 @@ function updateLicense(obj) {
       data.nameAr,
       data.description,
       data.descriptionAr,
-      data.exp1Label,
-      data.exp1LabelAr,
-      data.exp1Date,
-      exp1StatusLabel,
-      data.exp2Label,
-      data.exp2LabelAr,
-      data.exp2Date,
-      exp2StatusLabel,
+      data.expiryLabel,
+      data.expiryLabelAr,
+      data.expiryDate,
+      expiryStatusLabel,
       overall.label,
       fileUrl,
       fileName || data.name,
@@ -858,12 +790,9 @@ function updateLicense(obj) {
       nameAr: data.nameAr,
       description: data.description,
       descriptionAr: data.descriptionAr,
-      exp1Label: data.exp1Label,
-      exp1LabelAr: data.exp1LabelAr,
-      exp2Label: data.exp2Label,
-      exp2LabelAr: data.exp2LabelAr,
-      exp1Date: data.exp1Date,
-      exp2Date: data.exp2Date,
+      expiryLabel: data.expiryLabel,
+      expiryLabelAr: data.expiryLabelAr,
+      expiryDate: data.expiryDate,
       hasHistory: true
     };
   } catch (err) {
@@ -911,19 +840,15 @@ function getLicenseHistory(id) {
       id: target,
       timestamp: formatTimestamp_(row[1]),
       action: sanitizeString_(row[2] || ''),
-      prevExp1Label: sanitizeString_(row[3]),
-      prevExp1LabelAr: sanitizeString_(row[4]),
-      prevExp1Date: toIso_(row[5]),
-      prevExp1Status: sanitizeString_(row[6]),
-      prevExp2Label: sanitizeString_(row[7]),
-      prevExp2LabelAr: sanitizeString_(row[8]),
-      prevExp2Date: toIso_(row[9]),
-      prevExp2Status: sanitizeString_(row[10]),
-      prevStatus: sanitizeString_(row[11]),
-      prevStatusType: sanitizeString_(row[12]),
+      prevExpiryLabel: sanitizeString_(row[3]),
+      prevExpiryLabelAr: sanitizeString_(row[4]),
+      prevExpiryDate: toIso_(row[5]),
+      prevExpiryStatus: sanitizeString_(row[6]),
+      prevStatus: sanitizeString_(row[7]),
+      prevStatusType: sanitizeString_(row[8]),
       prevFileUrl: fileUrl,
       prevFilePreviewUrl: makePreviewUrl_(fileUrl),
-      prevFileName: sanitizeString_(row[14])
+      prevFileName: sanitizeString_(row[10])
     };
   });
 }

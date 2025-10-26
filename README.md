@@ -30,17 +30,15 @@ The history sheet is initialised automatically with the `LICENSE_HISTORY_HEADER`
 
 ## Regression check
 
-To confirm the dashboard tallies mixed status rows correctly, add a record whose first expiry date is already past while the second expiry date is still active. For example:
+To confirm the dashboard tallies status buckets correctly, seed the sheet with a couple of contrasting expiry dates and allow the script to recompute the status columns:
 
-| Field | Sample value |
-| --- | --- |
-| `name` | `Mixed status regression` |
-| `exp1Label` | `Primary expiry` |
-| `exp1Date` | `2023-01-01` |
-| `exp2Label` | `Secondary expiry` |
-| `exp2Date` | `2099-01-01` |
+| Field | Record A (expired) | Record B (upcoming) |
+| --- | --- | --- |
+| `name` | `Expired sample` | `Upcoming sample` |
+| `expiryLabel` | `Trade license` | `Insurance renewal` |
+| `expiryDate` | `2023-01-01` | _30 days from today_ |
 
-Leave the status columns blank so the script recomputes them. After refreshing the dashboard, the Expired card increases by two (expired primary date and overall status) while the Active card increases by one (secondary expiry), demonstrating that a single row contributes to every applicable bucket.
+After refreshing the dashboard the Expired card increments by one (record A) and the Upcoming card increments by one (record B). Clearing the status cells keeps the calculation server driven and highlights any regressions in the bucketing logic.
 
 ### Invalid payload fallback
 
