@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales & Cash Dashboard</title>
+  <style>
+    :root {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      color-scheme: light;
+      --bg: #f2f4f9;
+      --surface: #ffffff;
+      --surface-alt: #eef2ff;
+      --border: #d8dce5;
+      --text: #1a1d23;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --accent: #1d4ed8;
+      --good: #15803d;
+      --warn: #c05621;
+      --bad: #b91c1c;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    .language-switch,
+    .tab-switch {
+      display: inline-flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .language-switch button,
+    .tab-switch button {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s ease;
+    }
+    .language-switch button.active,
+    .tab-switch button.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+      display: grid;
+      gap: 20px;
+    }
+    .module {
+      display: none;
+      gap: 20px;
+    }
+    .module.active {
+      display: grid;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: 0 12px 30px rgba(22, 33, 74, 0.06);
+    }
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .stat-card .value {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    .stat-card .note {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 6px;
+      display: block;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 8px 20px rgba(22, 33, 74, 0.05);
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    input[type="search"],
+    input[type="date"],
+    input[type="number"],
+    input[type="file"],
+    select,
+    textarea {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      font-size: 0.95rem;
+      background: #fff;
+      min-width: 200px;
+      box-sizing: border-box;
+    }
+    input[type="search"] {
+      flex: 1;
+    }
+    button.primary {
+      background: var(--primary);
+      border: none;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary {
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead {
+      background: var(--surface-alt);
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) {
+      background: rgba(37, 99, 235, 0.035);
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      gap: 4px;
+    }
+    .tag.in { background: rgba(21, 128, 61, 0.12); color: var(--good); }
+    .tag.out { background: rgba(185, 28, 28, 0.14); color: var(--bad); }
+    .tag.pending { background: rgba(192, 86, 33, 0.14); color: var(--warn); }
+    .actions button {
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+      display: inline-block;
+    }
+    .entry-panel {
+      display: grid;
+      gap: 16px;
+    }
+    .entry-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .entry-tabs button {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 8px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      flex: 1 1 160px;
+    }
+    .entry-tabs button.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .entry-form {
+      display: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      background: var(--surface);
+    }
+    .entry-form.active {
+      display: grid;
+      gap: 14px;
+    }
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    label span {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+    .actions-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .entry-message {
+      font-size: 0.85rem;
+      min-height: 1.2em;
+    }
+    @media (max-width: 768px) {
+      header { flex-direction: column; align-items: flex-start; }
+      .filters { flex-direction: column; align-items: stretch; }
+      input[type="search"] { width: 100%; }
+      .tab-switch button { flex: 1 1 140px; }
+      .entry-tabs button { flex: 1 1 48%; }
+    }
+    @media (max-width: 480px) {
+      .entry-tabs button { flex: 1 1 100%; }
+      .field-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="appTitle"></h1>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <div class="tab-switch">
+        <button type="button" class="active" data-tab="sales" data-i18n="tabSales"></button>
+        <button type="button" data-tab="cash" data-i18n="tabCash"></button>
+      </div>
+      <div class="language-switch">
+        <button type="button" data-lang="en" class="active" data-i18n="languageEnglish"></button>
+        <button type="button" data-lang="ar" data-i18n="languageArabic"></button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section id="sales-module" class="module active">
+      <section class="stat-grid">
+        <article class="stat-card">
+          <span class="label" data-i18n="salesStatTotalSales"></span>
+          <span class="value" id="sales-stat-total-sales">0.000</span>
+          <span class="note" id="sales-stat-net-income" data-i18n-template="salesStatNetIncome"></span>
+        </article>
+        <article class="stat-card">
+          <span class="label" data-i18n="salesStatKnetSales"></span>
+          <span class="value" id="sales-stat-knet-sales">0.000</span>
+          <span class="note" id="sales-stat-knet-pending" data-i18n-template="salesStatKnetPending"></span>
+        </article>
+        <article class="stat-card">
+          <span class="label" data-i18n="salesStatCashSales"></span>
+          <span class="value" id="sales-stat-cash-sales">0.000</span>
+          <span class="note muted" data-i18n="salesStatCashHint"></span>
+        </article>
+        <article class="stat-card">
+          <span class="label" data-i18n="salesStatExpenses"></span>
+          <span class="value" id="sales-stat-expenses">0.000</span>
+          <span class="note" id="sales-stat-overdue" data-i18n-template="salesStatOverdue"></span>
+        </article>
+      </section>
+
+      <section class="panel filters">
+        <input type="search" id="sales-search-input" data-i18n-placeholder="salesSearchPlaceholder">
+        <label>
+          <input type="checkbox" id="sales-pending-toggle">
+          <span data-i18n="salesFilterPending"></span>
+        </label>
+        <button type="button" class="primary" id="sales-refresh-btn" data-i18n="refreshButton"></button>
+      </section>
+
+      <section class="panel">
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="salesColDate"></th>
+                <th data-i18n="salesColTotal"></th>
+                <th data-i18n="salesColKnet"></th>
+                <th data-i18n="salesColCash"></th>
+                <th data-i18n="salesColExpenses"></th>
+                <th data-i18n="salesColNet"></th>
+                <th data-i18n="salesColKnetStatus"></th>
+                <th data-i18n="salesColReceipt"></th>
+                <th data-i18n="salesColNotes"></th>
+                <th data-i18n="salesColActions"></th>
+              </tr>
+            </thead>
+            <tbody id="sales-records-body"></tbody>
+          </table>
+        </div>
+        <p class="muted" id="sales-empty-state" data-i18n="salesEmptyState"></p>
+      </section>
+
+      <section class="panel entry-panel">
+        <div class="entry-tabs" role="tablist">
+          <button type="button" class="entry-tab active" data-sales-entry-tab="cash" data-i18n="salesEntryCashTab"></button>
+          <button type="button" class="entry-tab" data-sales-entry-tab="knet" data-i18n="salesEntryKnetTab"></button>
+          <button type="button" class="entry-tab" data-sales-entry-tab="expense" data-i18n="salesEntryExpenseTab"></button>
+          <button type="button" class="entry-tab" data-sales-entry-tab="received" data-i18n="salesEntryReceivedTab"></button>
+        </div>
+
+        <form id="sales-form-cash" class="entry-form active" data-sales-entry="cash">
+          <div class="field-grid">
+            <label>
+              <span data-i18n="salesFormDate"></span>
+              <input type="date" id="sales-cash-date" required>
+            </label>
+            <label>
+              <span data-i18n="salesFormCashSales"></span>
+              <input type="number" id="sales-cash-amount" step="0.001" min="0" required>
+            </label>
+          </div>
+          <label>
+            <span data-i18n="salesFormNotes"></span>
+            <textarea id="sales-cash-notes"></textarea>
+          </label>
+          <div class="actions-row">
+            <button type="button" class="secondary" data-reset="cash" data-i18n="resetButton"></button>
+            <button type="submit" class="primary" data-i18n="saveButton"></button>
+          </div>
+          <p class="muted entry-message" id="sales-message-cash"></p>
+        </form>
+
+        <form id="sales-form-knet" class="entry-form" data-sales-entry="knet">
+          <div class="field-grid">
+            <label>
+              <span data-i18n="salesFormDate"></span>
+              <input type="date" id="sales-knet-date" required>
+            </label>
+            <label>
+              <span data-i18n="salesFormTotalSales"></span>
+              <input type="number" id="sales-knet-total" step="0.001" min="0" required>
+            </label>
+            <label>
+              <span data-i18n="salesFormKnetSales"></span>
+              <input type="number" id="sales-knet-amount" step="0.001" min="0" required>
+              <span class="badge muted" data-i18n="salesFormKnetHint"></span>
+            </label>
+            <label>
+              <span data-i18n="salesFormExpectedDate"></span>
+              <input type="date" id="sales-knet-expected">
+              <span class="badge muted" data-i18n="salesFormExpectedHint"></span>
+            </label>
+            <label>
+              <span data-i18n="salesFormReceivedDate"></span>
+              <input type="date" id="sales-knet-received">
+              <span class="badge muted" data-i18n="salesFormReceivedHint"></span>
+            </label>
+            <label>
+              <span data-i18n="salesFormReceipt"></span>
+              <input type="file" id="sales-knet-receipt" accept="image/*">
+              <span class="badge muted" data-i18n="salesFormReceiptHint"></span>
+            </label>
+          </div>
+          <label>
+            <input type="checkbox" id="sales-knet-mark">
+            <span data-i18n="salesFormMarkReceived"></span>
+          </label>
+          <label>
+            <span data-i18n="salesFormNotes"></span>
+            <textarea id="sales-knet-notes"></textarea>
+          </label>
+          <div class="actions-row">
+            <button type="button" class="secondary" data-reset="knet" data-i18n="resetButton"></button>
+            <button type="submit" class="primary" data-i18n="saveButton"></button>
+          </div>
+          <p class="muted entry-message" id="sales-message-knet"></p>
+        </form>
+
+        <form id="sales-form-expense" class="entry-form" data-sales-entry="expense">
+          <div class="field-grid">
+            <label>
+              <span data-i18n="salesFormDate"></span>
+              <input type="date" id="sales-expense-date" required>
+            </label>
+            <label>
+              <span data-i18n="salesFormExpenses"></span>
+              <input type="number" id="sales-expense-amount" step="0.001" min="0" required>
+            </label>
+          </div>
+          <label>
+            <span data-i18n="salesFormExpenseNotes"></span>
+            <textarea id="sales-expense-notes"></textarea>
+          </label>
+          <div class="actions-row">
+            <button type="button" class="secondary" data-reset="expense" data-i18n="resetButton"></button>
+            <button type="submit" class="primary" data-i18n="saveButton"></button>
+          </div>
+          <p class="muted entry-message" id="sales-message-expense"></p>
+        </form>
+
+        <form id="sales-form-received" class="entry-form" data-sales-entry="received">
+          <div class="field-grid">
+            <label>
+              <span data-i18n="salesReceivedId"></span>
+              <input type="text" id="sales-received-id" required>
+            </label>
+            <label>
+              <span data-i18n="salesFormReceivedDate"></span>
+              <input type="date" id="sales-received-date">
+            </label>
+          </div>
+          <p class="muted" data-i18n="salesReceivedHelp"></p>
+          <div class="actions-row">
+            <button type="submit" class="primary" data-i18n="salesMarkReceivedButton"></button>
+          </div>
+          <p class="muted entry-message" id="sales-message-received"></p>
+        </form>
+      </section>
+    </section>
+
+    <section id="cash-module" class="module">
+      <section class="stat-grid">
+        <article class="stat-card">
+          <span class="label" data-i18n="cashStatTotalIn"></span>
+          <span class="value" id="cash-stat-total-in">0.000</span>
+          <span class="note" id="cash-stat-pending" data-i18n-template="cashStatPendingKnet"></span>
+        </article>
+        <article class="stat-card">
+          <span class="label" data-i18n="cashStatTotalOut"></span>
+          <span class="value" id="cash-stat-total-out">0.000</span>
+          <span class="note" id="cash-stat-profit" data-i18n-template="cashStatProfitTransfer"></span>
+        </article>
+        <article class="stat-card">
+          <span class="label" data-i18n="cashStatInHand"></span>
+          <span class="value" id="cash-stat-in-hand">0.000</span>
+          <span class="note muted" data-i18n="cashStatHint"></span>
+        </article>
+      </section>
+
+      <section class="panel filters">
+        <input type="search" id="cash-search-input" data-i18n-placeholder="cashSearchPlaceholder">
+        <label>
+          <input type="checkbox" id="cash-pending-toggle">
+          <span data-i18n="cashFilterPending"></span>
+        </label>
+        <button type="button" class="primary" id="cash-refresh-btn" data-i18n="refreshButton"></button>
+      </section>
+
+      <section class="panel">
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="cashColDate"></th>
+                <th data-i18n="cashColDirection"></th>
+                <th data-i18n="cashColCategory"></th>
+                <th data-i18n="cashColAmount"></th>
+                <th data-i18n="cashColStatus"></th>
+                <th data-i18n="cashColKnet"></th>
+                <th data-i18n="cashColProfit"></th>
+                <th data-i18n="cashColNotes"></th>
+                <th data-i18n="cashColActions"></th>
+              </tr>
+            </thead>
+            <tbody id="cash-records-body"></tbody>
+          </table>
+        </div>
+        <p class="muted" id="cash-empty-state" data-i18n="cashEmptyState"></p>
+      </section>
+
+      <section class="panel">
+        <h2 data-i18n="cashFormTitle"></h2>
+        <form id="cash-entry-form">
+          <div class="field-grid">
+            <label>
+              <span data-i18n="cashFormDate"></span>
+              <input type="date" id="cash-form-date" name="entryDate" required>
+            </label>
+            <label>
+              <span data-i18n="cashFormDirection"></span>
+              <select id="cash-form-direction" name="direction">
+                <option value="IN" data-i18n="directionIn"></option>
+                <option value="OUT" data-i18n="directionOut"></option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="cashFormCategory"></span>
+              <select id="cash-form-category" name="category"></select>
+            </label>
+            <label>
+              <span data-i18n="cashFormAmount"></span>
+              <input type="number" id="cash-form-amount" name="amount" step="0.001" min="0" required>
+            </label>
+            <label class="cash-knet-only">
+              <span data-i18n="cashFormExpectedDate"></span>
+              <input type="date" id="cash-form-expected" name="knetExpectedDate">
+            </label>
+            <label class="cash-knet-only">
+              <span data-i18n="cashFormReceivedDate"></span>
+              <input type="date" id="cash-form-received" name="knetReceivedDate">
+            </label>
+          </div>
+          <label class="cash-knet-only">
+            <input type="checkbox" id="cash-form-mark-received" name="markReceived">
+            <span data-i18n="cashFormMarkReceived"></span>
+          </label>
+          <label>
+            <span data-i18n="cashFormDescription"></span>
+            <textarea id="cash-form-description" name="description"></textarea>
+          </label>
+          <label>
+            <span data-i18n="cashFormNotes"></span>
+            <textarea id="cash-form-notes" name="notes"></textarea>
+          </label>
+          <div class="actions-row">
+            <button type="button" class="secondary" id="cash-reset-btn" data-i18n="resetButton"></button>
+            <button type="submit" class="primary" id="cash-submit-btn" data-i18n="saveButton"></button>
+          </div>
+          <p class="muted entry-message" id="cash-form-message"></p>
+        </form>
+      </section>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

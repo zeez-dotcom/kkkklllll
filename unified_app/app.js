@@ -1,0 +1,1317 @@
+(function () {
+  'use strict';
+
+  const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
+  const CASH_CATEGORIES = {
+    IN: [
+      { value: 'CashSale', labelKey: 'cashCategoryCashSale' },
+      { value: 'KnetSale', labelKey: 'cashCategoryKnetSale' },
+      { value: 'Deposit', labelKey: 'cashCategoryDeposit' },
+      { value: 'OtherIncome', labelKey: 'cashCategoryOtherIncome' }
+    ],
+    OUT: [
+      { value: 'Expense', labelKey: 'cashCategoryExpense' },
+      { value: 'CashOut', labelKey: 'cashCategoryCashOut' }
+    ]
+  };
+
+  const translations = {
+    en: {
+      appTitle: 'Sales & Cash Dashboard',
+      tabSales: 'Sales',
+      tabCash: 'Cash',
+      languageEnglish: 'English',
+      languageArabic: 'العربية',
+      salesStatTotalSales: 'Total sales',
+      salesStatNetIncome: 'Net income: {{value}}',
+      salesStatKnetSales: 'KNET sales',
+      salesStatKnetPending: 'Pending KNET: {{count}} / {{value}}',
+      salesStatCashSales: 'Cash sales',
+      salesStatCashHint: 'Cash collected the same day.',
+      salesStatExpenses: 'Expenses',
+      salesStatOverdue: 'Overdue KNET: {{count}}',
+      salesSearchPlaceholder: 'Search by date, amount, or note...',
+      salesFilterPending: 'Pending KNET only',
+      refreshButton: 'Refresh',
+      salesColDate: 'Date',
+      salesColTotal: 'Total',
+      salesColKnet: 'KNET',
+      salesColCash: 'Cash',
+      salesColExpenses: 'Expenses',
+      salesColNet: 'Net',
+      salesColKnetStatus: 'KNET status',
+      salesColReceipt: 'Receipt',
+      salesColNotes: 'Notes',
+      salesColActions: 'Actions',
+      salesEmptyState: 'No sales records yet.',
+      salesEntryCashTab: 'Record cash sale',
+      salesEntryKnetTab: 'Record KNET sale',
+      salesEntryExpenseTab: 'Record expense',
+      salesEntryReceivedTab: 'KNET received',
+      salesFormDate: 'Date',
+      salesFormCashSales: 'Cash amount',
+      salesFormNotes: 'Notes',
+      resetButton: 'Reset',
+      saveButton: 'Save',
+      salesFormTotalSales: 'Total sales',
+      salesFormKnetSales: 'KNET amount',
+      salesFormKnetHint: 'Leave blank to assume zero.',
+      salesFormExpectedDate: 'Expected deposit',
+      salesFormExpectedHint: 'Defaults to 10 days after the sale.',
+      salesFormReceivedDate: 'Received date',
+      salesFormReceivedHint: 'Fill when deposit arrives.',
+      salesFormReceipt: 'Receipt image',
+      salesFormReceiptHint: 'Optional JPG/PNG up to 5 MB.',
+      salesFormMarkReceived: 'Mark as received immediately',
+      salesFormExpenses: 'Expense amount',
+      salesFormExpenseNotes: 'Expense details',
+      salesReceivedId: 'Sales record ID',
+      salesReceivedHelp: 'Use the ID from the sales table to mark its KNET payment as received.',
+      salesMarkReceivedButton: 'Mark received',
+      successSaved: 'Saved successfully.',
+      successMarked: 'Marked as received.',
+      errorGeneric: 'Something went wrong. Please try again.',
+      errorRuntimeUnavailable: 'Google Apps Script runtime is unavailable.',
+      salesErrorAmountRequired: 'Amount is required.',
+      salesErrorIdRequired: 'Record ID is required.',
+      salesErrorTotals: 'KNET amount cannot exceed total sales.',
+      salesErrorReceiptTooLarge: 'Receipt image exceeds 5 MB.',
+      salesReceiptView: 'View receipt',
+      salesReceiptNone: 'No receipt',
+      confirmMarkReceived: 'Mark this KNET payment as received?',
+      promptReceivedDate: 'Received date (YYYY-MM-DD). Leave blank for today.',
+      knetNotApplicable: 'No KNET sale',
+      knetStatusLabel: 'Status',
+      knetPendingGeneric: 'Pending',
+      knetDueIn: 'Due in {{days}} day(s)',
+      knetDueToday: 'Due today',
+      knetOverdue: 'Overdue by {{days}} day(s)',
+      knetReceived: 'Received',
+      knetReceivedOnTime: 'Received on time',
+      knetReceivedEarly: 'Received {{days}} day(s) early',
+      knetReceivedLate: 'Received {{days}} day(s) late',
+      expectedLabel: 'Expected',
+      receivedLabel: 'Received',
+      salesActionMark: 'Mark received',
+      cashStatTotalIn: 'Money in',
+      cashStatPendingKnet: 'Pending KNET: {{count}} / {{value}}',
+      cashStatTotalOut: 'Money out',
+      cashStatProfitTransfer: 'Transferred to profit: {{count}} / {{value}}',
+      cashStatInHand: 'Cash in hand',
+      cashStatHint: 'Money available after pending KNET and expenses.',
+      cashSearchPlaceholder: 'Search by date, category, or note...',
+      cashFilterPending: 'Pending KNET only',
+      cashColDate: 'Date',
+      cashColDirection: 'Direction',
+      cashColCategory: 'Category',
+      cashColAmount: 'Amount',
+      cashColStatus: 'Status',
+      cashColKnet: 'KNET',
+      cashColProfit: 'Profit transfer',
+      cashColNotes: 'Notes',
+      cashColActions: 'Actions',
+      cashEmptyState: 'No cash entries yet.',
+      cashFormTitle: 'Record cash movement',
+      cashFormDate: 'Date',
+      cashFormDirection: 'Direction',
+      directionIn: 'Money in',
+      directionOut: 'Money out',
+      cashFormCategory: 'Category',
+      cashFormAmount: 'Amount',
+      cashFormExpectedDate: 'Expected KNET deposit',
+      cashFormReceivedDate: 'Received date',
+      cashFormMarkReceived: 'Mark KNET as received',
+      cashFormDescription: 'Description',
+      cashFormNotes: 'Notes',
+      cashActionMark: 'Mark received',
+      cashActionTransfer: 'Transfer to profits',
+      cashErrorAmountRequired: 'Amount is required.',
+      confirmTransfer: 'Transfer this amount to profits?',
+      confirmReceived: 'Mark this KNET entry as received?',
+      promptTransferDate: 'Transfer date (YYYY-MM-DD). Leave blank for today.',
+      cashStatusPending: 'Pending',
+      cashStatusReceived: 'Received',
+      cashStatusPosted: 'Posted',
+      cashStatusTransferred: 'Transferred',
+      cashKnetNone: 'Not a KNET entry',
+      cashProfitNotTransferred: 'Not transferred',
+      cashProfitTransferred: 'Transferred on {{date}}',
+      cashCategoryCashSale: 'Cash sale',
+      cashCategoryKnetSale: 'KNET sale',
+      cashCategoryDeposit: 'Bank deposit',
+      cashCategoryOtherIncome: 'Other income',
+      cashCategoryExpense: 'Expense',
+      cashCategoryCashOut: 'Cash withdrawal'
+    },
+    ar: {
+      appTitle: 'لوحة المبيعات والنقد',
+      tabSales: 'المبيعات',
+      tabCash: 'النقد',
+      languageEnglish: 'English',
+      languageArabic: 'العربية',
+      salesStatTotalSales: 'إجمالي المبيعات',
+      salesStatNetIncome: 'صافي الدخل: {{value}}',
+      salesStatKnetSales: 'مبيعات كي نت',
+      salesStatKnetPending: 'كي نت معلّقة: {{count}} / {{value}}',
+      salesStatCashSales: 'مبيعات نقدية',
+      salesStatCashHint: 'النقد المحصل في نفس اليوم.',
+      salesStatExpenses: 'المصروفات',
+      salesStatOverdue: 'كي نت متأخرة: {{count}}',
+      salesSearchPlaceholder: 'ابحث بالتاريخ أو المبلغ أو الملاحظات...',
+      salesFilterPending: 'عرض العمليات المعلقة فقط',
+      refreshButton: 'تحديث',
+      salesColDate: 'التاريخ',
+      salesColTotal: 'الإجمالي',
+      salesColKnet: 'كي نت',
+      salesColCash: 'نقداً',
+      salesColExpenses: 'مصروفات',
+      salesColNet: 'الصافي',
+      salesColKnetStatus: 'حالة كي نت',
+      salesColReceipt: 'الإيصال',
+      salesColNotes: 'ملاحظات',
+      salesColActions: 'إجراءات',
+      salesEmptyState: 'لا توجد سجلات مبيعات بعد.',
+      salesEntryCashTab: 'تسجيل بيع نقدي',
+      salesEntryKnetTab: 'تسجيل بيع كي نت',
+      salesEntryExpenseTab: 'تسجيل مصروف',
+      salesEntryReceivedTab: 'استلام كي نت',
+      salesFormDate: 'التاريخ',
+      salesFormCashSales: 'المبلغ النقدي',
+      salesFormNotes: 'ملاحظات',
+      resetButton: 'تفريغ',
+      saveButton: 'حفظ',
+      salesFormTotalSales: 'إجمالي المبيعات',
+      salesFormKnetSales: 'مبلغ كي نت',
+      salesFormKnetHint: 'اتركه فارغاً لاعتبار صفر.',
+      salesFormExpectedDate: 'تاريخ الإيداع المتوقع',
+      salesFormExpectedHint: 'يفترض بعد 10 أيام من تاريخ البيع.',
+      salesFormReceivedDate: 'تاريخ الاستلام',
+      salesFormReceivedHint: 'امله عند وصول الإيداع.',
+      salesFormReceipt: 'صورة الإيصال',
+      salesFormReceiptHint: 'اختياري: JPG/PNG حتى 5 ميجابايت.',
+      salesFormMarkReceived: 'اعتبارها مستلمة فوراً',
+      salesFormExpenses: 'قيمة المصروف',
+      salesFormExpenseNotes: 'تفاصيل المصروف',
+      salesReceivedId: 'معرّف سجل المبيعات',
+      salesReceivedHelp: 'استخدم المعرّف من جدول المبيعات لتأكيد استلام كي نت.',
+      salesMarkReceivedButton: 'تأكيد الاستلام',
+      successSaved: 'تم الحفظ بنجاح.',
+      successMarked: 'تم التأكيد على الاستلام.',
+      errorGeneric: 'حدث خطأ، حاول مرة أخرى.',
+      errorRuntimeUnavailable: 'خدمة Google Apps Script غير متاحة.',
+      salesErrorAmountRequired: 'المبلغ مطلوب.',
+      salesErrorIdRequired: 'مطلوب إدخال المعرّف.',
+      salesErrorTotals: 'لا يمكن أن يتجاوز مبلغ كي نت إجمالي المبيعات.',
+      salesErrorReceiptTooLarge: 'حجم الإيصال يتجاوز 5 ميجابايت.',
+      salesReceiptView: 'عرض الإيصال',
+      salesReceiptNone: 'لا يوجد إيصال',
+      confirmMarkReceived: 'تأكيد استلام عملية كي نت؟',
+      promptReceivedDate: 'تاريخ الاستلام (YYYY-MM-DD). اتركه فارغاً لليوم.',
+      knetNotApplicable: 'لا توجد عملية كي نت',
+      knetStatusLabel: 'الحالة',
+      knetPendingGeneric: 'معلق',
+      knetDueIn: 'يستحق خلال {{days}} يوم',
+      knetDueToday: 'مستحق اليوم',
+      knetOverdue: 'متأخر {{days}} يوم',
+      knetReceived: 'تم الاستلام',
+      knetReceivedOnTime: 'تم الاستلام في الوقت المحدد',
+      knetReceivedEarly: 'تم الاستلام قبل الموعد بـ {{days}} يوم',
+      knetReceivedLate: 'تم الاستلام بعد الموعد بـ {{days}} يوم',
+      expectedLabel: 'المتوقع',
+      receivedLabel: 'تاريخ الاستلام',
+      salesActionMark: 'تأكيد الاستلام',
+      cashStatTotalIn: 'المبالغ الواردة',
+      cashStatPendingKnet: 'كي نت معلّقة: {{count}} / {{value}}',
+      cashStatTotalOut: 'المبالغ الصادرة',
+      cashStatProfitTransfer: 'حوّل للأرباح: {{count}} / {{value}}',
+      cashStatInHand: 'النقد المتوفر',
+      cashStatHint: 'الرصيد المتاح بعد استبعاد كي نت المعلقة والمصروفات.',
+      cashSearchPlaceholder: 'ابحث بالتاريخ أو التصنيف أو الملاحظات...',
+      cashFilterPending: 'عرض كي نت المعلقة فقط',
+      cashColDate: 'التاريخ',
+      cashColDirection: 'الاتجاه',
+      cashColCategory: 'التصنيف',
+      cashColAmount: 'المبلغ',
+      cashColStatus: 'الحالة',
+      cashColKnet: 'كي نت',
+      cashColProfit: 'تحويل الأرباح',
+      cashColNotes: 'ملاحظات',
+      cashColActions: 'إجراءات',
+      cashEmptyState: 'لا توجد سجلات نقدية بعد.',
+      cashFormTitle: 'تسجيل حركة نقدية',
+      cashFormDate: 'التاريخ',
+      cashFormDirection: 'الاتجاه',
+      directionIn: 'وارد',
+      directionOut: 'صادر',
+      cashFormCategory: 'التصنيف',
+      cashFormAmount: 'المبلغ',
+      cashFormExpectedDate: 'تاريخ إيداع كي نت المتوقع',
+      cashFormReceivedDate: 'تاريخ استلام كي نت',
+      cashFormMarkReceived: 'اعتبار كي نت مستلمة',
+      cashFormDescription: 'الوصف',
+      cashFormNotes: 'ملاحظات',
+      cashActionMark: 'تأكيد الاستلام',
+      cashActionTransfer: 'تحويل للأرباح',
+      cashErrorAmountRequired: 'المبلغ مطلوب.',
+      confirmTransfer: 'تحويل هذا المبلغ إلى الأرباح؟',
+      confirmReceived: 'تأكيد استلام عملية كي نت؟',
+      promptTransferDate: 'تاريخ التحويل (YYYY-MM-DD). اتركه لليوم.',
+      cashStatusPending: 'معلق',
+      cashStatusReceived: 'تم الاستلام',
+      cashStatusPosted: 'مُسجل',
+      cashStatusTransferred: 'محول',
+      cashKnetNone: 'ليست عملية كي نت',
+      cashProfitNotTransferred: 'لم يتم التحويل',
+      cashProfitTransferred: 'حوّل بتاريخ {{date}}',
+      cashCategoryCashSale: 'مبيعات نقدية',
+      cashCategoryKnetSale: 'مبيعات كي نت',
+      cashCategoryDeposit: 'إيداع بنكي',
+      cashCategoryOtherIncome: 'دخل آخر',
+      cashCategoryExpense: 'مصروف',
+      cashCategoryCashOut: 'سحب نقدي'
+    }
+  };
+  const state = {
+    language: 'en',
+    module: 'sales',
+    sales: {
+      rows: [],
+      summary: createDefaultSalesSummary(),
+      filters: { search: '', pendingOnly: false },
+      loading: false
+    },
+    cash: {
+      rows: [],
+      summary: createDefaultCashSummary(),
+      filters: { search: '', pendingOnly: false },
+      loading: false
+    }
+  };
+
+  const dom = {
+    tabButtons: document.querySelectorAll('.tab-switch button'),
+    modules: {
+      sales: document.getElementById('sales-module'),
+      cash: document.getElementById('cash-module')
+    },
+    languageButtons: document.querySelectorAll('.language-switch button'),
+    sales: {
+      stats: {
+        totalSales: document.getElementById('sales-stat-total-sales'),
+        netIncome: document.getElementById('sales-stat-net-income'),
+        knetSales: document.getElementById('sales-stat-knet-sales'),
+        knetPending: document.getElementById('sales-stat-knet-pending'),
+        cashSales: document.getElementById('sales-stat-cash-sales'),
+        expenses: document.getElementById('sales-stat-expenses'),
+        overdue: document.getElementById('sales-stat-overdue')
+      },
+      search: document.getElementById('sales-search-input'),
+      pendingToggle: document.getElementById('sales-pending-toggle'),
+      refreshBtn: document.getElementById('sales-refresh-btn'),
+      tableBody: document.getElementById('sales-records-body'),
+      empty: document.getElementById('sales-empty-state'),
+      entryTabs: document.querySelectorAll('[data-sales-entry-tab]'),
+      entryForms: {
+        cash: document.getElementById('sales-form-cash'),
+        knet: document.getElementById('sales-form-knet'),
+        expense: document.getElementById('sales-form-expense'),
+        received: document.getElementById('sales-form-received')
+      },
+      messages: {
+        cash: document.getElementById('sales-message-cash'),
+        knet: document.getElementById('sales-message-knet'),
+        expense: document.getElementById('sales-message-expense'),
+        received: document.getElementById('sales-message-received')
+      },
+      entryPanel: document.querySelector('.entry-panel'),
+      inputs: {
+        cashDate: document.getElementById('sales-cash-date'),
+        cashAmount: document.getElementById('sales-cash-amount'),
+        cashNotes: document.getElementById('sales-cash-notes'),
+        knetDate: document.getElementById('sales-knet-date'),
+        knetTotal: document.getElementById('sales-knet-total'),
+        knetAmount: document.getElementById('sales-knet-amount'),
+        knetExpected: document.getElementById('sales-knet-expected'),
+        knetReceived: document.getElementById('sales-knet-received'),
+        knetMark: document.getElementById('sales-knet-mark'),
+        knetNotes: document.getElementById('sales-knet-notes'),
+        knetReceipt: document.getElementById('sales-knet-receipt'),
+        expenseDate: document.getElementById('sales-expense-date'),
+        expenseAmount: document.getElementById('sales-expense-amount'),
+        expenseNotes: document.getElementById('sales-expense-notes'),
+        receivedId: document.getElementById('sales-received-id'),
+        receivedDate: document.getElementById('sales-received-date')
+      }
+    },
+    cash: {
+      stats: {
+        totalIn: document.getElementById('cash-stat-total-in'),
+        pending: document.getElementById('cash-stat-pending'),
+        totalOut: document.getElementById('cash-stat-total-out'),
+        profit: document.getElementById('cash-stat-profit'),
+        inHand: document.getElementById('cash-stat-in-hand')
+      },
+      search: document.getElementById('cash-search-input'),
+      pendingToggle: document.getElementById('cash-pending-toggle'),
+      refreshBtn: document.getElementById('cash-refresh-btn'),
+      tableBody: document.getElementById('cash-records-body'),
+      empty: document.getElementById('cash-empty-state'),
+      form: document.getElementById('cash-entry-form'),
+      message: document.getElementById('cash-form-message'),
+      date: document.getElementById('cash-form-date'),
+      direction: document.getElementById('cash-form-direction'),
+      category: document.getElementById('cash-form-category'),
+      amount: document.getElementById('cash-form-amount'),
+      expected: document.getElementById('cash-form-expected'),
+      received: document.getElementById('cash-form-received'),
+      markReceived: document.getElementById('cash-form-mark-received'),
+      description: document.getElementById('cash-form-description'),
+      notes: document.getElementById('cash-form-notes'),
+      resetBtn: document.getElementById('cash-reset-btn'),
+      submitBtn: document.getElementById('cash-submit-btn'),
+      knetFields: document.querySelectorAll('.cash-knet-only')
+    }
+  };
+  let salesRefreshTimer = null;
+  let cashRefreshTimer = null;
+
+  function createDefaultSalesSummary() {
+    return {
+      totalSales: 0,
+      totalKnetSales: 0,
+      totalCashSales: 0,
+      totalExpenses: 0,
+      netIncome: 0,
+      pendingKnetAmount: 0,
+      pendingKnetCount: 0,
+      overdueKnetCount: 0,
+      receivedKnetAmount: 0
+    };
+  }
+
+  function createDefaultCashSummary() {
+    return {
+      totalIn: 0,
+      totalOut: 0,
+      cashInHand: 0,
+      pendingKnetAmount: 0,
+      pendingKnetCount: 0,
+      overdueKnetCount: 0,
+      profitTransferredAmount: 0,
+      profitTransferredCount: 0
+    };
+  }
+  function t(key) {
+    const pack = translations[state.language] || translations.en;
+    return (pack && pack[key]) || translations.en[key] || key;
+  }
+  function formatTemplate(key, values) {
+    let output = t(key);
+    return output.replace(/\{\{(\w+)\}\}/g, function (match, token) {
+      if (!values || values[token] == null) {
+        return match;
+      }
+      return String(values[token]);
+    });
+  }
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/\r?\n/g, '<br>');
+  }
+  function escapeAttr(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+  function formatMoney(value) {
+    const number = Number(value || 0);
+    const locale = state.language === 'ar' ? 'ar' : 'en';
+    return number.toLocaleString(locale, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  }
+  function formatDate(iso) {
+    if (!iso) return '--';
+    const date = new Date(iso + 'T00:00:00');
+    if (isNaN(date.getTime())) return iso;
+    const locale = state.language === 'ar' ? 'ar' : 'en';
+    return date.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+  function todayIso() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+  }
+  function ensureRuntime() {
+    return typeof google !== 'undefined' && google.script && google.script.run;
+  }
+  function setActiveModule(module) {
+    state.module = module;
+    Object.keys(dom.modules).forEach(function (name) {
+      const isActive = name === module;
+      if (dom.modules[name]) {
+        dom.modules[name].classList.toggle('active', isActive);
+      }
+    });
+    dom.tabButtons.forEach(function (button) {
+      const target = button.getAttribute('data-tab');
+      button.classList.toggle('active', target === module);
+    });
+  }
+  function applyTranslations() {
+    document.documentElement.lang = state.language;
+    document.body.dir = state.language === 'ar' ? 'rtl' : 'ltr';
+
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      const key = el.getAttribute('data-i18n');
+      el.textContent = t(key);
+    });
+
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+      const key = el.getAttribute('data-i18n-placeholder');
+      el.setAttribute('placeholder', t(key));
+    });
+
+    dom.languageButtons.forEach(function (button) {
+      const lang = button.getAttribute('data-lang');
+      button.classList.toggle('active', lang === state.language);
+    });
+
+    populateCashCategories();
+    renderSalesStats();
+    renderSalesTable();
+    renderCashStats();
+    renderCashTable();
+  }
+  function setSalesEntryTab(tab) {
+    dom.sales.entryTabs.forEach(function (button) {
+      const key = button.getAttribute('data-sales-entry-tab');
+      button.classList.toggle('active', key === tab);
+    });
+    Object.keys(dom.sales.entryForms).forEach(function (name) {
+      const form = dom.sales.entryForms[name];
+      const value = form ? form.getAttribute('data-sales-entry') : '';
+      if (form) {
+        form.classList.toggle('active', value === tab);
+      }
+    });
+  }
+  function setSalesMessage(type, message, isError) {
+    const target = dom.sales.messages[type];
+    if (!target) return;
+    target.textContent = message || '';
+    if (message) {
+      target.style.color = isError ? '#b91c1c' : '#15803d';
+    } else {
+      target.style.color = 'var(--muted)';
+    }
+  }
+  function setCashMessage(message, isError) {
+    if (!dom.cash.message) return;
+    dom.cash.message.textContent = message || '';
+    if (message) {
+      dom.cash.message.style.color = isError ? '#b91c1c' : '#15803d';
+    } else {
+      dom.cash.message.style.color = 'var(--muted)';
+    }
+  }
+  function setFormDisabled(form, disabled) {
+    if (!form) return;
+    const elements = form.querySelectorAll('input, select, textarea, button');
+    elements.forEach(function (el) {
+      if (disabled) {
+        el.setAttribute('data-disabled-prev', el.disabled ? '1' : '0');
+        el.disabled = true;
+      } else {
+        const prev = el.getAttribute('data-disabled-prev');
+        if (prev === '0') {
+          el.disabled = false;
+        }
+        el.removeAttribute('data-disabled-prev');
+      }
+    });
+  }
+  function renderSalesStats() {
+    const summary = state.sales.summary || createDefaultSalesSummary();
+    if (dom.sales.stats.totalSales) dom.sales.stats.totalSales.textContent = formatMoney(summary.totalSales);
+    if (dom.sales.stats.knetSales) dom.sales.stats.knetSales.textContent = formatMoney(summary.totalKnetSales);
+    if (dom.sales.stats.cashSales) dom.sales.stats.cashSales.textContent = formatMoney(summary.totalCashSales);
+    if (dom.sales.stats.expenses) dom.sales.stats.expenses.textContent = formatMoney(summary.totalExpenses);
+    if (dom.sales.stats.netIncome) {
+      dom.sales.stats.netIncome.textContent = formatTemplate('salesStatNetIncome', {
+        value: formatMoney(summary.netIncome)
+      });
+    }
+    if (dom.sales.stats.knetPending) {
+      dom.sales.stats.knetPending.textContent = formatTemplate('salesStatKnetPending', {
+        count: summary.pendingKnetCount,
+        value: formatMoney(summary.pendingKnetAmount)
+      });
+    }
+    if (dom.sales.stats.overdue) {
+      dom.sales.stats.overdue.textContent = formatTemplate('salesStatOverdue', {
+        count: summary.overdueKnetCount
+      });
+    }
+  }
+  function renderSalesTable() {
+    const rows = state.sales.rows || [];
+    if (!dom.sales.tableBody || !dom.sales.empty) return;
+    if (!rows.length) {
+      dom.sales.tableBody.innerHTML = '';
+      dom.sales.empty.style.display = '';
+      return;
+    }
+    dom.sales.empty.style.display = 'none';
+    const html = rows.map(renderSalesRow).join('');
+    dom.sales.tableBody.innerHTML = html;
+  }
+  function renderSalesRow(row) {
+    const receiptCell = row.hasReceipt
+      ? '<a href="' + escapeAttr(row.receiptUrl) + '" target="_blank" rel="noopener">' +
+          escapeHtml(row.receiptName || t('salesReceiptView')) + '</a>'
+      : '<span class="muted">' + escapeHtml(t('salesReceiptNone')) + '</span>';
+    const notesParts = [];
+    if (row.expenseNotes) notesParts.push(escapeHtml(row.expenseNotes));
+    if (row.notes) notesParts.push(escapeHtml(row.notes));
+    const notesCell = notesParts.length ? notesParts.join('<hr>') : '<span class="muted">--</span>';
+    const actions = [];
+    if (row.knetStatus === 'Pending') {
+      actions.push('<button type="button" data-action="sales-mark" data-id="' + escapeAttr(row.id) + '">' +
+        escapeHtml(t('salesActionMark')) + '</button>');
+    }
+    return [
+      '<tr>',
+      '<td>' + escapeHtml(formatDate(row.reportDate)) + '</td>',
+      '<td>' + escapeHtml(formatMoney(row.totalSales)) + '</td>',
+      '<td>' + escapeHtml(formatMoney(row.knetSales)) + '</td>',
+      '<td>' + escapeHtml(formatMoney(row.cashSales)) + '</td>',
+      '<td>' + escapeHtml(formatMoney(row.expenses)) + '</td>',
+      '<td>' + escapeHtml(formatMoney(row.netSales)) + '</td>',
+      '<td>' + renderSalesKnet(row) + '</td>',
+      '<td>' + receiptCell + '</td>',
+      '<td>' + notesCell + '</td>',
+      '<td class="actions">' + (actions.join('') || '<span class="muted">--</span>') + '</td>',
+      '</tr>'
+    ].join('');
+  }
+
+  function renderSalesKnet(row) {
+    if (!row.knetStatus) {
+      return '<span class="muted">' + escapeHtml(t('knetNotApplicable')) + '</span>';
+    }
+    const lines = [];
+    lines.push('<strong>' + escapeHtml(t('knetStatusLabel')) + ':</strong> ' + escapeHtml(describeKnetStatus(row)));
+    if (row.knetExpectedDate) {
+      lines.push('<div>' + escapeHtml(t('expectedLabel')) + ': ' + escapeHtml(formatDate(row.knetExpectedDate)) + '</div>');
+    }
+    if (row.knetReceivedDate) {
+      lines.push('<div>' + escapeHtml(t('receivedLabel')) + ': ' + escapeHtml(formatDate(row.knetReceivedDate)) + '</div>');
+    }
+    return lines.join('');
+  }
+
+  function describeKnetStatus(row) {
+    if (row.knetStatus === 'Pending') {
+      if (typeof row.knetDueDays === 'number') {
+        if (row.knetDueDays === 0) {
+          return t('knetDueToday');
+        }
+        if (row.knetDueDays > 0) {
+          return formatTemplate('knetDueIn', { days: row.knetDueDays });
+        }
+        return formatTemplate('knetOverdue', { days: Math.abs(row.knetDueDays) });
+      }
+      return t('knetPendingGeneric');
+    }
+    if (row.knetStatus === 'Received') {
+      if (typeof row.knetDelayDays === 'number') {
+        if (row.knetDelayDays === 0) {
+          return t('knetReceivedOnTime');
+        }
+        if (row.knetDelayDays < 0) {
+          return formatTemplate('knetReceivedEarly', { days: Math.abs(row.knetDelayDays) });
+        }
+        return formatTemplate('knetReceivedLate', { days: row.knetDelayDays });
+      }
+      return t('knetReceived');
+    }
+    return row.knetStatus;
+  }
+
+  function renderCashStats() {
+    const summary = state.cash.summary || createDefaultCashSummary();
+    if (dom.cash.stats.totalIn) dom.cash.stats.totalIn.textContent = formatMoney(summary.totalIn);
+    if (dom.cash.stats.totalOut) dom.cash.stats.totalOut.textContent = formatMoney(summary.totalOut);
+    if (dom.cash.stats.inHand) dom.cash.stats.inHand.textContent = formatMoney(summary.cashInHand);
+    if (dom.cash.stats.pending) {
+      dom.cash.stats.pending.textContent = formatTemplate('cashStatPendingKnet', {
+        count: summary.pendingKnetCount,
+        value: formatMoney(summary.pendingKnetAmount)
+      });
+    }
+    if (dom.cash.stats.profit) {
+      dom.cash.stats.profit.textContent = formatTemplate('cashStatProfitTransfer', {
+        count: summary.profitTransferredCount,
+        value: formatMoney(summary.profitTransferredAmount)
+      });
+    }
+  }
+
+  function renderCashTable() {
+    const rows = state.cash.rows || [];
+    if (!dom.cash.tableBody || !dom.cash.empty) return;
+    if (!rows.length) {
+      dom.cash.tableBody.innerHTML = '';
+      dom.cash.empty.style.display = '';
+      return;
+    }
+    dom.cash.empty.style.display = 'none';
+    const html = rows.map(renderCashRow).join('');
+    dom.cash.tableBody.innerHTML = html;
+  }
+
+  function renderCashRow(row) {
+    const directionTag = '<span class="tag ' + (row.direction === 'IN' ? 'in' : 'out') + '">' +
+      escapeHtml(row.direction === 'IN' ? t('directionIn') : t('directionOut')) + '</span>';
+    const statusTag = '<span class="tag ' + statusClass(row.status) + '">' + escapeHtml(describeCashStatus(row.status)) + '</span>';
+    const knetInfo = renderCashKnet(row);
+    const profitInfo = renderCashProfit(row);
+    const notes = row.notes ? escapeHtml(row.notes) : '<span class="muted">--</span>';
+    const actions = renderCashActions(row);
+    return [
+      '<tr>',
+      '<td>' + escapeHtml(formatDate(row.entryDate)) + '</td>',
+      '<td>' + directionTag + '</td>',
+      '<td>' + escapeHtml(describeCashCategory(row.category)) + '</td>',
+      '<td>' + escapeHtml(formatMoney(row.amount)) + '</td>',
+      '<td>' + statusTag + '</td>',
+      '<td>' + knetInfo + '</td>',
+      '<td>' + profitInfo + '</td>',
+      '<td>' + notes + '</td>',
+      '<td class="actions">' + actions + '</td>',
+      '</tr>'
+    ].join('');
+  }
+
+  function statusClass(status) {
+    if (status === 'Received') return 'in';
+    if (status === 'Transferred') return 'out';
+    return 'pending';
+  }
+
+  function describeCashStatus(status) {
+    switch (status) {
+      case 'Pending': return t('cashStatusPending');
+      case 'Received': return t('cashStatusReceived');
+      case 'Transferred': return t('cashStatusTransferred');
+      default: return t('cashStatusPosted');
+    }
+  }
+
+  function renderCashKnet(row) {
+    if (row.category !== 'KnetSale') {
+      return '<span class="muted">' + escapeHtml(t('cashKnetNone')) + '</span>';
+    }
+    const parts = [];
+    parts.push('<div>' + escapeHtml(describeKnetStatus(row)) + '</div>');
+    if (row.knetExpectedDate) {
+      parts.push('<div>' + escapeHtml(t('expectedLabel')) + ': ' + escapeHtml(formatDate(row.knetExpectedDate)) + '</div>');
+    }
+    if (row.knetReceivedDate) {
+      parts.push('<div>' + escapeHtml(t('receivedLabel')) + ': ' + escapeHtml(formatDate(row.knetReceivedDate)) + '</div>');
+    }
+    return parts.join('');
+  }
+
+  function renderCashProfit(row) {
+    if (!row.isIncome) {
+      return '<span class="muted">--</span>';
+    }
+    if (row.profitTransferDate) {
+      return escapeHtml(formatTemplate('cashProfitTransferred', { date: formatDate(row.profitTransferDate) }));
+    }
+    return '<span class="muted">' + escapeHtml(t('cashProfitNotTransferred')) + '</span>';
+  }
+
+  function renderCashActions(row) {
+    const actions = [];
+    if (row.category === 'KnetSale' && row.status === 'Pending') {
+      actions.push('<button type="button" data-action="cash-mark" data-id="' + escapeAttr(row.id) + '">' +
+        escapeHtml(t('cashActionMark')) + '</button>');
+    }
+    if (row.isIncome && row.status === 'Received' && !row.profitTransferDate) {
+      actions.push('<button type="button" data-action="cash-transfer" data-id="' + escapeAttr(row.id) + '">' +
+        escapeHtml(t('cashActionTransfer')) + '</button>');
+    }
+    return actions.length ? actions.join('') : '<span class="muted">--</span>';
+  }
+
+  function describeCashCategory(category) {
+    switch (category) {
+      case 'CashSale': return t('cashCategoryCashSale');
+      case 'KnetSale': return t('cashCategoryKnetSale');
+      case 'Deposit': return t('cashCategoryDeposit');
+      case 'OtherIncome': return t('cashCategoryOtherIncome');
+      case 'CashOut': return t('cashCategoryCashOut');
+      default: return t('cashCategoryExpense');
+    }
+  }
+
+  function populateCashCategories() {
+    if (!dom.cash.direction || !dom.cash.category) return;
+    const direction = dom.cash.direction.value === 'OUT' ? 'OUT' : 'IN';
+    const previous = dom.cash.category.value;
+    const options = CASH_CATEGORIES[direction] || [];
+    dom.cash.category.innerHTML = options.map(function (opt) {
+      return '<option value="' + opt.value + '">' + escapeHtml(t(opt.labelKey)) + '</option>';
+    }).join('');
+    const match = options.some(function (opt) { return opt.value === previous; });
+    dom.cash.category.value = match ? previous : (options[0] ? options[0].value : '');
+    updateCashKnetVisibility();
+  }
+
+  function updateCashKnetVisibility() {
+    if (!dom.cash.direction || !dom.cash.category) return;
+    const isKnet = dom.cash.direction.value === 'IN' && dom.cash.category.value === 'KnetSale';
+    dom.cash.knetFields.forEach(function (el) {
+      el.style.display = isKnet ? '' : 'none';
+    });
+    if (!isKnet && dom.cash.markReceived) {
+      dom.cash.expected.value = '';
+      dom.cash.received.value = '';
+      dom.cash.markReceived.checked = false;
+    }
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        const result = String(reader.result || '');
+        resolve(result.indexOf(',') === -1 ? result : result.split(',').pop());
+      };
+      reader.onerror = function (err) {
+        reject(err);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function refreshSales() {
+    if (!ensureRuntime()) {
+      ['cash', 'knet', 'expense', 'received'].forEach(function (type) {
+        setSalesMessage(type, t('errorRuntimeUnavailable'), true);
+      });
+      return;
+    }
+    state.sales.loading = true;
+    if (dom.sales.refreshBtn) dom.sales.refreshBtn.disabled = true;
+    const query = {
+      search: state.sales.filters.search,
+      pendingOnly: state.sales.filters.pendingOnly
+    };
+    google.script.run.withSuccessHandler(function (res) {
+      state.sales.loading = false;
+      if (dom.sales.refreshBtn) dom.sales.refreshBtn.disabled = false;
+      if (res && res.ok) {
+        state.sales.summary = Object.assign(createDefaultSalesSummary(), res.summary || {});
+        state.sales.rows = Array.isArray(res.rows) ? res.rows : [];
+        renderSalesStats();
+        renderSalesTable();
+      } else {
+        alert(String((res && res.error) || t('errorGeneric')));
+      }
+    }).withFailureHandler(function (err) {
+      state.sales.loading = false;
+      if (dom.sales.refreshBtn) dom.sales.refreshBtn.disabled = false;
+      alert(String((err && err.message) || t('errorGeneric')));
+    }).getSalesDashboardData(query);
+  }
+
+  function refreshCash() {
+    if (!ensureRuntime()) {
+      setCashMessage(t('errorRuntimeUnavailable'), true);
+      return;
+    }
+    state.cash.loading = true;
+    if (dom.cash.refreshBtn) dom.cash.refreshBtn.disabled = true;
+    const query = {
+      search: state.cash.filters.search,
+      showPendingOnly: state.cash.filters.pendingOnly
+    };
+    google.script.run.withSuccessHandler(function (res) {
+      state.cash.loading = false;
+      if (dom.cash.refreshBtn) dom.cash.refreshBtn.disabled = false;
+      if (res && res.ok) {
+        state.cash.summary = Object.assign(createDefaultCashSummary(), res.summary || {});
+        state.cash.rows = Array.isArray(res.rows) ? res.rows : [];
+        renderCashStats();
+        renderCashTable();
+      } else {
+        alert(String((res && res.error) || t('errorGeneric')));
+      }
+    }).withFailureHandler(function (err) {
+      state.cash.loading = false;
+      if (dom.cash.refreshBtn) dom.cash.refreshBtn.disabled = false;
+      alert(String((err && err.message) || t('errorGeneric')));
+    }).getCashDashboardData(query);
+  }
+
+  function scheduleSalesRefresh(delay) {
+    if (salesRefreshTimer) {
+      clearTimeout(salesRefreshTimer);
+    }
+    salesRefreshTimer = setTimeout(refreshSales, isFinite(delay) ? delay : 250);
+  }
+
+  function scheduleCashRefresh(delay) {
+    if (cashRefreshTimer) {
+      clearTimeout(cashRefreshTimer);
+    }
+    cashRefreshTimer = setTimeout(refreshCash, isFinite(delay) ? delay : 250);
+  }
+
+  function handleSalesCashSubmit(event) {
+    event.preventDefault();
+    const amount = Number(dom.sales.inputs.cashAmount && dom.sales.inputs.cashAmount.value);
+    if (!(amount > 0)) {
+      setSalesMessage('cash', t('salesErrorAmountRequired'), true);
+      return;
+    }
+    const payload = {
+      reportDate: (dom.sales.inputs.cashDate && dom.sales.inputs.cashDate.value) || todayIso(),
+      totalSales: amount,
+      cashSales: amount,
+      knetSales: 0,
+      expenses: 0,
+      notes: dom.sales.inputs.cashNotes ? dom.sales.inputs.cashNotes.value || '' : ''
+    };
+    submitSalesEntry('cash', payload);
+  }
+
+  function handleSalesKnetSubmit(event) {
+    event.preventDefault();
+    const total = Number(dom.sales.inputs.knetTotal && dom.sales.inputs.knetTotal.value);
+    const knet = Number(dom.sales.inputs.knetAmount && dom.sales.inputs.knetAmount.value);
+    if (!(total > 0) || !(knet > 0)) {
+      setSalesMessage('knet', t('salesErrorAmountRequired'), true);
+      return;
+    }
+    if (knet > total) {
+      setSalesMessage('knet', t('salesErrorTotals'), true);
+      return;
+    }
+    const payload = {
+      reportDate: (dom.sales.inputs.knetDate && dom.sales.inputs.knetDate.value) || todayIso(),
+      totalSales: total,
+      knetSales: knet,
+      cashSales: Math.max(total - knet, 0),
+      expenses: 0,
+      knetExpectedDate: dom.sales.inputs.knetExpected ? dom.sales.inputs.knetExpected.value || '' : '',
+      knetReceivedDate: dom.sales.inputs.knetReceived ? dom.sales.inputs.knetReceived.value || '' : '',
+      markReceived: dom.sales.inputs.knetMark ? dom.sales.inputs.knetMark.checked : false,
+      notes: dom.sales.inputs.knetNotes ? dom.sales.inputs.knetNotes.value || '' : ''
+    };
+    const fileInput = dom.sales.inputs.knetReceipt;
+    const file = fileInput && fileInput.files && fileInput.files[0];
+    if (file) {
+      if (file.size > MAX_RECEIPT_BYTES) {
+        setSalesMessage('knet', t('salesErrorReceiptTooLarge'), true);
+        return;
+      }
+      readFileAsBase64(file).then(function (b64) {
+        payload.receipt = {
+          name: file.name,
+          type: file.type || 'image/jpeg',
+          size: file.size,
+          b64: b64
+        };
+        submitSalesEntry('knet', payload);
+      }).catch(function () {
+        setSalesMessage('knet', t('errorGeneric'), true);
+      });
+    } else {
+      submitSalesEntry('knet', payload);
+    }
+  }
+
+  function handleSalesExpenseSubmit(event) {
+    event.preventDefault();
+    const amount = Number(dom.sales.inputs.expenseAmount && dom.sales.inputs.expenseAmount.value);
+    if (!(amount > 0)) {
+      setSalesMessage('expense', t('salesErrorAmountRequired'), true);
+      return;
+    }
+    const payload = {
+      reportDate: (dom.sales.inputs.expenseDate && dom.sales.inputs.expenseDate.value) || todayIso(),
+      totalSales: 0,
+      knetSales: 0,
+      cashSales: 0,
+      expenses: amount,
+      expenseNotes: dom.sales.inputs.expenseNotes ? dom.sales.inputs.expenseNotes.value || '' : ''
+    };
+    submitSalesEntry('expense', payload);
+  }
+
+  function handleSalesReceivedSubmit(event) {
+    event.preventDefault();
+    if (!ensureRuntime()) {
+      setSalesMessage('received', t('errorRuntimeUnavailable'), true);
+      return;
+    }
+    const id = dom.sales.inputs.receivedId ? (dom.sales.inputs.receivedId.value || '').trim() : '';
+    if (!id) {
+      setSalesMessage('received', t('salesErrorIdRequired'), true);
+      return;
+    }
+    setSalesMessage('received', '', false);
+    const form = dom.sales.entryForms.received;
+    setFormDisabled(form, true);
+    google.script.run.withSuccessHandler(function (res) {
+      setFormDisabled(form, false);
+      if (res && res.ok) {
+        if (form) form.reset();
+        setSalesMessage('received', t('successMarked'), false);
+        scheduleSalesRefresh(100);
+      } else {
+        setSalesMessage('received', String((res && res.error) || t('errorGeneric')), true);
+      }
+    }).withFailureHandler(function (err) {
+      setFormDisabled(form, false);
+      setSalesMessage('received', String((err && err.message) || t('errorGeneric')), true);
+    }).markKnetReceived({
+      id: id,
+      receivedDate: dom.sales.inputs.receivedDate ? dom.sales.inputs.receivedDate.value || '' : ''
+    });
+  }
+
+  function submitSalesEntry(type, payload) {
+    if (!ensureRuntime()) {
+      setSalesMessage(type, t('errorRuntimeUnavailable'), true);
+      return;
+    }
+    setSalesMessage(type, '', false);
+    const form = dom.sales.entryForms[type];
+    setFormDisabled(form, true);
+    google.script.run.withSuccessHandler(function (res) {
+      setFormDisabled(form, false);
+      if (res && res.ok) {
+        if (form) form.reset();
+        setSalesDefaults(type);
+        setSalesMessage(type, t('successSaved'), false);
+        scheduleSalesRefresh(100);
+      } else {
+        setSalesMessage(type, String((res && res.error) || t('errorGeneric')), true);
+      }
+    }).withFailureHandler(function (err) {
+      setFormDisabled(form, false);
+      setSalesMessage(type, String((err && err.message) || t('errorGeneric')), true);
+    }).recordSalesEntry(payload);
+  }
+
+  function handleSalesTableActions(event) {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const action = button.getAttribute('data-action');
+    const id = button.getAttribute('data-id');
+    if (!id) return;
+    if (action === 'sales-mark') {
+      if (!window.confirm(t('confirmMarkReceived'))) {
+        return;
+      }
+      const suggestion = todayIso();
+      const answer = window.prompt(t('promptReceivedDate'), suggestion);
+      if (answer === null) {
+        return;
+      }
+      button.disabled = true;
+      if (!ensureRuntime()) {
+        button.disabled = false;
+        alert(t('errorRuntimeUnavailable'));
+        return;
+      }
+      google.script.run.withSuccessHandler(function (res) {
+        button.disabled = false;
+        if (res && res.ok) {
+          scheduleSalesRefresh(100);
+        } else {
+          alert(String((res && res.error) || t('errorGeneric')));
+        }
+      }).withFailureHandler(function (err) {
+        button.disabled = false;
+        alert(String((err && err.message) || t('errorGeneric')));
+      }).markKnetReceived({
+        id: id,
+        receivedDate: answer || ''
+      });
+    }
+  }
+
+  function handleCashSubmit(event) {
+    event.preventDefault();
+    const amount = Number(dom.cash.amount && dom.cash.amount.value);
+    if (!(amount > 0)) {
+      setCashMessage(t('cashErrorAmountRequired'), true);
+      return;
+    }
+    const payload = {
+      entryDate: (dom.cash.date && dom.cash.date.value) || todayIso(),
+      direction: dom.cash.direction ? dom.cash.direction.value || 'IN' : 'IN',
+      category: dom.cash.category ? dom.cash.category.value || '' : '',
+      amount: amount,
+      knetExpectedDate: dom.cash.expected ? dom.cash.expected.value || '' : '',
+      knetReceivedDate: dom.cash.received ? dom.cash.received.value || '' : '',
+      markReceived: dom.cash.markReceived ? dom.cash.markReceived.checked : false,
+      description: dom.cash.description ? dom.cash.description.value || '' : '',
+      notes: dom.cash.notes ? dom.cash.notes.value || '' : ''
+    };
+    if (!ensureRuntime()) {
+      setCashMessage(t('errorRuntimeUnavailable'), true);
+      return;
+    }
+    setCashMessage('', false);
+    setFormDisabled(dom.cash.form, true);
+    google.script.run.withSuccessHandler(function (res) {
+      setFormDisabled(dom.cash.form, false);
+      if (res && res.ok) {
+        if (dom.cash.form) dom.cash.form.reset();
+        setCashDefaults();
+        setCashMessage(t('successSaved'), false);
+        scheduleCashRefresh(100);
+      } else {
+        setCashMessage(String((res && res.error) || t('errorGeneric')), true);
+      }
+    }).withFailureHandler(function (err) {
+      setFormDisabled(dom.cash.form, false);
+      setCashMessage(String((err && err.message) || t('errorGeneric')), true);
+    }).recordCashEntry(payload);
+  }
+
+  function handleCashTableActions(event) {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const id = button.getAttribute('data-id');
+    if (!id) return;
+    const action = button.getAttribute('data-action');
+    if (!ensureRuntime()) {
+      alert(t('errorRuntimeUnavailable'));
+      return;
+    }
+    if (action === 'cash-mark') {
+      if (!window.confirm(t('confirmReceived'))) return;
+      const suggestion = todayIso();
+      const answer = window.prompt(t('promptReceivedDate'), suggestion);
+      if (answer === null) return;
+      button.disabled = true;
+      google.script.run.withSuccessHandler(function (res) {
+        button.disabled = false;
+        if (res && res.ok) {
+          scheduleCashRefresh(100);
+        } else {
+          alert(String((res && res.error) || t('errorGeneric')));
+        }
+      }).withFailureHandler(function (err) {
+        button.disabled = false;
+        alert(String((err && err.message) || t('errorGeneric')));
+      }).markCashKnetReceived({
+        id: id,
+        receivedDate: answer || ''
+      });
+    } else if (action === 'cash-transfer') {
+      if (!window.confirm(t('confirmTransfer'))) return;
+      const suggestion = todayIso();
+      const answer = window.prompt(t('promptTransferDate'), suggestion);
+      if (answer === null) return;
+      button.disabled = true;
+      google.script.run.withSuccessHandler(function (res) {
+        button.disabled = false;
+        if (res && res.ok) {
+          scheduleCashRefresh(100);
+        } else {
+          alert(String((res && res.error) || t('errorGeneric')));
+        }
+      }).withFailureHandler(function (err) {
+        button.disabled = false;
+        alert(String((err && err.message) || t('errorGeneric')));
+      }).transferCashToProfit({
+        id: id,
+        transferDate: answer || ''
+      });
+    }
+  }
+
+  function setSalesDefaults(type) {
+    if (type === 'cash' && dom.sales.inputs.cashDate) {
+      dom.sales.inputs.cashDate.value = todayIso();
+    }
+    if (type === 'knet') {
+      if (dom.sales.inputs.knetDate) dom.sales.inputs.knetDate.value = todayIso();
+      if (dom.sales.inputs.knetMark) dom.sales.inputs.knetMark.checked = false;
+      if (dom.sales.inputs.knetExpected) dom.sales.inputs.knetExpected.value = '';
+      if (dom.sales.inputs.knetReceived) dom.sales.inputs.knetReceived.value = '';
+    }
+    if (type === 'expense' && dom.sales.inputs.expenseDate) {
+      dom.sales.inputs.expenseDate.value = todayIso();
+    }
+  }
+
+  function setCashDefaults() {
+    if (dom.cash.date) dom.cash.date.value = todayIso();
+    if (dom.cash.direction) dom.cash.direction.value = 'IN';
+    populateCashCategories();
+  }
+
+  function bindEvents() {
+    dom.tabButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        const target = button.getAttribute('data-tab') || 'sales';
+        setActiveModule(target);
+      });
+    });
+
+    dom.languageButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        const lang = button.getAttribute('data-lang');
+        if (!lang || !translations[lang] || lang === state.language) return;
+        state.language = lang;
+        applyTranslations();
+      });
+    });
+
+    dom.sales.entryTabs.forEach(function (button) {
+      button.addEventListener('click', function () {
+        const tab = button.getAttribute('data-sales-entry-tab');
+        if (!tab) return;
+        setSalesEntryTab(tab);
+      });
+    });
+    if (dom.sales.entryForms.cash) {
+      dom.sales.entryForms.cash.addEventListener('submit', handleSalesCashSubmit);
+    }
+    if (dom.sales.entryForms.knet) {
+      dom.sales.entryForms.knet.addEventListener('submit', handleSalesKnetSubmit);
+    }
+    if (dom.sales.entryForms.expense) {
+      dom.sales.entryForms.expense.addEventListener('submit', handleSalesExpenseSubmit);
+    }
+    if (dom.sales.entryForms.received) {
+      dom.sales.entryForms.received.addEventListener('submit', handleSalesReceivedSubmit);
+    }
+
+    if (dom.sales.entryPanel) {
+      dom.sales.entryPanel.addEventListener('click', function (event) {
+        const resetType = event.target && event.target.getAttribute('data-reset');
+        if (!resetType || !dom.sales.entryForms[resetType]) return;
+        event.preventDefault();
+        dom.sales.entryForms[resetType].reset();
+        setSalesDefaults(resetType);
+        setSalesMessage(resetType, '', false);
+      });
+    }
+
+    if (dom.sales.inputs.knetMark && dom.sales.inputs.knetReceived) {
+      dom.sales.inputs.knetMark.addEventListener('change', function () {
+        if (dom.sales.inputs.knetMark.checked && !dom.sales.inputs.knetReceived.value) {
+          dom.sales.inputs.knetReceived.value = todayIso();
+        }
+      });
+    }
+
+    if (dom.sales.tableBody) {
+      dom.sales.tableBody.addEventListener('click', handleSalesTableActions);
+    }
+
+    if (dom.sales.search) {
+      dom.sales.search.addEventListener('input', function (event) {
+        state.sales.filters.search = event.target.value.trim();
+        scheduleSalesRefresh();
+      });
+    }
+    if (dom.sales.pendingToggle) {
+      dom.sales.pendingToggle.addEventListener('change', function (event) {
+        state.sales.filters.pendingOnly = event.target.checked;
+        scheduleSalesRefresh();
+      });
+    }
+    if (dom.sales.refreshBtn) {
+      dom.sales.refreshBtn.addEventListener('click', function () {
+        refreshSales();
+      });
+    }
+
+    if (dom.cash.form) {
+      dom.cash.form.addEventListener('submit', handleCashSubmit);
+    }
+    if (dom.cash.resetBtn) {
+      dom.cash.resetBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        dom.cash.form.reset();
+        setCashDefaults();
+        setCashMessage('', false);
+      });
+    }
+    if (dom.cash.tableBody) {
+      dom.cash.tableBody.addEventListener('click', handleCashTableActions);
+    }
+
+    if (dom.cash.search) {
+      dom.cash.search.addEventListener('input', function (event) {
+        state.cash.filters.search = event.target.value.trim();
+        scheduleCashRefresh();
+      });
+    }
+    if (dom.cash.pendingToggle) {
+      dom.cash.pendingToggle.addEventListener('change', function (event) {
+        state.cash.filters.pendingOnly = event.target.checked;
+        scheduleCashRefresh();
+      });
+    }
+    if (dom.cash.refreshBtn) {
+      dom.cash.refreshBtn.addEventListener('click', function () {
+        refreshCash();
+      });
+    }
+    if (dom.cash.direction) {
+      dom.cash.direction.addEventListener('change', populateCashCategories);
+    }
+    if (dom.cash.category) {
+      dom.cash.category.addEventListener('change', updateCashKnetVisibility);
+    }
+    if (dom.cash.markReceived && dom.cash.received) {
+      dom.cash.markReceived.addEventListener('change', function () {
+        if (dom.cash.markReceived.checked && !dom.cash.received.value) {
+          dom.cash.received.value = todayIso();
+        }
+      });
+    }
+  }
+
+  function initDefaults() {
+    if (dom.sales.inputs.cashDate) dom.sales.inputs.cashDate.value = todayIso();
+    if (dom.sales.inputs.knetDate) dom.sales.inputs.knetDate.value = todayIso();
+    if (dom.sales.inputs.expenseDate) dom.sales.inputs.expenseDate.value = todayIso();
+    if (dom.cash.date) dom.cash.date.value = todayIso();
+    populateCashCategories();
+    setSalesEntryTab('cash');
+    setActiveModule('sales');
+  }
+
+  function init() {
+    bindEvents();
+    initDefaults();
+    applyTranslations();
+    refreshSales();
+    refreshCash();
+  }
+
+  init();
+})();

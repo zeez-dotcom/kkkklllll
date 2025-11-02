@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales &amp; Expenses Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      --surface: #ffffff;
+      --surface-muted: #f5f7fb;
+      --border: #d4d7dd;
+      --text: #1a1d23;
+      --text-muted: #6b7280;
+      --primary: #2563eb;
+      --primary-text: #ffffff;
+      --success: #15803d;
+      --danger: #b91c1c;
+      --warning: #c05621;
+      --table-stripe: #f8fafc;
+    }
+    body {
+      margin: 0;
+      background: #eef1f6;
+      color: var(--text);
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    main {
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+    }
+    .language-switch {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .language-switch button {
+      border: none;
+      padding: 8px 16px;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s ease;
+    }
+    .language-switch button.active {
+      background: var(--primary);
+      color: var(--primary-text);
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(22, 33, 74, 0.06);
+    }
+    .card .label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+    .card .value {
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    .card .sub {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .filters {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(22, 33, 74, 0.05);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .filters input[type="search"] {
+      flex: 1;
+      min-width: 220px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+    }
+    .filters label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .filters button {
+      border: none;
+      border-radius: 8px;
+      background: var(--primary);
+      color: var(--primary-text);
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .table-wrapper {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 24px rgba(22, 33, 74, 0.05);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 840px;
+    }
+    thead th {
+      text-align: start;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      font-size: 0.92rem;
+    }
+    tbody tr:nth-child(even) {
+      background: var(--table-stripe);
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .status-received {
+      background: rgba(21, 128, 61, 0.12);
+      color: var(--success);
+    }
+    .status-pending {
+      background: rgba(192, 86, 33, 0.12);
+      color: var(--warning);
+    }
+    .status-overdue {
+      background: rgba(185, 28, 28, 0.12);
+      color: var(--danger);
+    }
+    .actions button {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      background: var(--primary);
+      color: var(--primary-text);
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .muted {
+      color: var(--text-muted);
+    }
+    .form-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 12px 30px rgba(22, 33, 74, 0.06);
+    }
+    form {
+      display: grid;
+      gap: 16px;
+    }
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    label span {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    input[type="date"],
+    input[type="number"],
+    input[type="file"],
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+    .actions-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .actions-row button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .primary {
+      background: var(--primary);
+      color: var(--primary-text);
+    }
+    .hint {
+      font-size: 0.8rem;
+      margin-top: 4px;
+      color: var(--text-muted);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--primary);
+    }
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filters button {
+        width: 100%;
+      }
+      .actions button {
+        width: 100%;
+      }
+      .actions-row {
+        justify-content: stretch;
+      }
+      .actions-row button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="appTitle"></h1>
+    <div class="language-switch">
+      <button type="button" data-lang="en" class="active" data-i18n="languageEnglish"></button>
+      <button type="button" data-lang="ar" data-i18n="languageArabic"></button>
+    </div>
+  </header>
+  <main>
+    <section class="card-grid" id="stats">
+      <div class="card">
+        <span class="label" data-i18n="statTotalSales"></span>
+        <span class="value" id="stat-total-sales">0.000</span>
+        <span class="sub" id="stat-net-income" data-i18n-template="statNetIncome"></span>
+      </div>
+      <div class="card">
+        <span class="label" data-i18n="statKnetSales"></span>
+        <span class="value" id="stat-knet-sales">0.000</span>
+        <span class="sub" id="stat-knet-pending" data-i18n-template="statKnetPending"></span>
+      </div>
+      <div class="card">
+        <span class="label" data-i18n="statCashSales"></span>
+        <span class="value" id="stat-cash-sales">0.000</span>
+        <span class="sub muted" data-i18n="statCashHint"></span>
+      </div>
+      <div class="card">
+        <span class="label" data-i18n="statExpenses"></span>
+        <span class="value" id="stat-expenses">0.000</span>
+        <span class="sub" id="stat-overdue" data-i18n-template="statOverdue"></span>
+      </div>
+    </section>
+
+    <section class="filters">
+      <input type="search" id="search-input" data-i18n-placeholder="searchPlaceholder">
+      <label>
+        <input type="checkbox" id="pending-toggle">
+        <span data-i18n="filterPending"></span>
+      </label>
+      <button type="button" id="refresh-btn" data-i18n="refreshButton"></button>
+    </section>
+
+    <section class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th data-i18n="colDate"></th>
+            <th data-i18n="colTotal"></th>
+            <th data-i18n="colKnet"></th>
+            <th data-i18n="colCash"></th>
+            <th data-i18n="colExpenses"></th>
+            <th data-i18n="colNet"></th>
+            <th data-i18n="colKnetStatus"></th>
+            <th data-i18n="colReceipt"></th>
+            <th data-i18n="colExpenseNotes"></th>
+            <th data-i18n="colNotes"></th>
+            <th data-i18n="colActions"></th>
+          </tr>
+        </thead>
+        <tbody id="records-body"></tbody>
+      </table>
+      <p class="muted" id="empty-state" data-i18n="emptyState"></p>
+    </section>
+
+    <section class="form-card">
+      <h2 data-i18n="formTitle"></h2>
+      <form id="entry-form">
+        <div class="field-grid">
+          <label>
+            <span data-i18n="formDate"></span>
+            <input type="date" name="reportDate" id="form-date" required>
+          </label>
+          <label>
+            <span data-i18n="formTotalSales"></span>
+            <input type="number" name="totalSales" id="form-total" step="0.001" min="0" required>
+          </label>
+          <label>
+            <span data-i18n="formKnetSales"></span>
+            <input type="number" name="knetSales" id="form-knet" step="0.001" min="0">
+            <span class="hint" data-i18n="formKnetHint"></span>
+          </label>
+          <label>
+            <span data-i18n="formCashSales"></span>
+            <input type="number" name="cashSales" id="form-cash" step="0.001" min="0">
+          </label>
+          <label>
+            <span data-i18n="formExpenses"></span>
+            <input type="number" name="expenses" id="form-expenses" step="0.001" min="0" value="0">
+          </label>
+          <label>
+            <span data-i18n="formReceipt"></span>
+            <input type="file" name="receipt" id="form-receipt" accept="image/*">
+            <span class="hint" data-i18n="formReceiptHint"></span>
+          </label>
+          <label>
+            <span data-i18n="formExpectedDate"></span>
+            <input type="date" name="knetExpectedDate" id="form-expected">
+            <span class="hint" data-i18n="formExpectedHint"></span>
+          </label>
+          <label>
+            <span data-i18n="formReceivedDate"></span>
+            <input type="date" name="knetReceivedDate" id="form-received">
+            <span class="hint" data-i18n="formReceivedHint"></span>
+          </label>
+        </div>
+        <label>
+          <span data-i18n="formExpenseNotes"></span>
+          <textarea name="expenseNotes" id="form-expense-notes" rows="3"></textarea>
+        </label>
+        <label>
+          <span data-i18n="formNotes"></span>
+          <textarea name="notes" id="form-notes" rows="3"></textarea>
+        </label>
+        <label>
+          <input type="checkbox" name="markReceived" id="form-mark-received">
+          <span data-i18n="formMarkReceived"></span>
+        </label>
+        <div class="actions-row">
+          <button type="button" id="reset-btn" class="muted" data-i18n="resetButton"></button>
+          <button type="submit" id="submit-btn" class="primary" data-i18n="saveButton"></button>
+        </div>
+        <p class="muted" id="form-message"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const translations = {
+        en: {
+          appTitle: 'Sales & Expenses Dashboard',
+          languageEnglish: 'English',
+          languageArabic: 'العربية',
+          statTotalSales: 'Total Sales',
+          statKnetSales: 'KNET Sales',
+          statCashSales: 'Cash Sales',
+          statExpenses: 'Expenses',
+          statNetIncome: 'Net income: {{value}}',
+          statCashHint: 'Cash collected on the same day.',
+          statKnetPending: 'Pending: {{count}} entries / {{value}}',
+          statOverdue: 'KNET overdue: {{count}}',
+          filterPending: 'Pending KNET only',
+          searchPlaceholder: 'Search by date, note, or amount…',
+          refreshButton: 'Refresh',
+          colDate: 'Date',
+          colTotal: 'Total',
+          colKnet: 'KNET',
+          colCash: 'Cash',
+          colExpenses: 'Expenses',
+          colNet: 'Net',
+          colKnetStatus: 'KNET Status',
+          colReceipt: 'Receipt',
+          colExpenseNotes: 'Expense Notes',
+          colNotes: 'Notes',
+          colActions: 'Actions',
+          emptyState: 'No records yet. Start by saving a sales entry.',
+          formTitle: 'Record Daily Sales',
+          formDate: 'Report date',
+          formTotalSales: 'Total sales',
+          formKnetSales: 'KNET sales',
+          formKnetHint: 'If blank we will assume zero.',
+          formCashSales: 'Cash sales',
+          formExpenses: 'Expenses',
+          formReceipt: 'Receipt image',
+          formReceiptHint: 'Optional JPG/PNG for cash or expense receipt (max 5 MB).',
+          formExpectedDate: 'Expected KNET deposit',
+          formExpectedHint: 'Defaults to 10 days after report date when left blank.',
+          formReceivedDate: 'KNET received date',
+          formReceivedHint: 'Fill in when you get the deposit.',
+          formExpenseNotes: 'Expense description',
+          formNotes: 'Notes',
+          formMarkReceived: 'Mark KNET as received right away',
+          saveButton: 'Save entry',
+          resetButton: 'Reset form',
+          successSaved: 'Entry saved successfully.',
+          errorGeneric: 'Something went wrong. Please try again.',
+          markReceived: 'Mark received',
+          promptReceivedDate: 'Enter the received date (YYYY-MM-DD). Leave blank for today.',
+          cancel: 'Cancel',
+          knetNotApplicable: 'No KNET sale',
+          knetStatusLabel: 'Status',
+          knetPendingGeneric: 'Pending',
+          knetDueIn: 'Due in {{days}} day(s)',
+          knetDueToday: 'Due today',
+          knetOverdue: 'Overdue by {{days}} day(s)',
+          knetReceived: 'Received',
+          knetReceivedOnTime: 'Received on time',
+          knetReceivedEarly: 'Received {{days}} day(s) early',
+          knetReceivedLate: 'Received {{days}} day(s) late',
+          expectedLabel: 'Expected',
+          receivedLabel: 'Received',
+          confirmMarkReceived: 'Mark this KNET payment as received?',
+          formValidationTotal: 'Total sales is required.',
+          viewReceipt: 'View receipt',
+          noReceipt: 'No receipt uploaded',
+          errorFileTooLarge: 'The selected image exceeds the 5 MB limit.',
+          errorInvalidFile: 'Unable to read the selected file. Please choose another image.'
+        },
+        ar: {
+          appTitle: 'لوحة متابعة المبيعات والمصروفات',
+          languageEnglish: 'English',
+          languageArabic: 'العربية',
+          statTotalSales: 'إجمالي المبيعات',
+          statKnetSales: 'مبيعات كي نت',
+          statCashSales: 'مبيعات نقدية',
+          statExpenses: 'المصروفات',
+          statNetIncome: 'صافي الدخل: {{value}}',
+          statCashHint: 'المبالغ النقدية المحصلة في نفس اليوم.',
+          statKnetPending: 'قيد التحصيل: {{count}} عملية / {{value}}',
+          statOverdue: 'كي نت متأخرة: {{count}}',
+          filterPending: 'عرض عمليات كي نت المعلقة فقط',
+          searchPlaceholder: 'ابحث بالتاريخ أو الملاحظات أو المبلغ…',
+          refreshButton: 'تحديث البيانات',
+          colDate: 'التاريخ',
+          colTotal: 'الإجمالي',
+          colKnet: 'كي نت',
+          colCash: 'نقداً',
+          colExpenses: 'المصروفات',
+          colNet: 'الصافي',
+          colKnetStatus: 'حالة كي نت',
+          colReceipt: 'الإيصال',
+          colExpenseNotes: 'وصف المصروف',
+          colNotes: 'ملاحظات',
+          colActions: 'إجراءات',
+          emptyState: 'لا توجد سجلات بعد. ابدأ بتسجيل عملية بيع.',
+          formTitle: 'تسجيل مبيعات اليوم',
+          formDate: 'تاريخ التقرير',
+          formTotalSales: 'إجمالي المبيعات',
+          formKnetSales: 'مبيعات كي نت',
+          formKnetHint: 'إذا تُرك فارغاً يفترض صفر.',
+          formCashSales: 'مبيعات نقدية',
+          formExpenses: 'المصروفات',
+          formReceipt: 'صورة الإيصال',
+          formReceiptHint: 'اختياري: صورة JPG/PNG بحد أقصى 5 ميجابايت.',
+          formExpectedDate: 'تاريخ استلام كي نت المتوقع',
+          formExpectedHint: 'يفترض بعد 10 أيام من تاريخ التقرير عند تركه فارغاً.',
+          formReceivedDate: 'تاريخ استلام كي نت',
+          formReceivedHint: 'عبئه عند استلام الإيداع.',
+          formExpenseNotes: 'وصف المصروف',
+          formNotes: 'ملاحظات',
+          formMarkReceived: 'اعتبار كي نت مستلمة فوراً',
+          saveButton: 'حفظ السجل',
+          resetButton: 'تفريغ النموذج',
+          successSaved: 'تم حفظ السجل بنجاح.',
+          errorGeneric: 'حدث خطأ، حاول مرة أخرى.',
+          markReceived: 'تأكيد الاستلام',
+          promptReceivedDate: 'أدخل تاريخ الاستلام (YYYY-MM-DD) أو اتركه فارغاً لليوم.',
+          cancel: 'إلغاء',
+          knetNotApplicable: 'لا توجد عملية كي نت',
+          knetStatusLabel: 'الحالة',
+          knetPendingGeneric: 'معلق',
+          knetDueIn: 'يُستحق خلال {{days}} يوم',
+          knetDueToday: 'مستحق اليوم',
+          knetOverdue: 'متأخر {{days}} يوم',
+          knetReceived: 'تم الاستلام',
+          knetReceivedOnTime: 'تم الاستلام في الوقت المحدد',
+          knetReceivedEarly: 'تم الاستلام قبل الموعد بـ {{days}} يوم',
+          knetReceivedLate: 'تم الاستلام بعد الموعد بـ {{days}} يوم',
+          expectedLabel: 'المتوقع',
+          receivedLabel: 'تاريخ الاستلام',
+          confirmMarkReceived: 'تأكيد استلام عملية كي نت؟',
+          formValidationTotal: 'مطلوب إدخال إجمالي المبيعات.',
+          viewReceipt: 'عرض الإيصال',
+          noReceipt: 'لا يوجد إيصال',
+          errorFileTooLarge: 'حجم الصورة المختارة يتجاوز 5 ميجابايت.',
+          errorInvalidFile: 'تعذّر قراءة الملف المختار. الرجاء اختيار صورة أخرى.'
+        }
+      };
+
+      const state = {
+        rows: [],
+        summary: {
+          totalSales: 0,
+          totalKnetSales: 0,
+          totalCashSales: 0,
+          totalExpenses: 0,
+          netIncome: 0,
+          pendingKnetAmount: 0,
+          pendingKnetCount: 0,
+          overdueKnetCount: 0
+        },
+        filters: {
+          search: '',
+          pendingOnly: false
+        },
+        language: 'en'
+      };
+      const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
+
+      const dom = {
+        languageButtons: document.querySelectorAll('.language-switch button'),
+        statsTotal: document.getElementById('stat-total-sales'),
+        statsKnet: document.getElementById('stat-knet-sales'),
+        statsCash: document.getElementById('stat-cash-sales'),
+        statsExpenses: document.getElementById('stat-expenses'),
+        statsNetIncome: document.getElementById('stat-net-income'),
+        statsKnetPending: document.getElementById('stat-knet-pending'),
+        statsOverdue: document.getElementById('stat-overdue'),
+        searchInput: document.getElementById('search-input'),
+        pendingToggle: document.getElementById('pending-toggle'),
+        refreshBtn: document.getElementById('refresh-btn'),
+        tableBody: document.getElementById('records-body'),
+        emptyState: document.getElementById('empty-state'),
+        form: document.getElementById('entry-form'),
+        formMessage: document.getElementById('form-message'),
+        formDate: document.getElementById('form-date'),
+        formTotal: document.getElementById('form-total'),
+        formKnet: document.getElementById('form-knet'),
+        formCash: document.getElementById('form-cash'),
+        formExpected: document.getElementById('form-expected'),
+        formReceived: document.getElementById('form-received'),
+        formReceipt: document.getElementById('form-receipt'),
+        formMarkReceived: document.getElementById('form-mark-received'),
+        resetBtn: document.getElementById('reset-btn'),
+        submitBtn: document.getElementById('submit-btn')
+      };
+
+      function t(key) {
+        return (translations[state.language] && translations[state.language][key]) || key;
+      }
+
+      function formatMoney(value) {
+        const number = Number(value || 0);
+        return number.toLocaleString(state.language === 'ar' ? 'ar' : 'en', {
+          minimumFractionDigits: 3,
+          maximumFractionDigits: 3
+        });
+      }
+
+      function formatDate(iso) {
+        if (!iso) return '—';
+        const date = new Date(iso + 'T00:00:00');
+        if (isNaN(date)) return iso;
+        return date.toLocaleDateString(state.language === 'ar' ? 'ar' : 'en', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+
+      function formatDateInput(date) {
+        if (!(date instanceof Date) || isNaN(date)) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+          .replace(/\n/g, '<br>');
+      }
+
+      function sanitizeHref(url) {
+        if (!url) return '#';
+        try {
+          const parsed = new URL(url);
+          const protocol = parsed.protocol.toLowerCase();
+          if (protocol === 'http:' || protocol === 'https:') {
+            return parsed.toString();
+          }
+        } catch (err) {
+          if (/^https?:\/\//i.test(url)) {
+            return url;
+          }
+        }
+        return '#';
+      }
+
+      function applyTranslations() {
+        document.documentElement.lang = state.language;
+        document.body.dir = state.language === 'ar' ? 'rtl' : 'ltr';
+        document.querySelectorAll('[data-i18n]').forEach(function (el) {
+          const key = el.getAttribute('data-i18n');
+          el.textContent = t(key);
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+          const key = el.getAttribute('data-i18n-placeholder');
+          el.setAttribute('placeholder', t(key));
+        });
+        dom.languageButtons.forEach(function (button) {
+          button.classList.toggle('active', button.getAttribute('data-lang') === state.language);
+        });
+        renderStats();
+        renderTable();
+      }
+
+      function substitute(templateKey, values) {
+        let template = t(templateKey);
+        Object.keys(values || {}).forEach(function (key) {
+          template = template.replace('{{' + key + '}}', values[key]);
+        });
+        return template;
+      }
+
+      function renderStats() {
+        dom.statsTotal.textContent = formatMoney(state.summary.totalSales);
+        dom.statsKnet.textContent = formatMoney(state.summary.totalKnetSales);
+        dom.statsCash.textContent = formatMoney(state.summary.totalCashSales);
+        dom.statsExpenses.textContent = formatMoney(state.summary.totalExpenses);
+
+        dom.statsNetIncome.textContent = substitute('statNetIncome', {
+          value: formatMoney(state.summary.netIncome)
+        });
+        dom.statsKnetPending.textContent = substitute('statKnetPending', {
+          count: state.summary.pendingKnetCount,
+          value: formatMoney(state.summary.pendingKnetAmount)
+        });
+        dom.statsOverdue.textContent = substitute('statOverdue', {
+          count: state.summary.overdueKnetCount
+        });
+      }
+
+      function renderTable() {
+        const rows = state.rows;
+        if (!rows.length) {
+          dom.tableBody.innerHTML = '';
+          dom.emptyState.style.display = 'block';
+          return;
+        }
+        dom.emptyState.style.display = 'none';
+        const html = rows.map(function (row) {
+          return [
+            '<tr>',
+            '<td>' + formatDate(row.reportDate) + '</td>',
+            '<td>' + formatMoney(row.totalSales) + '</td>',
+            '<td>' + formatMoney(row.knetSales) + '</td>',
+            '<td>' + formatMoney(row.cashSales) + '</td>',
+            '<td>' + formatMoney(row.expenses) + '</td>',
+            '<td>' + formatMoney(row.netSales) + '</td>',
+            '<td>' + renderKnetCell(row) + '</td>',
+            '<td>' + renderReceiptCell(row) + '</td>',
+            '<td>' + escapeHtml(row.expenseNotes) + '</td>',
+            '<td>' + escapeHtml(row.notes) + '</td>',
+            '<td class="actions">' + renderActions(row) + '</td>',
+            '</tr>'
+          ].join('');
+        }).join('');
+        dom.tableBody.innerHTML = html;
+      }
+
+      function renderKnetCell(row) {
+        if (!row || Number(row.knetSales) <= 0) {
+          return '<span class="muted">' + t('knetNotApplicable') + '</span>';
+        }
+        const statusClass = row.knetStatus === 'Received'
+          ? 'status-pill status-received'
+          : (row.knetIsOverdue ? 'status-pill status-overdue' : 'status-pill status-pending');
+        const lines = [];
+
+        let statusText = t('knetPendingGeneric');
+        if (row.knetStatus === 'Received') {
+          statusText = t('knetReceived');
+        }
+        lines.push('<span class="' + statusClass + '">' + statusText + '</span>');
+
+        if (row.knetStatus === 'Pending') {
+          if (typeof row.knetDueDays === 'number') {
+            if (row.knetDueDays > 0) {
+              lines.push('<span class="muted">' + substitute('knetDueIn', { days: Math.abs(row.knetDueDays) }) + '</span>');
+            } else if (row.knetDueDays === 0) {
+              lines.push('<span class="muted">' + t('knetDueToday') + '</span>');
+            } else {
+              lines.push('<span class="muted">' + substitute('knetOverdue', { days: Math.abs(row.knetDueDays) }) + '</span>');
+            }
+          }
+          if (row.knetExpectedDate) {
+            lines.push('<span class="badge">' + t('expectedLabel') + ': ' + formatDate(row.knetExpectedDate) + '</span>');
+          }
+        } else if (row.knetStatus === 'Received') {
+          if (typeof row.knetDelayDays === 'number') {
+            if (row.knetDelayDays > 0) {
+              lines.push('<span class="muted">' + substitute('knetReceivedLate', { days: Math.abs(row.knetDelayDays) }) + '</span>');
+            } else if (row.knetDelayDays < 0) {
+              lines.push('<span class="muted">' + substitute('knetReceivedEarly', { days: Math.abs(row.knetDelayDays) }) + '</span>');
+            } else {
+              lines.push('<span class="muted">' + t('knetReceivedOnTime') + '</span>');
+            }
+          }
+          if (row.knetReceivedDate) {
+            lines.push('<span class="badge">' + t('receivedLabel') + ': ' + formatDate(row.knetReceivedDate) + '</span>');
+          }
+        }
+
+        return lines.join('<br>');
+      }
+
+      function renderReceiptCell(row) {
+        if (!row || !row.receiptUrl) {
+          return '<span class="muted">' + t('noReceipt') + '</span>';
+        }
+        const link = row.receiptPreviewUrl || row.receiptUrl;
+        const safeLink = sanitizeHref(link);
+        const label = row.receiptName ? escapeHtml(row.receiptName) : escapeHtml(t('viewReceipt'));
+        return '<a href="' + safeLink + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+      }
+
+      function renderActions(row) {
+        if (row.knetStatus === 'Pending' && Number(row.knetSales) > 0) {
+          return '<button type="button" data-action="mark-received" data-id="' + row.id + '">' + t('markReceived') + '</button>';
+        }
+        return '<span class="muted">—</span>';
+      }
+
+      function refreshDashboard() {
+        dom.refreshBtn.disabled = true;
+        google.script.run
+          .withSuccessHandler(function (res) {
+            dom.refreshBtn.disabled = false;
+            if (!res || !res.ok) {
+              dom.formMessage.textContent = (res && res.error) || t('errorGeneric');
+              return;
+            }
+            state.summary = res.summary || state.summary;
+            state.rows = res.rows || [];
+            renderStats();
+            renderTable();
+          })
+          .withFailureHandler(function (err) {
+            dom.refreshBtn.disabled = false;
+            dom.formMessage.textContent = (err && err.message) || t('errorGeneric');
+          })
+          .getSalesDashboardData({
+            search: state.filters.search,
+            pendingOnly: state.filters.pendingOnly
+          });
+      }
+
+      function gatherFormData() {
+        const form = dom.form;
+        const payload = {
+          reportDate: form.reportDate.value,
+          totalSales: form.totalSales.value,
+          knetSales: form.knetSales.value,
+          cashSales: form.cashSales.value,
+          expenses: form.expenses.value,
+          expenseNotes: form.expenseNotes.value,
+          notes: form.notes.value,
+          knetExpectedDate: form.knetExpectedDate.value,
+          knetReceivedDate: form.knetReceivedDate.value,
+          markReceived: form.markReceived.checked
+        };
+        return payload;
+      }
+
+      function resetForm() {
+        dom.form.reset();
+        dom.formMessage.textContent = '';
+        const today = new Date();
+        dom.formDate.value = formatDateInput(today);
+        dom.formExpected.value = '';
+        dom.formReceived.value = '';
+        if (dom.formReceipt) {
+          dom.formReceipt.value = '';
+        }
+      }
+
+      function getSelectedReceipt() {
+        if (!dom.formReceipt || !dom.formReceipt.files) {
+          return null;
+        }
+        return dom.formReceipt.files[0] || null;
+      }
+
+      function readFileAsDataUrl(file) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function () {
+            resolve(reader.result);
+          };
+          reader.onerror = function () {
+            reject(new Error(t('errorInvalidFile')));
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function buildReceiptPayload() {
+        const file = getSelectedReceipt();
+        if (!file) {
+          return Promise.resolve(null);
+        }
+        if (file.size > MAX_RECEIPT_BYTES) {
+          return Promise.reject(new Error(t('errorFileTooLarge')));
+        }
+        return readFileAsDataUrl(file).then(function (dataUrl) {
+          return {
+            name: file.name,
+            type: file.type || 'image/jpeg',
+            size: file.size,
+            b64: dataUrl
+          };
+        });
+      }
+
+      function handleFormSubmit(event) {
+        event.preventDefault();
+        if (!dom.formTotal.value) {
+          dom.formMessage.textContent = t('formValidationTotal');
+          return;
+        }
+        dom.submitBtn.disabled = true;
+        dom.formMessage.textContent = '';
+        const payload = gatherFormData();
+        buildReceiptPayload()
+          .then(function (receipt) {
+            if (receipt) {
+              payload.receipt = receipt;
+            }
+            google.script.run
+              .withSuccessHandler(function (res) {
+                dom.submitBtn.disabled = false;
+                if (!res || !res.ok) {
+                  dom.formMessage.textContent = (res && res.error) || t('errorGeneric');
+                  return;
+                }
+                dom.formMessage.textContent = t('successSaved');
+                resetForm();
+                refreshDashboard();
+              })
+              .withFailureHandler(function (err) {
+                dom.submitBtn.disabled = false;
+                dom.formMessage.textContent = (err && err.message) || t('errorGeneric');
+              })
+              .recordSalesEntry(payload);
+          })
+          .catch(function (err) {
+            dom.submitBtn.disabled = false;
+            dom.formMessage.textContent = (err && err.message) || t('errorGeneric');
+          });
+      }
+
+      function handleTableClick(event) {
+        const target = event.target;
+        if (!target || target.getAttribute('data-action') !== 'mark-received') {
+          return;
+        }
+        const id = target.getAttribute('data-id');
+        if (!id) return;
+        if (!window.confirm(t('confirmMarkReceived'))) {
+          return;
+        }
+        const suggestion = formatDateInput(new Date());
+        const answer = window.prompt(t('promptReceivedDate'), suggestion);
+        if (answer === null) {
+          return;
+        }
+        target.disabled = true;
+        google.script.run
+          .withSuccessHandler(function (res) {
+            target.disabled = false;
+            if (!res || !res.ok) {
+              dom.formMessage.textContent = (res && res.error) || t('errorGeneric');
+              return;
+            }
+            refreshDashboard();
+          })
+          .withFailureHandler(function (err) {
+            target.disabled = false;
+            dom.formMessage.textContent = (err && err.message) || t('errorGeneric');
+          })
+          .markKnetReceived({
+            id: id,
+            receivedDate: answer
+          });
+      }
+
+      function init() {
+        const today = new Date();
+        dom.formDate.value = formatDateInput(today);
+        dom.searchInput.addEventListener('input', function (event) {
+          state.filters.search = event.target.value.trim().toLowerCase();
+          refreshDashboard();
+        });
+        dom.pendingToggle.addEventListener('change', function (event) {
+          state.filters.pendingOnly = event.target.checked;
+          refreshDashboard();
+        });
+        dom.refreshBtn.addEventListener('click', refreshDashboard);
+        dom.form.addEventListener('submit', handleFormSubmit);
+        dom.resetBtn.addEventListener('click', resetForm);
+        dom.tableBody.addEventListener('click', handleTableClick);
+        dom.formMarkReceived.addEventListener('change', function (event) {
+          if (event.target.checked && !dom.formReceived.value) {
+            dom.formReceived.value = formatDateInput(new Date());
+          }
+        });
+        dom.languageButtons.forEach(function (button) {
+          button.addEventListener('click', function () {
+            const lang = button.getAttribute('data-lang');
+            if (lang && translations[lang]) {
+              state.language = lang;
+              applyTranslations();
+            }
+          });
+        });
+        applyTranslations();
+        refreshDashboard();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
