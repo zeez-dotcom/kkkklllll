@@ -11,6 +11,7 @@ const SALES_HEADER = [
   'reportDate',
   'totalSales',
   'knetSales',
+  'knetReceivedAmount',
   'cashSales',
   'expenses',
   'expenseNotes',
@@ -49,6 +50,7 @@ const CASH_HEADER = [
   'updatedAt'
 ];
 const CASH_DEFAULT_KNET_DELAY_DAYS = 10;
+const SHARE_EXPORTS_PUBLIC = false;
 
 /**********************
  * WEB APP ENTRY
@@ -64,6 +66,8 @@ function doGet() {
 function getSalesDashboardData(query) {
   try {
     const filters = sanitizeSalesFilters_(query || {});
+    const fromDate = toIsoDate_(query && query.fromDate);
+    const toDate = toIsoDate_(query && query.toDate) || todayIso_();
     const sheet = getSalesSheet_();
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) {
@@ -72,6 +76,7 @@ function getSalesDashboardData(query) {
         summary: salesEmptySummary_(),
         rows: [],
         filters,
+        range: { fromDate: fromDate || '', toDate: toDate || '' },
         generatedAt: toIsoTimestamp_(new Date())
       };
     }
@@ -82,6 +87,10 @@ function getSalesDashboardData(query) {
     for (let i = 0; i < values.length; i++) {
       const record = mapSalesRowToObject_(values[i], headerMap);
       const enriched = finalizeSalesRecord_(record);
+      // Date range filter (default: today)
+      const d = enriched.reportDate;
+      if (d && (fromDate && d < fromDate)) continue;
+      if (d && (toDate && d > toDate)) continue;
       if (filterSalesRecord_(enriched, filters)) {
         rows.push(enriched);
       }
@@ -93,6 +102,7 @@ function getSalesDashboardData(query) {
       summary,
       rows,
       filters,
+      range: { fromDate: fromDate || '', toDate: toDate || '' },
       generatedAt: toIsoTimestamp_(new Date())
     };
   } catch (err) {
@@ -127,6 +137,9 @@ function recordSalesEntry(payload) {
       record.createdAt = existing.createdAt || nowIso;
       record.receiptUrl = record.receiptUrl || existing.receiptUrl || '';
       record.receiptName = record.receiptName || existing.receiptName || '';
+      if (!(parseMoney_(record.knetReceivedAmount) > 0) && parseMoney_(existing.knetReceivedAmount) > 0) {
+        record.knetReceivedAmount = existing.knetReceivedAmount;
+      }
     }
 
     if (receipt) {
@@ -159,6 +172,7 @@ function markKnetReceived(input) {
     const data = input || {};
     const id = sanitizeString_(data.id);
     if (!id) throw new Error('Record ID is required.');
+    const amount = parseMoney_(data.amount);
 
     const sheet = getSalesSheet_();
     const headerMap = buildHeaderIndex_(SALES_HEADER);
@@ -168,8 +182,25 @@ function markKnetReceived(input) {
     }
     const values = sheet.getRange(rowNumber, 1, 1, SALES_HEADER.length).getValues()[0];
     const record = mapSalesRowToObject_(values, headerMap);
-    record.knetReceivedDate = toIsoDate_(data.receivedDate) || todayIso_();
-    record.knetStatus = 'Received';
+    const total = parseMoney_(record.knetSales);
+    const current = parseMoney_(record.knetReceivedAmount);
+    const remaining = Math.max(total - current, 0);
+    let receiveNow = amount > 0 ? amount : remaining;
+    if (!(receiveNow > 0)) {
+      throw new Error('Amount to receive must be greater than zero.');
+    }
+    if (receiveNow > remaining) {
+      throw new Error('Amount exceeds pending KNET amount.');
+    }
+    record.knetReceivedAmount = round2_(current + receiveNow);
+    // Only set received date when fully received
+    if (record.knetReceivedAmount >= total && total > 0) {
+      record.knetReceivedDate = toIsoDate_(data.receivedDate) || todayIso_();
+      record.knetStatus = 'Received';
+    } else {
+      record.knetReceivedDate = '';
+      record.knetStatus = 'Pending';
+    }
     record.updatedAt = toIsoTimestamp_(new Date());
 
     const computed = Object.assign(record, computeSalesKnetStatus_(record));
@@ -181,6 +212,75 @@ function markKnetReceived(input) {
       ok: true,
       record: finalizeSalesRecord_(computed)
     };
+  } catch (err) {
+    return { ok: false, error: String((err && err.message) || err) };
+  }
+}
+
+/**********************
+ * SALES BULK KNET RECEIVE
+ **********************/
+function receiveKnetBulk(input) {
+  try {
+    const data = input || {};
+    const amount = parseMoney_(data.amount);
+    if (!(amount > 0)) {
+      throw new Error('Amount to receive must be greater than zero.');
+    }
+    const receiveDate = toIsoDate_(data.receivedDate) || todayIso_();
+    const sheet = getSalesSheet_();
+    const headerMap = buildHeaderIndex_(SALES_HEADER);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { ok: true, applied: 0, remaining: amount, updated: 0 };
+    }
+    const values = sheet.getRange(2, 1, lastRow - 1, SALES_HEADER.length).getValues();
+    // Build objects with pending amounts
+    const rows = values.map(function (row, idx) {
+      const rec = mapSalesRowToObject_(row, headerMap);
+      const total = parseMoney_(rec.knetSales);
+      const received = parseMoney_(rec.knetReceivedAmount);
+      const pending = Math.max(total - received, 0);
+      return { index: idx, rec: rec, pending: pending };
+    }).filter(function (x) { return x.pending > 0; });
+
+    // Sort FIFO by reportDate asc, then createdAt asc
+    rows.sort(function (a, b) {
+      const aDate = a.rec.reportDate || '';
+      const bDate = b.rec.reportDate || '';
+      if (aDate < bDate) return -1;
+      if (aDate > bDate) return 1;
+      const aCreated = a.rec.createdAt || '';
+      const bCreated = b.rec.createdAt || '';
+      if (aCreated < bCreated) return -1;
+      if (aCreated > bCreated) return 1;
+      return 0;
+    });
+
+    let remaining = amount;
+    let updatedCount = 0;
+    for (let i = 0; i < rows.length && remaining > 0; i++) {
+      const entry = rows[i];
+      const rec = entry.rec;
+      const take = Math.min(entry.pending, remaining);
+      if (!(take > 0)) continue;
+      const newReceived = round2_(parseMoney_(rec.knetReceivedAmount) + take);
+      rec.knetReceivedAmount = newReceived;
+      if (newReceived >= parseMoney_(rec.knetSales) && parseMoney_(rec.knetSales) > 0) {
+        rec.knetReceivedDate = receiveDate;
+        rec.knetStatus = 'Received';
+      } else {
+        rec.knetReceivedDate = '';
+        rec.knetStatus = 'Pending';
+      }
+      rec.updatedAt = toIsoTimestamp_(new Date());
+      const valuesRow = buildRowValues_(rec, SALES_HEADER);
+      sheet.getRange(2 + entry.index, 1, 1, SALES_HEADER.length).setValues([valuesRow]);
+      updatedCount += 1;
+      remaining = round2_(remaining - take);
+    }
+
+    return { ok: true, applied: round2_(amount - remaining), remaining: remaining, updated: updatedCount };
   } catch (err) {
     return { ok: false, error: String((err && err.message) || err) };
   }
@@ -378,6 +478,356 @@ function transferCashToProfit(input) {
 }
 
 /**********************
+ * REPORT EXPORTS
+ **********************/
+function exportSalesReport(input) {
+  try {
+    const data = input || {};
+    const from = toIsoDate_(data.fromDate);
+    const to = toIsoDate_(data.toDate) || todayIso_();
+    const format = (String(data.format || 'xlsx').toLowerCase() === 'pdf') ? 'pdf' : 'xlsx';
+
+    const sheet = getSalesSheet_();
+    const lastRow = sheet.getLastRow();
+    const headerMap = buildHeaderIndex_(SALES_HEADER);
+    const rows = [];
+    if (lastRow >= 2) {
+      const values = sheet.getRange(2, 1, lastRow - 1, SALES_HEADER.length).getValues();
+      for (var i = 0; i < values.length; i++) {
+        const rec = mapSalesRowToObject_(values[i], headerMap);
+        const d = rec.reportDate;
+        if (d && (!from || d >= from) && (!to || d <= to)) {
+          rows.push(finalizeSalesRecord_(rec));
+        }
+      }
+    }
+    const report = buildSalesReportFile_(rows, from, to);
+    const exportUrl = buildSpreadsheetExportUrl_(report.id, format === 'pdf' ? report.summarySheetId : report.sheetId, format);
+    return { ok: true, id: report.id, name: report.name, url: report.url, exportUrl: exportUrl, format: format };
+  } catch (err) {
+    return { ok: false, error: String((err && err.message) || err) };
+  }
+}
+
+function exportCashReport(input) {
+  try {
+    const data = input || {};
+    const from = toIsoDate_(data.fromDate);
+    const to = toIsoDate_(data.toDate) || todayIso_();
+    const format = (String(data.format || 'xlsx').toLowerCase() === 'pdf') ? 'pdf' : 'xlsx';
+
+    const sheet = getCashSheet_();
+    const lastRow = sheet.getLastRow();
+    const headerMap = buildHeaderIndex_(CASH_HEADER);
+    const rows = [];
+    if (lastRow >= 2) {
+      const values = sheet.getRange(2, 1, lastRow - 1, CASH_HEADER.length).getValues();
+      for (var i = 0; i < values.length; i++) {
+        const rec = mapCashRowToObject_(values[i], headerMap);
+        const d = rec.entryDate;
+        if (d && (!from || d >= from) && (!to || d <= to)) {
+          rows.push(finalizeCashRecord_(rec));
+        }
+      }
+    }
+    const report = buildCashReportFile_(rows, from, to);
+    const exportUrl = buildSpreadsheetExportUrl_(report.id, format === 'pdf' ? report.summarySheetId : report.sheetId, format);
+    return { ok: true, id: report.id, name: report.name, url: report.url, exportUrl: exportUrl, format: format };
+  } catch (err) {
+    return { ok: false, error: String((err && err.message) || err) };
+  }
+}
+
+function exportBothReport(input) {
+  try {
+    const data = input || {};
+    const from = toIsoDate_(data.fromDate);
+    const to = toIsoDate_(data.toDate) || todayIso_();
+    const format = (String(data.format || 'xlsx').toLowerCase() === 'pdf') ? 'pdf' : 'xlsx';
+
+    // Build Sales rows
+    const salesSheet = getSalesSheet_();
+    const salesLast = salesSheet.getLastRow();
+    const salesHeaderMap = buildHeaderIndex_(SALES_HEADER);
+    const sales = [];
+    if (salesLast >= 2) {
+      const vals = salesSheet.getRange(2, 1, salesLast - 1, SALES_HEADER.length).getValues();
+      for (var i = 0; i < vals.length; i++) {
+        const rec = mapSalesRowToObject_(vals[i], salesHeaderMap);
+        const d = rec.reportDate;
+        if (d && (!from || d >= from) && (!to || d <= to)) {
+          sales.push(finalizeSalesRecord_(rec));
+        }
+      }
+    }
+
+    // Build Cash rows
+    const cashSheet = getCashSheet_();
+    const cashLast = cashSheet.getLastRow();
+    const cashHeaderMap = buildHeaderIndex_(CASH_HEADER);
+    const cash = [];
+    if (cashLast >= 2) {
+      const vals = cashSheet.getRange(2, 1, cashLast - 1, CASH_HEADER.length).getValues();
+      for (var j = 0; j < vals.length; j++) {
+        const rec = mapCashRowToObject_(vals[j], cashHeaderMap);
+        const d = rec.entryDate;
+        if (d && (!from || d >= from) && (!to || d <= to)) {
+          cash.push(finalizeCashRecord_(rec));
+        }
+      }
+    }
+
+    const report = buildBothReportFile_(sales, cash, from, to);
+    const exportUrl = buildSpreadsheetExportUrl_(report.id, format === 'pdf' ? report.summarySheetId : report.firstSheetId, format);
+    return { ok: true, id: report.id, name: report.name, url: report.url, exportUrl: exportUrl, format: format };
+  } catch (err) {
+    return { ok: false, error: String((err && err.message) || err) };
+  }
+}
+
+function buildBothReportFile_(salesRows, cashRows, from, to) {
+  const name = 'Sales+Cash Report ' + (from || '') + (to ? ' to ' + to : '');
+  const ss = SpreadsheetApp.create(name || 'Sales+Cash Report');
+  // Sales sheet
+  const salesSh = ss.getActiveSheet();
+  salesSh.setName('Sales');
+  const salesHeader = ['Date', 'Total', 'KNET', 'Cash', 'Expenses', 'Net', 'KNET Status', 'Expected', 'Received', 'Notes'];
+  const salesValues = [salesHeader];
+  let s_total = 0, s_k = 0, s_c = 0, s_e = 0, s_net = 0, s_pend = 0, s_pcount = 0;
+  salesRows.forEach(function (r) {
+    salesValues.push([r.reportDate, r.totalSales, r.knetSales, r.cashSales, r.expenses, r.netSales, r.knetStatus || '', r.knetExpectedDate || '', r.knetReceivedDate || '', r.expenseNotes || r.notes || '']);
+    s_total += r.totalSales; s_k += r.knetSales; s_c += r.cashSales; s_e += r.expenses; s_net += r.netSales; if (r.knetStatus === 'Pending') { s_pend += r.knetSales; s_pcount++; }
+  });
+  salesSh.getRange(1, 1, salesValues.length, salesHeader.length).setValues(salesValues);
+  salesSh.getRange(1, 1, 1, salesHeader.length).setFontWeight('bold');
+  salesSh.autoResizeColumns(1, salesHeader.length);
+
+  // Cash sheet
+  const cashSh = ss.insertSheet('Cash');
+  const cashHeader = ['Date', 'Direction', 'Category', 'Amount', 'Status', 'KNET Expected', 'KNET Received', 'Profit Transfer', 'Notes'];
+  const cashValues = [cashHeader];
+  let c_in = 0, c_out = 0, c_pend = 0, c_pcount = 0, c_inhand = 0;
+  cashRows.forEach(function (r) {
+    cashValues.push([r.entryDate, r.direction, r.category, r.amount, r.status, r.knetExpectedDate || '', r.knetReceivedDate || '', r.profitTransferDate || '', r.notes || '']);
+    if (r.direction === 'IN') { c_in += r.amountNumber; if (r.category === 'KnetSale' && r.status === 'Pending') { c_pend += r.amountNumber; c_pcount++; } if (r.status === 'Received' && !r.profitTransferDate) { c_inhand += r.amountNumber; } }
+    else { c_out += r.amountNumber; c_inhand -= r.amountNumber; }
+  });
+  cashSh.getRange(1, 1, cashValues.length, cashHeader.length).setValues(cashValues);
+  cashSh.getRange(1, 1, 1, cashHeader.length).setFontWeight('bold');
+  cashSh.autoResizeColumns(1, cashHeader.length);
+
+  // Aggregated Cash for chart
+  const aggMap = {};
+  cashRows.forEach(function (r) {
+    const d = r.entryDate || '';
+    if (!d) return;
+    if (!aggMap[d]) aggMap[d] = { In: 0, Out: 0 };
+    if (r.direction === 'IN') aggMap[d].In += r.amountNumber; else aggMap[d].Out += r.amountNumber;
+  });
+  const dates = Object.keys(aggMap).sort();
+  const aggSh = ss.insertSheet('CashAgg');
+  const aggValues = [['Date', 'In', 'Out']].concat(dates.map(function (d) { return [d, aggMap[d].In, aggMap[d].Out]; }));
+  aggSh.getRange(1, 1, aggValues.length, 3).setValues(aggValues);
+  aggSh.getRange(1, 1, 1, 3).setFontWeight('bold');
+
+  // Summary sheet with KPI and charts
+  const sumSh = ss.insertSheet('Summary');
+  const summary = [
+    ['From', from || ''],
+    ['To', to || ''],
+    ['Total Sales', s_total],
+    ['KNET Sales', s_k],
+    ['Cash Sales', s_c],
+    ['Expenses', s_e],
+    ['Net Income', s_net],
+    ['Pending KNET (count)', s_pcount],
+    ['Pending KNET (amount)', s_pend],
+    ['Total In', c_in],
+    ['Total Out', c_out],
+    ['Cash In Hand', c_inhand]
+  ];
+  sumSh.getRange(1, 1, summary.length, 2).setValues(summary);
+  sumSh.getRange(1, 1, 2, 2).setFontWeight('bold');
+  sumSh.getRange(3, 1, summary.length - 2, 2).setFontSize(12);
+  sumSh.getRange(3, 2, summary.length - 2, 1).setFontWeight('bold');
+  try {
+    // Sales chart
+    const salesChart = sumSh.newChart().asColumnChart()
+      .addRange(salesSh.getRange(1, 1, Math.max(2, salesValues.length), 5))
+      .setOption('title', 'Sales by Date')
+      .setPosition(14, 1, 0, 0)
+      .build();
+    sumSh.insertChart(salesChart);
+  } catch (e) {}
+  try {
+    // Cash In/Out chart
+    const cashChart = sumSh.newChart().asColumnChart()
+      .addRange(aggSh.getRange(1, 1, Math.max(2, aggValues.length), 3))
+      .setOption('title', 'Cash In/Out by Date')
+      .setPosition(28, 1, 0, 0)
+      .build();
+    sumSh.insertChart(cashChart);
+  } catch (e) {}
+
+  if (SHARE_EXPORTS_PUBLIC) {
+    DriveApp.getFileById(ss.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  }
+  return { id: ss.getId(), firstSheetId: salesSh.getSheetId(), summarySheetId: sumSh.getSheetId(), name: name, url: ss.getUrl() };
+}
+function buildSalesReportFile_(rows, from, to) {
+  const name = 'Sales Report ' + (from || '') + (to ? ' to ' + to : '');
+  const ss = SpreadsheetApp.create(name || 'Sales Report');
+  const sh = ss.getActiveSheet();
+  sh.setName('Sales');
+  const header = ['Date', 'Total', 'KNET', 'Cash', 'Expenses', 'Net', 'KNET Status', 'Expected', 'Received', 'Notes'];
+  const values = [header];
+  let total = 0, totalK = 0, totalC = 0, totalE = 0, net = 0, pendingK = 0, pendingCount = 0;
+  rows.forEach(function (r) {
+    values.push([
+      r.reportDate,
+      r.totalSales,
+      r.knetSales,
+      r.cashSales,
+      r.expenses,
+      r.netSales,
+      r.knetStatus || '',
+      r.knetExpectedDate || '',
+      r.knetReceivedDate || '',
+      r.expenseNotes || r.notes || ''
+    ]);
+    total += r.totalSales; totalK += r.knetSales; totalC += r.cashSales; totalE += r.expenses; net += r.netSales; if (r.knetStatus === 'Pending') { pendingK += r.knetSales; pendingCount++; }
+  });
+  sh.getRange(1, 1, values.length, header.length).setValues(values);
+  sh.getRange(1, 1, 1, header.length).setFontWeight('bold');
+  sh.autoResizeColumns(1, header.length);
+  const sumSh = ss.insertSheet('Summary');
+  const summary = [
+    ['From', from || ''],
+    ['To', to || ''],
+    ['Total Sales', total],
+    ['KNET Sales', totalK],
+    ['Cash Sales', totalC],
+    ['Expenses', totalE],
+    ['Net Income', net],
+    ['Pending KNET (count)', pendingCount],
+    ['Pending KNET (amount)', pendingK]
+  ];
+  sumSh.getRange(1, 1, summary.length, 2).setValues(summary);
+  sumSh.getRange(1, 1, 2, 2).setFontWeight('bold');
+  // KPI formatting
+  sumSh.getRange(3, 1, 7, 2).setFontSize(12);
+  sumSh.getRange(3, 2, 7, 1).setFontWeight('bold');
+  // Chart on Summary using Sales sheet data: Date vs Total/KNET/Cash/Expenses
+  try {
+    const chartRange = sh.getRange(1, 1, Math.max(2, values.length), 5);
+    const chart = sumSh.newChart()
+      .asColumnChart()
+      .addRange(chartRange)
+      .setOption('title', 'Sales by Date')
+      .setPosition(10, 1, 0, 0)
+      .build();
+    sumSh.insertChart(chart);
+  } catch (e) {}
+  if (SHARE_EXPORTS_PUBLIC) {
+    DriveApp.getFileById(ss.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  }
+  return { id: ss.getId(), sheetId: sh.getSheetId(), summarySheetId: sumSh.getSheetId(), name: name, url: ss.getUrl() };
+}
+
+function buildCashReportFile_(rows, from, to) {
+  const name = 'Cash Report ' + (from || '') + (to ? ' to ' + to : '');
+  const ss = SpreadsheetApp.create(name || 'Cash Report');
+  const sh = ss.getActiveSheet();
+  sh.setName('Cash');
+  const header = ['Date', 'Direction', 'Category', 'Amount', 'Status', 'KNET Expected', 'KNET Received', 'Profit Transfer', 'Notes'];
+  const values = [header];
+  let totalIn = 0, totalOut = 0, pendingK = 0, pendingCount = 0, inHand = 0;
+  rows.forEach(function (r) {
+    values.push([
+      r.entryDate,
+      r.direction,
+      r.category,
+      r.amount,
+      r.status,
+      r.knetExpectedDate || '',
+      r.knetReceivedDate || '',
+      r.profitTransferDate || '',
+      r.notes || ''
+    ]);
+    if (r.direction === 'IN') {
+      totalIn += r.amountNumber;
+      if (r.category === 'KnetSale' && r.status === 'Pending') { pendingK += r.amountNumber; pendingCount++; }
+      if (r.status === 'Received' && !r.profitTransferDate) { inHand += r.amountNumber; }
+    } else {
+      totalOut += r.amountNumber;
+      inHand -= r.amountNumber;
+    }
+  });
+  sh.getRange(1, 1, values.length, header.length).setValues(values);
+  sh.getRange(1, 1, 1, header.length).setFontWeight('bold');
+  sh.autoResizeColumns(1, header.length);
+  const sumSh = ss.insertSheet('Summary');
+  const summary = [
+    ['From', from || ''],
+    ['To', to || ''],
+    ['Total In', totalIn],
+    ['Total Out', totalOut],
+    ['Pending KNET (count)', pendingCount],
+    ['Pending KNET (amount)', pendingK],
+    ['Cash In Hand', inHand]
+  ];
+  sumSh.getRange(1, 1, summary.length, 2).setValues(summary);
+  sumSh.getRange(1, 1, 2, 2).setFontWeight('bold');
+  // Build aggregated IN/OUT per date for chart
+  const aggMap = {};
+  rows.forEach(function (r) {
+    const d = r.entryDate || '';
+    if (!d) return;
+    if (!aggMap[d]) aggMap[d] = { In: 0, Out: 0 };
+    if (r.direction === 'IN') aggMap[d].In += r.amountNumber;
+    else aggMap[d].Out += r.amountNumber;
+  });
+  const dates = Object.keys(aggMap).sort();
+  const aggSh = ss.insertSheet('CashAgg');
+  const aggValues = [['Date', 'In', 'Out']].concat(dates.map(function (d) { return [d, aggMap[d].In, aggMap[d].Out]; }));
+  aggSh.getRange(1, 1, aggValues.length, 3).setValues(aggValues);
+  aggSh.getRange(1, 1, 1, 3).setFontWeight('bold');
+  try {
+    const chart = sumSh.newChart()
+      .asColumnChart()
+      .addRange(aggSh.getRange(1, 1, Math.max(2, aggValues.length), 3))
+      .setOption('title', 'Cash In/Out by Date')
+      .setPosition(10, 1, 0, 0)
+      .build();
+    sumSh.insertChart(chart);
+  } catch (e) {}
+  if (SHARE_EXPORTS_PUBLIC) {
+    DriveApp.getFileById(ss.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  }
+  return { id: ss.getId(), sheetId: sh.getSheetId(), summarySheetId: sumSh.getSheetId(), name: name, url: ss.getUrl() };
+}
+
+function buildSpreadsheetExportUrl_(id, sheetId, format) {
+  // format: 'xlsx' or 'pdf'
+  const base = 'https://docs.google.com/spreadsheets/d/' + encodeURIComponent(id) + '/export';
+  if (format === 'pdf') {
+    const params = [
+      'format=pdf',
+      'size=A4',
+      'portrait=false',
+      'fitw=true',
+      'sheetnames=true',
+      'printtitle=true',
+      'pagenumbers=RIGHT',
+      'gridlines=false',
+      'fzr=true',
+      'gid=' + encodeURIComponent(sheetId)
+    ].join('&');
+    return base + '?' + params;
+  }
+  return base + '?format=xlsx';
+}
+/**********************
  * SALES HELPERS
  **********************/
 function getSalesSheet_() {
@@ -479,6 +929,7 @@ function sanitizeSalesPayload_(raw) {
   const reportDate = toIsoDate_(payload.reportDate) || todayIso_();
   const totalSales = parseMoney_(payload.totalSales);
   const knetSales = parseMoney_(payload.knetSales);
+  let knetReceivedAmount = parseMoney_(payload.knetReceivedAmount);
   const cashSales = parseMoney_(payload.cashSales);
   const expenses = parseMoney_(payload.expenses);
   let knetExpectedDate = toIsoDate_(payload.knetExpectedDate);
@@ -493,6 +944,9 @@ function sanitizeSalesPayload_(raw) {
     if (markReceived && !knetReceivedDate) {
       knetReceivedDate = todayIso_();
     }
+    if (markReceived && !(knetReceivedAmount > 0)) {
+      knetReceivedAmount = knetSales;
+    }
     if (knetReceivedDate) {
       status = 'Received';
     } else if (!status) {
@@ -501,6 +955,7 @@ function sanitizeSalesPayload_(raw) {
   } else {
     knetExpectedDate = '';
     knetReceivedDate = '';
+    knetReceivedAmount = 0;
     status = '';
   }
 
@@ -509,6 +964,7 @@ function sanitizeSalesPayload_(raw) {
     reportDate,
     totalSales,
     knetSales,
+    knetReceivedAmount,
     cashSales,
     expenses,
     expenseNotes: sanitizeString_(payload.expenseNotes),
@@ -532,6 +988,7 @@ function mapSalesRowToObject_(row, headerMap) {
   record.reportDate = toIsoDate_(record.reportDate);
   record.totalSales = parseMoney_(record.totalSales);
   record.knetSales = parseMoney_(record.knetSales);
+  record.knetReceivedAmount = parseMoney_(record.knetReceivedAmount);
   record.cashSales = parseMoney_(record.cashSales);
   record.expenses = parseMoney_(record.expenses);
   record.expenseNotes = sanitizeString_(record.expenseNotes);
@@ -554,7 +1011,9 @@ function finalizeSalesRecord_(record) {
   normalized.knetDelayDays = knetInfo.knetDelayDays;
   normalized.knetIsOverdue = knetInfo.knetIsOverdue;
   normalized.netSales = round2_(normalized.totalSales - normalized.expenses);
-  normalized.knetPendingAmount = normalized.knetStatus === 'Pending' ? normalized.knetSales : 0;
+  const received = parseMoney_(normalized.knetReceivedAmount);
+  const pending = Math.max(parseMoney_(normalized.knetSales) - received, 0);
+  normalized.knetPendingAmount = pending;
   normalized.receiptUrl = sanitizeUrl_(normalized.receiptUrl);
   normalized.receiptName = sanitizeString_(normalized.receiptName || '');
   normalized.receiptPreviewUrl = makeDrivePreviewUrl_(normalized.receiptUrl);
@@ -576,7 +1035,9 @@ function computeSalesKnetStatus_(record) {
   const expected = dateFromIso_(record.knetExpectedDate);
   const received = dateFromIso_(record.knetReceivedDate);
   let status = sanitizeString_(record.knetStatus);
-  if (received) {
+  const receivedAmount = parseMoney_(record.knetReceivedAmount);
+  const total = parseMoney_(record.knetSales);
+  if (received || receivedAmount >= total) {
     status = 'Received';
   } else if (!status) {
     status = 'Pending';
@@ -1007,7 +1468,7 @@ function sanitizeReceiptInput_(raw) {
   if (!raw) return null;
   const obj = typeof raw === 'object' ? raw : {};
   const name = sanitizeString_(obj.name);
-  const b64 = sanitizeString_(obj.b64);
+  const b64 = sanitizeString_(obj.b64 || obj.base64);
   if (!name || !b64) {
     return null;
   }
