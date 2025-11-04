@@ -991,6 +991,15 @@
                 .replace(/>/g, '&gt;');
         }
 
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function filterData() {
             const selectedDate = document.getElementById("datePicker").value;
             const searchInput = document.getElementById('searchInput');
@@ -1208,7 +1217,7 @@
                 return;
             }
             tbody.innerHTML = orders.map(order => {
-                let cancelledPrice = extractCancelledOrderPrice(order.comments);
+                const cancelledPrice = escapeHtml(extractCancelledOrderPrice(order.comments || ''));
                 const logs = logsMap && logsMap[order.orderNumber] ? logsMap[order.orderNumber] : [];
                 const totalProducts = (order.products || []).length;
                 const outboundMap = {};
@@ -1222,22 +1231,34 @@
                 const statusLabel = totalProducts
                     ? t('quickStatus', { out: outCount, total: totalProducts, in: inCount })
                     : t('noItems');
+                const customerName = escapeHtml(order.customerName || '');
+                const phone = escapeHtml(order.phone || '');
+                const location = escapeHtml(order.location || '');
+                const comments = escapeHtml(order.comments || '');
+                const timeValue = escapeHtml(kind === 'sheel' ? (order.sheelTime || '') : (order.tarkeebTime || ''));
+                const paymentMethod = escapeHtml(order.paymentMethod || '');
+                const productsHtml = (order.products || []).map(product => {
+                    const productImageValue = product.productImage == null ? '' : product.productImage;
+                    const productImage = escapeAttr(productImageValue);
+                    const productName = escapeHtml(product.productName || t('unnamedProduct'));
+                    const productCategory = escapeHtml(product.productCategory || '');
+                    return `
+                                <div class="product-item">
+                                    <img src="${productImage}" alt="${t('productAlt')}">
+                                    <span>${productName} (${productCategory})</span>
+                                </div>`;
+                }).join('');
                 return `
                     <tr class="${order.isCancelled ? 'row-cancelled' : ''}">
-                        <td><a href="https://natatiti.com/dashboard/reservations/${order.orderNumber}/invoice" target="_blank">${order.orderNumber}</a></td>
-                        <td>${order.customerName}</td>
-                        <td>${order.phone}</td>
-                        <td>${order.location}</td>
-                        <td>${order.comments}</td>
-                        <td>${kind === 'sheel' ? order.sheelTime : order.tarkeebTime}</td>
-                        <td><span class="pill">${order.paymentMethod}</span></td>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${escapeAttr(order.orderNumber)}/invoice" target="_blank">${order.orderNumber}</a></td>
+                        <td>${customerName}</td>
+                        <td>${phone}</td>
+                        <td>${location}</td>
+                        <td>${comments}</td>
+                        <td>${timeValue}</td>
+                        <td><span class="pill">${paymentMethod}</span></td>
                         <td>
-                            ${order.products.map(product => `
-                                <div class="product-item">
-                                    <img src="${product.productImage}" alt="${t('productAlt')}">
-                                    <span>${product.productName} (${product.productCategory})</span>
-                                </div>
-                            `).join('')}
+                            ${productsHtml}
                         </td>
                         <td>${order.grandTotal.toFixed(2)}</td>
                         <td class="cancelled-column">${cancelledPrice}</td>
@@ -1257,26 +1278,41 @@
                 tbody.innerHTML = `<tr><td class="empty" colspan="10">${t('noMaintenanceRange')}</td></tr>`;
                 return;
             }
-            tbody.innerHTML = orders.map(order => `
-              <tr>
-                <td><a href="https://natatiti.com/dashboard/reservations/${order.orderNumber}/invoice" target="_blank">${order.orderNumber}</a></td>
-                <td>${order.customerName}</td>
-                <td>${order.phone}</td>
-                <td>${order.location}</td>
-                <td>${order.comments}</td>
-                <td>${order.tarkeebDate || ""}</td>
-                <td>${order.sheelDate || ""}</td>
-                <td><span class="pill">${order.paymentMethod}</span></td>
-                <td>
-                    ${order.products.map(product => `
+            tbody.innerHTML = orders.map(order => {
+                const customerName = escapeHtml(order.customerName || '');
+                const phone = escapeHtml(order.phone || '');
+                const location = escapeHtml(order.location || '');
+                const comments = escapeHtml(order.comments || '');
+                const tarkeebDate = escapeHtml(order.tarkeebDate || '');
+                const sheelDate = escapeHtml(order.sheelDate || '');
+                const paymentMethod = escapeHtml(order.paymentMethod || '');
+                const productsHtml = (order.products || []).map(product => {
+                    const productImageValue = product.productImage == null ? '' : product.productImage;
+                    const productImage = escapeAttr(productImageValue);
+                    const productName = escapeHtml(product.productName || t('unnamedProduct'));
+                    const productCategory = escapeHtml(product.productCategory || '');
+                    return `
                         <div class="product-item">
-                            <img src="${product.productImage}" alt="${t('productAlt')}">
-                            <span>${product.productName} (${product.productCategory})</span>
-                        </div>
-                    `).join('')}
+                            <img src="${productImage}" alt="${t('productAlt')}">
+                            <span>${productName} (${productCategory})</span>
+                        </div>`;
+                }).join('');
+                return `
+              <tr>
+                <td><a href="https://natatiti.com/dashboard/reservations/${escapeAttr(order.orderNumber)}/invoice" target="_blank">${order.orderNumber}</a></td>
+                <td>${customerName}</td>
+                <td>${phone}</td>
+                <td>${location}</td>
+                <td>${comments}</td>
+                <td>${tarkeebDate}</td>
+                <td>${sheelDate}</td>
+                <td><span class="pill">${paymentMethod}</span></td>
+                <td>
+                    ${productsHtml}
                 </td>
                 <td>${order.grandTotal.toFixed(2)}</td>
-              </tr>`).join('');
+              </tr>`;
+            }).join('');
         }
 
         function openWarehouseFromButton(button) {
@@ -1619,24 +1655,31 @@
             }
 
             tbody.innerHTML = items.map(item => {
+                const productImage = escapeAttr(item.product.productImage ? item.product.productImage : 'https://via.placeholder.com/60');
+                const productName = escapeHtml(item.product.productName || t('unnamedProduct'));
+                const productCategory = escapeHtml(item.product.productCategory || '');
+                const customerName = escapeHtml(item.order.customerName || '');
+                const location = escapeHtml(item.order.location || '');
+                const scheduled = escapeHtml(formatDateTimeStrings(item.order.tarkeebDate, item.order.tarkeebTime));
+                const orderNumberAttr = escapeAttr(item.order.orderNumber);
                 const productCell = `
                     <div class="product-item" style="margin-bottom:0;">
-                        <img src="${item.product.productImage || 'https://via.placeholder.com/60'}" alt="${t('productAlt')}">
+                        <img src="${productImage}" alt="${t('productAlt')}">
                         <div>
-                            <div>${item.product.productName || t('unnamedProduct')}</div>
-                            <div class="card-title">${item.product.productCategory || ''}</div>
+                            <div>${productName}</div>
+                            <div class="card-title">${productCategory}</div>
                         </div>
                     </div>`;
                 return `
                     <tr>
-                        <td><a href="https://natatiti.com/dashboard/reservations/${item.order.orderNumber}/invoice" target="_blank">${item.order.orderNumber}</a></td>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${orderNumberAttr}/invoice" target="_blank">${item.order.orderNumber}</a></td>
                         <td>${productCell}</td>
-                        <td>${item.order.customerName}</td>
-                        <td>${item.order.location}</td>
-                        <td>${formatDateTimeStrings(item.order.tarkeebDate, item.order.tarkeebTime)}</td>
+                        <td>${customerName}</td>
+                        <td>${location}</td>
+                        <td>${scheduled}</td>
                         <td>${renderDirectionStatus(item.outbound, 'out')}</td>
                         <td>${renderDirectionStatus(item.inbound, 'in')}</td>
-                        <td><button data-order="${item.order.orderNumber}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
+                        <td><button data-order="${orderNumberAttr}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
                     </tr>`;
             }).join('');
         }
@@ -1671,24 +1714,31 @@
             }
 
             tbody.innerHTML = items.map(item => {
+                const productImage = escapeAttr(item.product.productImage ? item.product.productImage : 'https://via.placeholder.com/60');
+                const productName = escapeHtml(item.product.productName || t('unnamedProduct'));
+                const productCategory = escapeHtml(item.product.productCategory || '');
+                const customerName = escapeHtml(item.order.customerName || '');
+                const location = escapeHtml(item.order.location || '');
+                const scheduled = escapeHtml(formatDateTimeStrings(item.order.sheelDate, item.order.sheelTime));
+                const orderNumberAttr = escapeAttr(item.order.orderNumber);
                 const productCell = `
                     <div class="product-item" style="margin-bottom:0;">
-                        <img src="${item.product.productImage || 'https://via.placeholder.com/60'}" alt="${t('productAlt')}">
+                        <img src="${productImage}" alt="${t('productAlt')}">
                         <div>
-                            <div>${item.product.productName || t('unnamedProduct')}</div>
-                            <div class="card-title">${item.product.productCategory || ''}</div>
+                            <div>${productName}</div>
+                            <div class="card-title">${productCategory}</div>
                         </div>
                     </div>`;
                 return `
                     <tr>
-                        <td><a href="https://natatiti.com/dashboard/reservations/${item.order.orderNumber}/invoice" target="_blank">${item.order.orderNumber}</a></td>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${orderNumberAttr}/invoice" target="_blank">${item.order.orderNumber}</a></td>
                         <td>${productCell}</td>
-                        <td>${item.order.customerName}</td>
-                        <td>${item.order.location}</td>
-                        <td>${formatDateTimeStrings(item.order.sheelDate, item.order.sheelTime)}</td>
+                        <td>${customerName}</td>
+                        <td>${location}</td>
+                        <td>${scheduled}</td>
                         <td>${renderDirectionStatus(item.outbound, 'out')}</td>
                         <td>${renderDirectionStatus(item.inbound, 'in')}</td>
-                        <td><button data-order="${item.order.orderNumber}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
+                        <td><button data-order="${orderNumberAttr}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
                     </tr>`;
             }).join('');
         }
@@ -1743,24 +1793,33 @@
             }
 
             tbody.innerHTML = items.map(item => {
+                const productImage = escapeAttr(item.product.productImage ? item.product.productImage : 'https://via.placeholder.com/60');
+                const productName = escapeHtml(item.product.productName || t('unnamedProduct'));
+                const productCategory = escapeHtml(item.product.productCategory || '');
+                const customerName = escapeHtml(item.order.customerName || '');
+                const location = escapeHtml(item.order.location || '');
+                const outboundTimestamp = escapeHtml(formatTimestamp(item.outbound ? item.outbound.timestamp : ''));
+                const scheduled = escapeHtml(item.scheduled || '');
+                const duration = escapeHtml(formatDuration(item.duration));
+                const orderNumberAttr = escapeAttr(item.order.orderNumber);
                 const productCell = `
                     <div class="product-item" style="margin-bottom:0;">
-                        <img src="${item.product.productImage || 'https://via.placeholder.com/60'}" alt="${t('productAlt')}">
+                        <img src="${productImage}" alt="${t('productAlt')}">
                         <div>
-                            <div>${item.product.productName || t('unnamedProduct')}</div>
-                            <div class="card-title">${item.product.productCategory || ''}</div>
+                            <div>${productName}</div>
+                            <div class="card-title">${productCategory}</div>
                         </div>
                     </div>`;
                 return `
                     <tr>
-                        <td><a href="https://natatiti.com/dashboard/reservations/${item.order.orderNumber}/invoice" target="_blank">${item.order.orderNumber}</a></td>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${orderNumberAttr}/invoice" target="_blank">${item.order.orderNumber}</a></td>
                         <td>${productCell}</td>
-                        <td>${item.order.customerName}</td>
-                        <td>${item.order.location}</td>
-                        <td>${formatTimestamp(item.outbound ? item.outbound.timestamp : '')}</td>
-                        <td>${item.scheduled}</td>
-                        <td>${formatDuration(item.duration)}</td>
-                        <td><button data-order="${item.order.orderNumber}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
+                        <td>${customerName}</td>
+                        <td>${location}</td>
+                        <td>${outboundTimestamp}</td>
+                        <td>${scheduled}</td>
+                        <td>${duration}</td>
+                        <td><button data-order="${orderNumberAttr}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
                     </tr>`;
             }).join('');
         }
@@ -1804,24 +1863,31 @@
             }
 
             tbody.innerHTML = rows.map(item => {
+                const productImage = escapeAttr(item.product.productImage ? item.product.productImage : 'https://via.placeholder.com/60');
+                const productName = escapeHtml(item.product.productName || t('unnamedProduct'));
+                const productCategory = escapeHtml(item.product.productCategory || '');
+                const customerName = escapeHtml(item.order.customerName || '');
+                const dueDisplay = escapeHtml(item.dueDisplay || '');
+                const overdueMs = asOf.getTime() - item.dueDate.getTime();
+                const overdueDuration = escapeHtml(formatDuration(overdueMs));
+                const orderNumberAttr = escapeAttr(item.order.orderNumber);
                 const productCell = `
                     <div class="product-item" style="margin-bottom:0;">
-                        <img src="${item.product.productImage || 'https://via.placeholder.com/60'}" alt="${t('productAlt')}">
+                        <img src="${productImage}" alt="${t('productAlt')}">
                         <div>
-                            <div>${item.product.productName || t('unnamedProduct')}</div>
-                            <div class="card-title">${item.product.productCategory || ''}</div>
+                            <div>${productName}</div>
+                            <div class="card-title">${productCategory}</div>
                         </div>
                     </div>`;
-                const overdueMs = asOf.getTime() - item.dueDate.getTime();
                 return `
                     <tr>
-                        <td><a href="https://natatiti.com/dashboard/reservations/${item.order.orderNumber}/invoice" target="_blank">${item.order.orderNumber}</a></td>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${orderNumberAttr}/invoice" target="_blank">${item.order.orderNumber}</a></td>
                         <td>${productCell}</td>
-                        <td>${item.order.customerName}</td>
-                        <td>${item.dueDisplay}</td>
+                        <td>${customerName}</td>
+                        <td>${dueDisplay}</td>
                         <td>${renderReportingStatus(item.outbound, item.inbound)}</td>
-                        <td><span class="status-pill overdue">${formatDuration(overdueMs)}</span></td>
-                        <td><button data-order="${item.order.orderNumber}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
+                        <td><span class="status-pill overdue">${overdueDuration}</span></td>
+                        <td><button data-order="${orderNumberAttr}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
                     </tr>`;
             }).join('');
         }
