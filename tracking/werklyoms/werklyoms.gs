@@ -105,8 +105,19 @@ function doGet(e) {
   template.availableDates = JSON.stringify(Array.from(availableDates));
   template.locationSummary = JSON.stringify(locationSummary);
   template.maintenanceOrders = JSON.stringify(maintenanceOrders); // Add maintenance orders to template
+  template.allOrdersJson = stringifyForHtml_(allOrdersArray);
+  template.maintenanceOrdersJson = stringifyForHtml_(maintenanceOrders);
 
   return template.evaluate();
+}
+
+function stringifyForHtml_(value) {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003C")
+    .replace(/>/g, "\\u003E")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 function parseAmount_(value) {

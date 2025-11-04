@@ -498,6 +498,8 @@
         </div>
     </div>
 
+    <script type="application/json" id="allOrdersJson"><?!= typeof allOrdersJson !== 'undefined' ? allOrdersJson : '[]' ?></script>
+    <script type="application/json" id="maintenanceOrdersJson"><?!= typeof maintenanceOrdersJson !== 'undefined' ? maintenanceOrdersJson : '[]' ?></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
     <script>
         // Polyfills for broader compatibility (older Safari/WebViews)
@@ -962,10 +964,14 @@
 
         // Template data from Apps Script; tolerate local preview when not injected
         const allOrders = (function(){
-            try { return JSON.parse('<?= allOrders ?>'); } catch (e) { return []; }
+            const element = document.getElementById('allOrdersJson');
+            if (!element) { return []; }
+            try { return JSON.parse(element.textContent || '[]'); } catch (e) { return []; }
         })();
         const maintenanceOrders = (function(){
-            try { return JSON.parse('<?= maintenanceOrders ?>'); } catch (e) { return []; }
+            const element = document.getElementById('maintenanceOrdersJson');
+            if (!element) { return []; }
+            try { return JSON.parse(element.textContent || '[]'); } catch (e) { return []; }
         })();
         let warehouseLogs = {};
         let currentWarehouseOrder = null;
