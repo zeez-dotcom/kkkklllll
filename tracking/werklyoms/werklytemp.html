@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Report</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --card: #ffffff;
+            --text: #2b2f38;
+            --muted: #6b7280;
+            --brand: #2563eb;
+            --brand-600: #1d4ed8;
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --danger-bg: #fff1f2;
+            --danger-text: #b91c1c;
+            --border: #e5e7eb;
+        }
+        body.dark-mode {
+            --bg: #0f172a;
+            --card: #111c35;
+            --text: #f8fafc;
+            --muted: #cbd5f5;
+            --brand: #3b82f6;
+            --brand-600: #2563eb;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger-bg: #7f1d1d;
+            --danger-text: #fee2e2;
+            --border: rgba(148, 163, 184, 0.35);
+        }
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        body.rtl {
+            direction: rtl;
+        }
+        header {
+            background: linear-gradient(135deg, var(--brand), var(--brand-600));
+            color: white;
+            padding: 18px 16px;
+        }
+        .header-inner { max-width: 1200px; margin: 0 auto; }
+        .header-title { margin: 0 0 8px; font-size: 22px; font-weight: 700; }
+        .toolbar { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 10px; align-items: center; }
+        .toolbar .field { display: flex; align-items: center; gap: 8px; }
+        .toolbar input[type="date"], .toolbar input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            outline: none;
+        }
+        .toolbar .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: #eef2ff; }
+        .toolbar .actions { display: flex; gap: 8px; justify-self: end; }
+        .toolbar .preferences { display: flex; gap: 12px; align-items: center; justify-self: end; }
+        .toolbar select, .toolbar .toggle-button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.15);
+            color: inherit;
+            cursor: pointer;
+        }
+        body.dark-mode .toolbar select, body.dark-mode .toolbar .toggle-button {
+            background: rgba(15, 23, 42, 0.6);
+            color: #e2e8f0;
+        }
+        .toggle-button { display: inline-flex; align-items: center; gap: 6px; }
+        .container {
+            max-width: 1200px;
+            margin: 16px auto 24px;
+            padding: 16px;
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(17, 24, 39, 0.08);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #eff6ff;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            color: #1e3a8a;
+        }
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        tr:hover {
+            background-color: #f3f4f6;
+        }
+        .product-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .product-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            margin-right: 10px;
+            border-radius: 5px;
+        }
+        .badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #eef2ff; color: #1e40af; }
+        .empty { text-align: center; color: var(--muted); font-style: italic; }
+        .row-cancelled { background: var(--danger-bg) !important; }
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #ecfeff; color: #155e75; border: 1px solid #cffafe; }
+        .status-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+        .status-pill.pending { background: #f3f4f6; color: #111827; }
+        .status-pill.out { background: #dbeafe; color: #1d4ed8; }
+        .status-pill.returned { background: #dcfce7; color: #166534; }
+        .status-pill.overdue { background: #fee2e2; color: #b91c1c; }
+        footer {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #777;
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            background-color: var(--brand);
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button.secondary { background: #f3f4f6; color: #1f2937; border: 1px solid var(--border); }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+        .cancelled-column {
+            display: none; /* Initially hidden */
+        }
+        .section-title { display: flex; align-items: center; gap: 8px; margin-top: 24px; }
+        .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .card { background: #fafafa; border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+        .card-title { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+        .card-value { font-size: 18px; font-weight: 700; }
+        .warehouse-status { font-size: 12px; color: var(--muted); }
+        .tab-nav { display: flex; gap: 8px; max-width: 1200px; margin: 16px auto 0; padding: 0 16px; flex-wrap: wrap; }
+        .tab-button { background: #e0e7ff; color: #1e3a8a; border: none; padding: 10px 16px; border-radius: 999px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; }
+        .tab-button.active { background: #1d4ed8; color: #fff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .debug-console {
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            background: rgba(254, 242, 242, 0.9);
+            color: #991b1b;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .range-filter { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+        .range-filter label { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+        .range-filter input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 9998; padding: 20px; box-sizing: border-box; align-items: center; justify-content: center; }
+        .modal-card { width: min(960px, 95vw); max-height: 90vh; background: #fff; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35); }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); }
+        .modal-title { font-weight: 700; }
+        .modal-body { padding: 16px; overflow: auto; }
+        .product-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+        .product-card img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; margin-right: 12px; }
+        .product-card-header { display: flex; gap: 12px; align-items: center; }
+        .log-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+        .log-panel { border: 1px dashed var(--border); border-radius: 8px; padding: 10px; }
+        .log-panel h4 { margin: 0 0 6px; font-size: 14px; }
+        .log-meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+        .log-preview { max-width: 100%; max-height: 180px; border-radius: 6px; }
+        .log-controls { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+        .log-controls input[type="file"] { flex: 1 1 160px; }
+        .log-controls input[type="text"] { flex: 1 1 160px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
+        .modal-close { background: #f3f4f6; color: #1f2937; border: 1px solid var(--border); }
+        @media print {
+            th {
+                position: static;
+            }
+            .table-container {
+                overflow: visible;
+                max-height: none;
+            }
+            .toolbar, .button-container, #toggleCancelledContainer { display: none !important; }
+            .modal-overlay { display: none !important; }
+        }
+        @media (max-width: 800px) {
+            .toolbar { grid-template-columns: 1fr; }
+            .actions { justify-self: stretch; }
+            .toolbar .preferences { justify-self: stretch; flex-wrap: wrap; }
+            .cards { grid-template-columns: 1fr; }
+            .product-item img { width: 44px; height: 44px; }
+            .tab-nav { padding: 0 12px; }
+            .range-filter { flex-direction: column; align-items: flex-start; }
+            .tab-button { width: 100%; text-align: center; }
+            .log-columns { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <h1 class="header-title" data-i18n="orderReport">Order Report</h1>
+            <div class="toolbar">
+                <div class="field">
+                    <label for="datePicker" style="min-width:90px;" data-i18n="dateLabel">Date</label>
+                    <input type="date" id="datePicker" onchange="filterData()" data-i18n-aria-label="ariaSelectDate">
+                </div>
+                <div class="field">
+                    <label for="searchInput" style="min-width:90px;" data-i18n="searchLabel">Search</label>
+                    <input type="text" id="searchInput" placeholder="Name, phone, order, location…" data-i18n-placeholder="searchPlaceholder" data-i18n-aria-label="ariaSearchOrders" oninput="filterData()">
+                </div>
+                <div class="toggle" id="toggleCancelledContainer">
+                    <input type="checkbox" id="toggleCancelled" onchange="toggleCancelledColumns()" data-i18n-aria-label="ariaShowCancelled">
+                    <label for="toggleCancelled" data-i18n="showCancelled">Show cancelled</label>
+                </div>
+                <div class="actions">
+                    <button class="secondary" onclick="exportToExcel()" data-i18n="export">Export</button>
+                    <button onclick="printReport()" data-i18n="print">Print</button>
+                </div>
+                <div class="preferences">
+                    <select id="languageSelect" data-i18n-aria-label="ariaLanguage">
+                        <option value="en" data-i18n-option="langEnglish">English</option>
+                        <option value="ar" data-i18n-option="langArabic">العربية</option>
+                    </select>
+                    <button type="button" id="themeToggle" class="toggle-button" data-i18n="darkMode" data-i18n-aria-label="ariaTheme">Dark mode</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="tab-nav">
+        <button class="tab-button active" data-tab-target="dashboard" onclick="switchTab('dashboard')" data-i18n="tabDashboard">Dashboard</button>
+        <button class="tab-button" data-tab-target="tarkeeb" onclick="switchTab('tarkeeb')" data-i18n="tabTarkeeb">Tarkeeb Items</button>
+        <button class="tab-button" data-tab-target="sheel" onclick="switchTab('sheel')" data-i18n="tabSheel">Sheel Items</button>
+        <button class="tab-button" data-tab-target="out" onclick="switchTab('out')" data-i18n="tabOut">Currently Out</button>
+        <button class="tab-button" data-tab-target="reporting" onclick="switchTab('reporting')" data-i18n="tabReporting">Reporting</button>
+    </div>
+
+    <div class="tab-content active" data-tab="dashboard">
+    <div class="container">
+        <div id="debugConsole" class="debug-console" style="display:none;"></div>
+        <h2 data-i18n="summary">Summary</h2>
+        <div class="cards" id="summaryCards">
+            <div class="card"><div class="card-title" data-i18n="cardTarkeeb">Tarkeeb Orders</div><div class="card-value" id="cardTarkeebCount">0</div></div>
+            <div class="card"><div class="card-title" data-i18n="cardSheel">Sheel Orders</div><div class="card-value" id="cardSheelCount">0</div></div>
+            <div class="card"><div class="card-title" data-i18n="cardCombined">Combined Total</div><div class="card-value" id="cardGrandTotal">0.00</div></div>
+        </div>
+        <div class="table-container">
+            <table id="summaryTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thTarkeebOrders">Tarkeeb Orders</th>
+                        <th data-i18n="thSheelOrders">Sheel Orders</th>
+                        <th data-i18n="thTarkeebTotal">Tarkeeb Grand Total</th>
+                        <th data-i18n="thSheelTotal">Sheel Grand Total</th>
+                        <th data-i18n="thCombinedTotal">Combined Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody id="summaryTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title" data-i18n="locationBreakdown">Location Breakdown</h3>
+        <div class="table-container">
+            <table id="locationTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thLocation">Location</th>
+                        <th data-i18n="thTarkeebOrders">Tarkeeb Orders</th>
+                        <th data-i18n="thSheelOrders">Sheel Orders</th>
+                        <th data-i18n="thTotalOrders">Total Orders</th>
+                        <th class="cancelled-column" data-i18n="thCancelledOrders">Cancelled Orders</th>
+                    </tr>
+                </thead>
+                <tbody id="locationTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title"><span data-i18n="tarkeebOrders">Tarkeeb Orders</span> <span class="badge" id="tarkeebCount">0</span></h3>
+        <div class="table-container">
+            <table id="tarkeebOrdersTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thOrderNumber">Order Number</th>
+                        <th data-i18n="thCustomer">Customer</th>
+                        <th data-i18n="thPhone">Phone</th>
+                        <th data-i18n="thLocation">Location</th>
+                        <th data-i18n="thComments">Comments</th>
+                        <th data-i18n="thTarkeebTime">Tarkeeb Time</th>
+                        <th data-i18n="thPayment">Payment Method</th>
+                        <th data-i18n="thProducts">Products</th>
+                        <th data-i18n="thGrandTotal">Grand Total</th>
+                        <th class="cancelled-column" data-i18n="thCancelledPrice">Cancelled Order Price</th>
+                        <th data-i18n="thWarehouse">Warehouse</th>
+                    </tr>
+                </thead>
+                <tbody id="tarkeebOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title"><span data-i18n="sheelOrders">Sheel Orders</span> <span class="badge" id="sheelCount">0</span></h3>
+        <div class="table-container">
+            <table id="sheelOrdersTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thOrderNumber">Order Number</th>
+                        <th data-i18n="thCustomer">Customer</th>
+                        <th data-i18n="thPhone">Phone</th>
+                        <th data-i18n="thLocation">Location</th>
+                        <th data-i18n="thComments">Comments</th>
+                        <th data-i18n="thSheelTime">Sheel Time</th>
+                        <th data-i18n="thPayment">Payment Method</th>
+                        <th data-i18n="thProducts">Products</th>
+                        <th data-i18n="thGrandTotal">Grand Total</th>
+                        <th class="cancelled-column" data-i18n="thCancelledPrice">Cancelled Order Price</th>
+                        <th data-i18n="thWarehouse">Warehouse</th>
+                    </tr>
+                </thead>
+                <tbody id="sheelOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title"><span data-i18n="maintenanceOrders">Maintenance Orders</span> <span class="badge" id="maintenanceCount">0</span></h3>
+        <div class="table-container">
+            <table id="maintenanceOrdersTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thOrderNumber">Order Number</th>
+                        <th data-i18n="thCustomer">Customer</th>
+                        <th data-i18n="thPhone">Phone</th>
+                        <th data-i18n="thLocation">Location</th>
+                        <th data-i18n="thComments">Comments</th>
+                        <th data-i18n="thMaintenanceStart">Maintenance Start Date</th>
+                        <th data-i18n="thMaintenanceComplete">Maintenance Complete Date</th>
+                        <th data-i18n="thPayment">Payment Method</th>
+                        <th data-i18n="thProducts">Products</th>
+                        <th data-i18n="thGrandTotal">Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody id="maintenanceOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="button-container">
+            <button class="secondary" onclick="exportToExcel()" data-i18n="export">Export</button>
+            <button onclick="printReport()" data-i18n="print">Print</button>
+        </div>
+    </div>
+    <footer>
+        <span data-i18n="footer">Generated by Order Management System</span>
+    </footer>
+    </div>
+
+    <div class="tab-content" data-tab="tarkeeb">
+        <div class="container">
+            <h2 data-i18n="tarkeebTabTitle">Tarkeeb Items</h2>
+            <p class="card-title" data-i18n="tarkeebTabHelp">Use this tab to plan items scheduled to leave the warehouse.</p>
+            <div class="range-filter">
+                <label for="tarkeebFrom" data-i18n="fromLabel">From</label><input type="date" id="tarkeebFrom">
+                <label for="tarkeebTo" data-i18n="toLabel">To</label><input type="date" id="tarkeebTo">
+            </div>
+            <div class="table-container">
+                <table id="tarkeebItemsTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thOrder">Order</th>
+                            <th data-i18n="thProduct">Product</th>
+                            <th data-i18n="thCustomer">Customer</th>
+                            <th data-i18n="thLocation">Location</th>
+                            <th data-i18n="thTarkeebDate">Tarkeeb Date</th>
+                            <th data-i18n="thOutbound">Outbound</th>
+                            <th data-i18n="thInbound">Inbound</th>
+                            <th data-i18n="thActions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tarkeebItemsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="sheel">
+        <div class="container">
+            <h2 data-i18n="sheelTabTitle">Sheel Items</h2>
+            <p class="card-title" data-i18n="sheelTabHelp">Track items scheduled to return from installations.</p>
+            <div class="range-filter">
+                <label for="sheelFrom" data-i18n="fromLabel">From</label><input type="date" id="sheelFrom">
+                <label for="sheelTo" data-i18n="toLabel">To</label><input type="date" id="sheelTo">
+            </div>
+            <div class="table-container">
+                <table id="sheelItemsTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thOrder">Order</th>
+                            <th data-i18n="thProduct">Product</th>
+                            <th data-i18n="thCustomer">Customer</th>
+                            <th data-i18n="thLocation">Location</th>
+                            <th data-i18n="thSheelDate">Sheel Date</th>
+                            <th data-i18n="thOutbound">Outbound</th>
+                            <th data-i18n="thInbound">Inbound</th>
+                            <th data-i18n="thActions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sheelItemsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="out">
+        <div class="container">
+            <h2 data-i18n="outTabTitle">Items Currently Out</h2>
+            <p class="card-title" data-i18n="outTabHelp">Shows items that left the warehouse but are not yet recorded as returned.</p>
+            <div class="range-filter">
+                <label for="outFrom" data-i18n="outboundFrom">Outbound From</label><input type="date" id="outFrom">
+                <label for="outTo" data-i18n="outboundTo">Outbound To</label><input type="date" id="outTo">
+            </div>
+            <div class="table-container">
+                <table id="outItemsTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thOrder">Order</th>
+                            <th data-i18n="thProduct">Product</th>
+                            <th data-i18n="thCustomer">Customer</th>
+                            <th data-i18n="thLocation">Location</th>
+                            <th data-i18n="thOutboundTime">Outbound Time</th>
+                            <th data-i18n="thExpectedReturn">Expected Return</th>
+                            <th data-i18n="thDaysOut">Days Out</th>
+                            <th data-i18n="thActions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="outItemsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="reporting">
+        <div class="container">
+            <h2 data-i18n="reportingTitle">Return Compliance Report</h2>
+            <p class="card-title" data-i18n="reportingHelp">Highlights items that should have been returned by the selected time but are still pending.</p>
+            <div class="range-filter">
+                <label for="reportDate" data-i18n="asOfDate">As of Date</label><input type="date" id="reportDate">
+                <label for="reportTime" data-i18n="asOfTime">As of Time</label><input type="time" id="reportTime" step="900">
+            </div>
+            <div class="table-container">
+                <table id="reportingTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thOrder">Order</th>
+                            <th data-i18n="thProduct">Product</th>
+                            <th data-i18n="thCustomer">Customer</th>
+                            <th data-i18n="thDueBack">Due Back</th>
+                            <th data-i18n="thStatus">Status</th>
+                            <th data-i18n="thOverdue">Overdue</th>
+                            <th data-i18n="thActions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportingBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden checkbox retained for backward compatibility, synced with visible toggle -->
+    <input type="checkbox" id="showCancelled" onchange="toggleCancelledColumns()" style="display:none;">
+
+    <div id="warehouseModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title"><span data-i18n="warehouseUpdateTitle">Warehouse Update — Order</span> <span id="warehouseOrderNumber"></span></div>
+                <button class="modal-close" onclick="closeWarehouse()" data-i18n="closeButton">Close</button>
+            </div>
+            <div class="modal-body" id="warehouseBody"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <script>
+        // Polyfills for broader compatibility (older Safari/WebViews)
+        (function(){
+            if (typeof NodeList !== 'undefined' && NodeList.prototype && !NodeList.prototype.forEach) {
+                NodeList.prototype.forEach = function(cb, thisArg){
+                    for (var i = 0; i < this.length; i++) cb.call(thisArg, this[i], i, this);
+                };
+            }
+        })();
+        const safeStorage = (function(){
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    const testKey = '__werkly_pref__';
+                    window.localStorage.setItem(testKey, '1');
+                    window.localStorage.removeItem(testKey);
+                    return window.localStorage;
+                }
+            } catch (err) {
+                console.warn('Local storage unavailable; UI preferences will not persist.', err);
+            }
+            return {
+                getItem: function(){ return null; },
+                setItem: function(){},
+                removeItem: function(){}
+            };
+        })();
+        const nativeConsole = {
+            error: (typeof console !== 'undefined' && console.error) ? console.error.bind(console) : function(){},
+            warn: (typeof console !== 'undefined' && console.warn) ? console.warn.bind(console) : function(){},
+            info: (typeof console !== 'undefined' && console.info) ? console.info.bind(console) : function(){},
+            log: (typeof console !== 'undefined' && console.log) ? console.log.bind(console) : function(){}
+        };
+        function formatDebugValue(value) {
+            if (value instanceof Error && value.stack) {
+                return value.stack;
+            }
+            if (value && typeof value === 'object') {
+                try {
+                    return JSON.stringify(value, null, 2);
+                } catch (err) {
+                    return Object.prototype.toString.call(value);
+                }
+            }
+            if (typeof value === 'undefined') return 'undefined';
+            if (value === null) return 'null';
+            return String(value);
+        }
+        const translations = {
+            en: {
+                orderReport: 'Order Report',
+                dateLabel: 'Date',
+                searchLabel: 'Search',
+                searchPlaceholder: 'Name, phone, order, location…',
+                showCancelled: 'Show cancelled',
+                export: 'Export',
+                print: 'Print',
+                darkMode: 'Dark mode',
+                lightMode: 'Light mode',
+                tabDashboard: 'Dashboard',
+                tabTarkeeb: 'Tarkeeb Items',
+                tabSheel: 'Sheel Items',
+                tabOut: 'Currently Out',
+                tabReporting: 'Reporting',
+                summary: 'Summary',
+                cardTarkeeb: 'Tarkeeb Orders',
+                cardSheel: 'Sheel Orders',
+                cardCombined: 'Combined Total',
+                thTarkeebOrders: 'Tarkeeb Orders',
+                thSheelOrders: 'Sheel Orders',
+                thTarkeebTotal: 'Tarkeeb Grand Total',
+                thSheelTotal: 'Sheel Grand Total',
+                thCombinedTotal: 'Combined Grand Total',
+                locationBreakdown: 'Location Breakdown',
+                thLocation: 'Location',
+                thTotalOrders: 'Total Orders',
+                thCancelledOrders: 'Cancelled Orders',
+                tarkeebOrders: 'Tarkeeb Orders',
+                sheelOrders: 'Sheel Orders',
+                maintenanceOrders: 'Maintenance Orders',
+                thOrderNumber: 'Order Number',
+                thCustomer: 'Customer',
+                thPhone: 'Phone',
+                thComments: 'Comments',
+                thTarkeebTime: 'Tarkeeb Time',
+                thSheelTime: 'Sheel Time',
+                thPayment: 'Payment Method',
+                thProducts: 'Products',
+                thGrandTotal: 'Grand Total',
+                thCancelledPrice: 'Cancelled Order Price',
+                thWarehouse: 'Warehouse',
+                thMaintenanceStart: 'Maintenance Start Date',
+                thMaintenanceComplete: 'Maintenance Complete Date',
+                footer: 'Generated by Order Management System',
+                tarkeebTabTitle: 'Tarkeeb Items',
+                tarkeebTabHelp: 'Use this tab to plan items scheduled to leave the warehouse.',
+                fromLabel: 'From',
+                toLabel: 'To',
+                thOrder: 'Order',
+                thProduct: 'Product',
+                thTarkeebDate: 'Tarkeeb Date',
+                thOutbound: 'Outbound',
+                thInbound: 'Inbound',
+                thActions: 'Actions',
+                sheelTabTitle: 'Sheel Items',
+                sheelTabHelp: 'Track items scheduled to return from installations.',
+                thSheelDate: 'Sheel Date',
+                outTabTitle: 'Items Currently Out',
+                outTabHelp: 'Shows items that left the warehouse but are not yet recorded as returned.',
+                outboundFrom: 'Outbound From',
+                outboundTo: 'Outbound To',
+                thOutboundTime: 'Outbound Time',
+                thExpectedReturn: 'Expected Return',
+                thDaysOut: 'Days Out',
+                reportingTitle: 'Return Compliance Report',
+                reportingHelp: 'Highlights items that should have been returned by the selected time but are still pending.',
+                asOfDate: 'As of Date',
+                asOfTime: 'As of Time',
+                thDueBack: 'Due Back',
+                thStatus: 'Status',
+                thOverdue: 'Overdue',
+                chooseImageFirst: 'Please choose an image first.',
+                uploadsAvailable: 'Warehouse uploads are available when running in the Apps Script web app.',
+                uploadFailed: 'Upload failed',
+                failedToReadImage: 'Failed to read image',
+                selectRange: 'Select a date range.',
+                noItemsRange: 'No items scheduled in this range.',
+                noItemsOut: 'No items currently out in this window.',
+                noOrdersForFilters: 'No orders found for the selected filters.',
+                noMaintenanceRange: 'No maintenance orders for the selected date.',
+                selectAsOfDate: 'Select an as-of date to generate the report.',
+                invalidAsOf: 'Invalid as-of date/time.',
+                noOverdue: 'No overdue items for the selected time.',
+                pendingReturn: 'Pending return',
+                pendingDispatch: 'Pending dispatch',
+                outboundLogged: 'Outbound logged',
+                returned: 'Returned',
+                noOutboundRecord: 'No outbound record',
+                awaitingReturn: 'Awaiting return',
+                notesLabel: 'Notes',
+                notesPlaceholder: 'Notes (optional)',
+                byOperator: 'By {{name}}',
+                noOutboundPhoto: 'No outbound photo',
+                noInboundPhoto: 'No inbound photo',
+                uploadRequiresApp: 'Uploads require the deployed Apps Script web app.',
+                quickStatus: '{{out}}/{{total}} out • {{in}}/{{total}} in',
+                noItems: 'No items',
+                none: 'None',
+                update: 'Update',
+                ariaSelectDate: 'Select date',
+                ariaSearchOrders: 'Search orders',
+                ariaShowCancelled: 'Toggle cancelled orders',
+                ariaLanguage: 'Language selector',
+                ariaTheme: 'Toggle color theme',
+                notAvailable: 'N/A',
+                cancelledTarkeeb: 'Tarkeeb: {{count}}',
+                cancelledSheel: 'Sheel: {{count}}',
+                langEnglish: 'English',
+                langArabic: 'Arabic',
+                dayAbbrev: 'd',
+                hourAbbrev: 'h',
+                minuteAbbrev: 'm',
+                lessThanHour: '<1h',
+                notesPrefix: 'Notes: {{text}}',
+                outboundLabel: 'Outbound',
+                inboundLabel: 'Inbound',
+                uploading: 'Uploading…',
+                upload: 'Upload',
+                noProducts: 'No products recorded for this order.',
+                unnamedProduct: 'Unnamed Product',
+                warehouseUpdateTitle: 'Warehouse Update — Order',
+                productAlt: 'Product image',
+                closeButton: 'Close'
+            },
+            ar: {
+                orderReport: 'تقرير الطلبات',
+                dateLabel: 'التاريخ',
+                searchLabel: 'بحث',
+                searchPlaceholder: 'اسم، هاتف، رقم طلب، موقع…',
+                showCancelled: 'عرض الملغاة',
+                export: 'تصدير',
+                print: 'طباعة',
+                darkMode: 'الوضع الداكن',
+                lightMode: 'الوضع الفاتح',
+                tabDashboard: 'لوحة التحكم',
+                tabTarkeeb: 'عناصر التركيب',
+                tabSheel: 'عناصر الشيل',
+                tabOut: 'عناصر خارج المستودع',
+                tabReporting: 'التقارير',
+                summary: 'الملخص',
+                cardTarkeeb: 'طلبات التركيب',
+                cardSheel: 'طلبات الشيل',
+                cardCombined: 'الإجمالي الكلي',
+                thTarkeebOrders: 'طلبات التركيب',
+                thSheelOrders: 'طلبات الشيل',
+                thTarkeebTotal: 'إجمالي التركيب',
+                thSheelTotal: 'إجمالي الشيل',
+                thCombinedTotal: 'الإجمالي المشترك',
+                locationBreakdown: 'توزيع المواقع',
+                thLocation: 'الموقع',
+                thTotalOrders: 'إجمالي الطلبات',
+                thCancelledOrders: 'الطلبات الملغاة',
+                tarkeebOrders: 'طلبات التركيب',
+                sheelOrders: 'طلبات الشيل',
+                maintenanceOrders: 'طلبات الصيانة',
+                thOrderNumber: 'رقم الطلب',
+                thCustomer: 'العميل',
+                thPhone: 'الهاتف',
+                thComments: 'ملاحظات',
+                thTarkeebTime: 'وقت التركيب',
+                thSheelTime: 'وقت الشيل',
+                thPayment: 'طريقة الدفع',
+                thProducts: 'المنتجات',
+                thGrandTotal: 'الإجمالي',
+                thCancelledPrice: 'قيمة الطلب الملغى',
+                thWarehouse: 'المستودع',
+                thMaintenanceStart: 'بداية الصيانة',
+                thMaintenanceComplete: 'انتهاء الصيانة',
+                footer: 'تم الإنشاء بواسطة نظام إدارة الطلبات',
+                tarkeebTabTitle: 'عناصر التركيب',
+                tarkeebTabHelp: 'استخدم هذا التبويب للتخطيط للعناصر المجدولة للخروج من المستودع.',
+                fromLabel: 'من',
+                toLabel: 'إلى',
+                thOrder: 'الطلب',
+                thProduct: 'المنتج',
+                thTarkeebDate: 'تاريخ التركيب',
+                thOutbound: 'الخروج',
+                thInbound: 'العودة',
+                thActions: 'الإجراءات',
+                sheelTabTitle: 'عناصر الشيل',
+                sheelTabHelp: 'تابع العناصر المجدولة للعودة من التركيب.',
+                thSheelDate: 'تاريخ الشيل',
+                outTabTitle: 'العناصر خارج المستودع',
+                outTabHelp: 'يعرض العناصر التي غادرت المستودع ولم يتم تسجيل عودتها بعد.',
+                outboundFrom: 'الخروج من',
+                outboundTo: 'الخروج إلى',
+                thOutboundTime: 'وقت الخروج',
+                thExpectedReturn: 'العودة المتوقعة',
+                thDaysOut: 'مدة الخروج',
+                reportingTitle: 'تقرير الالتزام بالعودة',
+                reportingHelp: 'يعرض العناصر التي كان يجب أن تعود قبل الوقت المحدد وما زالت معلقة.',
+                asOfDate: 'تاريخ المراجعة',
+                asOfTime: 'وقت المراجعة',
+                thDueBack: 'موعد العودة',
+                thStatus: 'الحالة',
+                thOverdue: 'متأخر',
+                chooseImageFirst: 'برجاء اختيار صورة أولاً.',
+                uploadsAvailable: 'تحميلات المستودع متاحة عند تشغيل التطبيق من بيئة Apps Script.',
+                uploadFailed: 'فشل التحميل',
+                failedToReadImage: 'تعذر قراءة الصورة',
+                selectRange: 'حدد نطاق التاريخ.',
+                noItemsRange: 'لا توجد عناصر مجدولة في هذا النطاق.',
+                noItemsOut: 'لا توجد عناصر خارج المستودع في هذه الفترة.',
+                noOrdersForFilters: 'لا توجد طلبات مطابقة للمرشحات المحددة.',
+                noMaintenanceRange: 'لا توجد طلبات صيانة لهذا التاريخ.',
+                selectAsOfDate: 'حدد تاريخ المراجعة لإنشاء التقرير.',
+                invalidAsOf: 'تاريخ أو وقت المراجعة غير صالح.',
+                noOverdue: 'لا توجد عناصر متأخرة في الوقت المحدد.',
+                pendingReturn: 'عودة معلقة',
+                pendingDispatch: 'خروج معلق',
+                outboundLogged: 'تم تسجيل الخروج',
+                returned: 'تمت العودة',
+                noOutboundRecord: 'لا يوجد تسجيل خروج',
+                awaitingReturn: 'بانتظار العودة',
+                notesLabel: 'ملاحظات',
+                notesPlaceholder: 'ملاحظات (اختياري)',
+                byOperator: 'بواسطة {{name}}',
+                noOutboundPhoto: 'لا توجد صورة للخروج',
+                noInboundPhoto: 'لا توجد صورة للعودة',
+                uploadRequiresApp: 'التحميلات تتطلب بيئة Apps Script المنشورة.',
+                quickStatus: '{{out}}/{{total}} خروج • {{in}}/{{total}} عودة',
+                noItems: 'لا توجد عناصر',
+                none: 'لا يوجد',
+                update: 'تحديث',
+                ariaSelectDate: 'اختر التاريخ',
+                ariaSearchOrders: 'بحث في الطلبات',
+                ariaShowCancelled: 'تبديل عرض الطلبات الملغاة',
+                ariaLanguage: 'اختيار اللغة',
+                ariaTheme: 'تبديل نمط الألوان',
+                notAvailable: 'غير متاح',
+                cancelledTarkeeb: 'تركيب: {{count}}',
+                cancelledSheel: 'شيل: {{count}}',
+                langEnglish: 'الإنجليزية',
+                langArabic: 'العربية',
+                dayAbbrev: 'ي',
+                hourAbbrev: 'س',
+                minuteAbbrev: 'د',
+                lessThanHour: '<1س',
+                notesPrefix: 'ملاحظات: {{text}}',
+                outboundLabel: 'الخروج',
+                inboundLabel: 'العودة',
+                uploading: 'جارٍ التحميل…',
+                upload: 'تحميل',
+                noProducts: 'لا توجد منتجات مسجلة لهذا الطلب.',
+                unnamedProduct: 'منتج بدون اسم',
+                warehouseUpdateTitle: 'تحديث المستودع — الطلب',
+                productAlt: 'صورة المنتج',
+                closeButton: 'إغلاق'
+            }
+        };
+
+        let currentLang = safeStorage.getItem('werklyLang') || 'en';
+        let isDarkMode = safeStorage.getItem('werklyTheme') === 'dark';
+
+        function t(key, vars = {}) {
+            const langTable = translations[currentLang] || translations.en;
+            let template = langTable[key] || translations.en[key] || key;
+            Object.keys(vars).forEach(k => {
+                const pattern = new RegExp(`{{${k}}}`, 'g');
+                template = template.replace(pattern, vars[k]);
+            });
+            return template;
+        }
+
+        function applyTranslations() {
+            document.documentElement.lang = currentLang;
+            if (currentLang === 'ar') { document.body.classList.add('rtl'); } else { document.body.classList.remove('rtl'); }
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.textContent = t(el.getAttribute('data-i18n'));
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+            });
+            document.querySelectorAll('[data-i18n-option]').forEach(el => {
+                el.textContent = t(el.getAttribute('data-i18n-option'));
+            });
+            document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+                el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria-label')));
+            });
+            const languageSelect = document.getElementById('languageSelect');
+            if (languageSelect && languageSelect.value !== currentLang) {
+                languageSelect.value = currentLang;
+            }
+            updateThemeToggleLabel();
+        }
+
+        function updateThemeToggleLabel() {
+            const btn = document.getElementById('themeToggle');
+            if (btn) {
+                const label = t(isDarkMode ? 'lightMode' : 'darkMode');
+                btn.textContent = label;
+                btn.setAttribute('aria-label', label);
+            }
+        }
+
+        function appendDebug(message, details) {
+            try {
+                var box = document.getElementById('debugConsole');
+                if (!box) return;
+                const now = new Date();
+                const timestamp = now.toISOString();
+                const detailText = details ? `\n${details}` : '';
+                const entry = `[${timestamp}] ${message}${detailText}`;
+                const current = box.textContent ? `${entry}\n${box.textContent}` : entry;
+                box.textContent = current;
+                box.style.display = 'block';
+            } catch (err) {
+                nativeConsole.error('Failed to append debug log', err);
+            }
+        }
+
+        function safeRun(fn, context, options) {
+            try {
+                return fn();
+            } catch (err) {
+                appendDebug(`Error in ${context || 'operation'}`, formatDebugValue(err));
+                if (!options || options.rethrow) {
+                    throw err;
+                }
+                return undefined;
+            }
+        }
+
+        if (typeof console !== 'undefined') {
+            console.error = function(){
+                const args = Array.prototype.slice.call(arguments);
+                nativeConsole.error.apply(console, args);
+                appendDebug('Console error', args.map(formatDebugValue).join(' '));
+            };
+            console.warn = function(){
+                const args = Array.prototype.slice.call(arguments);
+                nativeConsole.warn.apply(console, args);
+                appendDebug('Console warn', args.map(formatDebugValue).join(' '));
+            };
+        }
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('error', function(event){
+                const detail = event && (event.error || event.message || event.filename);
+                appendDebug('Unhandled error', formatDebugValue(detail));
+            });
+            window.addEventListener('unhandledrejection', function(event){
+                appendDebug('Unhandled rejection', formatDebugValue(event && event.reason));
+            });
+        }
+
+        function initWerklyOms() {
+            // Set today's date as default and show maintenance ongoing orders
+            const datePicker = document.getElementById("datePicker");
+            if (datePicker) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                datePicker.value = `${yyyy}-${mm}-${dd}`;
+            }
+
+            if (isDarkMode) { document.body.classList.add('dark-mode'); } else { document.body.classList.remove('dark-mode'); }
+            const languageSelect = document.getElementById('languageSelect');
+            if (languageSelect) {
+                languageSelect.value = currentLang;
+                languageSelect.addEventListener('change', function(e){
+                    safeRun(function(){
+                        currentLang = (e && e.target && e.target.value) ? e.target.value : 'en';
+                        safeStorage.setItem('werklyLang', currentLang);
+                        applyTranslations();
+                        filterData();
+                        refreshAdditionalTabs();
+                    }, 'languageSelect.change', { rethrow: false });
+                });
+            }
+
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function(){
+                    safeRun(function(){
+                        isDarkMode = !isDarkMode;
+                        if (isDarkMode) { document.body.classList.add('dark-mode'); } else { document.body.classList.remove('dark-mode'); }
+                        safeStorage.setItem('werklyTheme', isDarkMode ? 'dark' : 'light');
+                        updateThemeToggleLabel();
+                    }, 'themeToggle.click', { rethrow: false });
+                });
+            }
+
+            safeRun(applyTranslations, 'applyTranslations.init', { rethrow: false });
+            safeRun(filterData, 'filterData.init', { rethrow: false });
+            // Ensure both toggles are in sync and initial state applied
+            const visibleToggle = document.getElementById('toggleCancelled');
+            const hiddenToggle = document.getElementById('showCancelled');
+            if (visibleToggle && hiddenToggle) {
+                visibleToggle.checked = hiddenToggle.checked;
+                safeRun(toggleCancelledColumns, 'toggleCancelledColumns.init', { rethrow: false });
+            }
+
+            safeRun(setDefaultRangeInputs, 'setDefaultRangeInputs', { rethrow: false });
+            safeRun(initializeTabs, 'initializeTabs', { rethrow: false });
+            safeRun(refreshAdditionalTabs, 'refreshAdditionalTabs', { rethrow: false });
+            if (hasAppsScript()) {
+                setTimeout(function(){
+                    safeRun(loadAllWarehouseLogs, 'loadAllWarehouseLogs', { rethrow: false });
+                }, 200);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function(){
+                safeRun(initWerklyOms, 'initWerklyOms');
+            });
+        } else {
+            safeRun(initWerklyOms, 'initWerklyOms');
+        }
+
+        // Template data from Apps Script; tolerate local preview when not injected
+        const allOrders = (function(){
+            try { return JSON.parse('<?= allOrders ?>'); } catch (e) { return []; }
+        })();
+        const maintenanceOrders = (function(){
+            try { return JSON.parse('<?= maintenanceOrders ?>'); } catch (e) { return []; }
+        })();
+        let warehouseLogs = {};
+        let currentWarehouseOrder = null;
+        let currentTarkeebOrders = [];
+        let currentSheelOrders = [];
+        let allLogsLoaded = false;
+
+        function hasAppsScript() {
+            return typeof google !== 'undefined' && google.script && google.script.run;
+        }
+
+        function escapeAttr(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function filterData() {
+            const selectedDate = document.getElementById("datePicker").value;
+            const searchInput = document.getElementById('searchInput');
+            const q = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
+
+            const tarkeebOrdersRaw = allOrders.filter(order => order.tarkeebDate === selectedDate);
+            const sheelOrdersRaw = allOrders.filter(order => order.sheelDate === selectedDate);
+            const maintenanceRaw = maintenanceOrders.filter(order => order.maintenanceDates.includes(selectedDate));
+
+            const matches = (order) => {
+                if (!q) return true;
+                const fields = [
+                    String(order.orderNumber),
+                    order.customerName || '',
+                    order.phone || '',
+                    order.location || '',
+                    order.comments || '',
+                    order.paymentMethod || ''
+                ];
+                const productFields = [];
+                (order.products || []).forEach(p => {
+                    productFields.push(p.productName || '');
+                    productFields.push(p.productCategory || '');
+                });
+                const combined = fields.concat(productFields);
+                for (let i = 0; i < combined.length; i++) {
+                    if (String(combined[i]).toLowerCase().indexOf(q) !== -1) return true;
+                }
+                return false;
+            };
+
+            const tarkeebOrders = tarkeebOrdersRaw.filter(matches);
+            const sheelOrders = sheelOrdersRaw.filter(matches);
+            const filteredMaintenanceOrders = maintenanceRaw.filter(matches);
+
+            currentTarkeebOrders = tarkeebOrders;
+            currentSheelOrders = sheelOrders;
+
+            updateSummary(tarkeebOrders, sheelOrders);
+            updateLocationBreakdown(tarkeebOrders, sheelOrders);
+            updateOrderTable("tarkeebOrdersTableBody", tarkeebOrders, 'tarkeeb', warehouseLogs);
+            updateOrderTable("sheelOrdersTableBody", sheelOrders, 'sheel', warehouseLogs);
+            updateMaintenanceOrdersTable(filteredMaintenanceOrders);
+
+            document.getElementById('tarkeebCount').textContent = tarkeebOrders.length;
+            document.getElementById('sheelCount').textContent = sheelOrders.length;
+            document.getElementById('maintenanceCount').textContent = filteredMaintenanceOrders.length;
+
+            toggleCancelledColumns();
+
+            refreshAdditionalTabs();
+
+            const orderMap = {};
+            tarkeebOrders.forEach(o => { orderMap[String(o.orderNumber)] = true; });
+            sheelOrders.forEach(o => { orderMap[String(o.orderNumber)] = true; });
+            const orderNumbers = Object.keys(orderMap);
+
+            if (orderNumbers.length && hasAppsScript()) {
+                google.script.run
+                    .withSuccessHandler((map) => {
+                        if (map) {
+                            Object.keys(map).forEach((key) => {
+                                warehouseLogs[key] = map[key];
+                            });
+                        }
+                        updateOrderTable("tarkeebOrdersTableBody", currentTarkeebOrders, 'tarkeeb', warehouseLogs);
+                        updateOrderTable("sheelOrdersTableBody", currentSheelOrders, 'sheel', warehouseLogs);
+                        if (currentWarehouseOrder && orderNumbers.includes(currentWarehouseOrder.orderNumber)) {
+                            renderWarehouseModal();
+                        }
+                        refreshAdditionalTabs();
+                    })
+                    .withFailureHandler((err) => {
+                        appendDebug('Failed to load filtered warehouse logs', formatDebugValue(err));
+                        nativeConsole.error('Failed to load logs', err);
+                    })
+                    .getWarehouseLogs(orderNumbers);
+            }
+        }
+
+        function toggleCancelledColumns() {
+            return safeRun(function(){
+                const hidden = document.getElementById('showCancelled');
+                const visible = document.getElementById('toggleCancelled');
+                if (!hidden) return;
+                if (visible) hidden.checked = visible.checked;
+                const showCancelled = !!hidden.checked;
+                const cancelledColumns = document.querySelectorAll(".cancelled-column");
+                cancelledColumns.forEach(column => {
+                    column.style.display = showCancelled ? "table-cell" : "none";
+                });
+            }, 'toggleCancelledColumns', { rethrow: false });
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        function exportToExcel() {
+            const selectedDate = document.getElementById("datePicker").value;
+            const currentDate = new Date();
+            const formattedDate = selectedDate ? selectedDate.replace(/-/g, '') 
+                : `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+            const currentTime = currentDate.toLocaleTimeString().replace(/:/g, '-');
+            const filename = `Order_Report_${formattedDate}_${currentTime}.xlsx`;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("tarkeebOrdersTable")), "Tarkeeb Orders");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("sheelOrdersTable")), "Sheel Orders");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("summaryTable")), "Summary");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("locationTable")), "Location Breakdown");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("maintenanceOrdersTable")), "Maintenance Orders");
+
+            XLSX.writeFile(wb, filename);
+        }
+
+        function updateSummary(tarkeebOrders, sheelOrders) {
+            const tarkeebTotal = tarkeebOrders.reduce((sum, order) => sum + order.grandTotal, 0);
+            const sheelTotal = sheelOrders.reduce((sum, order) => sum + order.grandTotal, 0);
+
+            document.getElementById("summaryTableBody").innerHTML = `
+              <tr>
+                <td>${tarkeebOrders.length}</td>
+                <td>${sheelOrders.length}</td>
+                <td>${tarkeebTotal.toFixed(2)}</td>
+                <td>${sheelTotal.toFixed(2)}</td>
+                <td>${(tarkeebTotal + sheelTotal).toFixed(2)}</td>
+              </tr>`;
+
+            // Update cards
+            const toMoney = (n) => Number(n || 0).toFixed(2);
+            document.getElementById('cardTarkeebCount').textContent = `${tarkeebOrders.length} • KD ${toMoney(tarkeebTotal)}`;
+            document.getElementById('cardSheelCount').textContent = `${sheelOrders.length} • KD ${toMoney(sheelTotal)}`;
+            document.getElementById('cardGrandTotal').textContent = `KD ${toMoney(tarkeebTotal + sheelTotal)}`;
+        }
+
+        function updateLocationBreakdown(tarkeebOrders, sheelOrders) {
+            const priorityLocations = [
+             "الوفرة-Wafra",
+             "الخيران-Al Khairan",
+             "مدينة صباح الأحمد-Sabah Al Ahmad City",
+              "ميناء عبدالله-Mina Abdullah",
+             "النويصيب-Nuwaiseeb",
+             "بنيدر-Bneidar",
+             "الظبية-Al Thabaeiya",    
+             "العبدلي-Al Abdali",
+              "كبد-Kabd" ,
+            ];
+
+            const locationSummary = {};
+
+            tarkeebOrders.forEach(order => {
+              if (!locationSummary[order.location]) {
+                locationSummary[order.location] = { 
+                    tarkeeb: 0, 
+                    sheel: 0, 
+                    total: 0, 
+                    tarkeebCancelled: 0, 
+                    sheelCancelled: 0 
+                };
+              }
+              locationSummary[order.location].tarkeeb++;
+              locationSummary[order.location].total++;
+              if (order.isCancelled) locationSummary[order.location].tarkeebCancelled++;
+            });
+
+            sheelOrders.forEach(order => {
+              if (!locationSummary[order.location]) {
+                locationSummary[order.location] = { 
+                    tarkeeb: 0, 
+                    sheel: 0, 
+                    total: 0, 
+                    tarkeebCancelled: 0, 
+                    sheelCancelled: 0 
+                };
+              }
+              locationSummary[order.location].sheel++;
+              locationSummary[order.location].total++;
+              if (order.isCancelled) locationSummary[order.location].sheelCancelled++;
+            });
+
+            const sortedLocations = [
+              ...priorityLocations.filter(location => locationSummary[location]),
+              ...Object.keys(locationSummary).filter(location => !priorityLocations.includes(location)),
+            ];
+
+            document.getElementById("locationTableBody").innerHTML = sortedLocations.map(location => {
+              const data = locationSummary[location];
+              const cancelledInfo = [];
+              if (data.tarkeebCancelled > 0) cancelledInfo.push(t('cancelledTarkeeb', { count: data.tarkeebCancelled }));
+              if (data.sheelCancelled > 0) cancelledInfo.push(t('cancelledSheel', { count: data.sheelCancelled }));
+
+              return `
+                <tr>
+                  <td>${location}</td>
+                  <td>${data.tarkeeb}</td>
+                  <td>${data.sheel}</td>
+                  <td>${data.total}</td>
+                  <td class="cancelled-column">${cancelledInfo.length > 0 ? cancelledInfo.join(', ') : t('none')}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // Extract first occurrence of "<number>KD" from comments
+        function extractCancelledOrderPrice(comment) {
+            const cancelPattern = /(\d+(?:\.\d+)?)KD/i;
+            const match = cancelPattern.exec(comment);
+            return match ? match[0] : t('notAvailable'); 
+        }
+
+        function updateOrderTable(tableId, orders, kind, logsMap) {
+            const tbody = document.getElementById(tableId);
+            if (!orders.length) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="11">${t('noOrdersForFilters')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = orders.map(order => {
+                let cancelledPrice = extractCancelledOrderPrice(order.comments);
+                const logs = logsMap && logsMap[order.orderNumber] ? logsMap[order.orderNumber] : [];
+                const totalProducts = (order.products || []).length;
+                const outboundMap = {};
+                const inboundMap = {};
+                logs.forEach(log => {
+                    if (log.direction === 'out') outboundMap[String(Number(log.productIndex))] = true;
+                    if (log.direction === 'in') inboundMap[String(Number(log.productIndex))] = true;
+                });
+                const outCount = Object.keys(outboundMap).length;
+                const inCount = Object.keys(inboundMap).length;
+                const statusLabel = totalProducts
+                    ? t('quickStatus', { out: outCount, total: totalProducts, in: inCount })
+                    : t('noItems');
+                return `
+                    <tr class="${order.isCancelled ? 'row-cancelled' : ''}">
+                        <td><a href="https://natatiti.com/dashboard/reservations/${order.orderNumber}/invoice" target="_blank">${order.orderNumber}</a></td>
+                        <td>${order.customerName}</td>
+                        <td>${order.phone}</td>
+                        <td>${order.location}</td>
+                        <td>${order.comments}</td>
+                        <td>${kind === 'sheel' ? order.sheelTime : order.tarkeebTime}</td>
+                        <td><span class="pill">${order.paymentMethod}</span></td>
+                        <td>
+                            ${order.products.map(product => `
+                                <div class="product-item">
+                                    <img src="${product.productImage}" alt="${t('productAlt')}">
+                                    <span>${product.productName} (${product.productCategory})</span>
+                                </div>
+                            `).join('')}
+                        </td>
+                        <td>${order.grandTotal.toFixed(2)}</td>
+                        <td class="cancelled-column">${cancelledPrice}</td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="warehouse-status">${statusLabel}</span>
+                                <button data-order="${escapeAttr(order.orderNumber)}" onclick="openWarehouseFromButton(this)">${t('update')}</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function updateMaintenanceOrdersTable(orders) {
+            const tbody = document.getElementById("maintenanceOrdersTableBody");
+            if (!orders.length) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="10">${t('noMaintenanceRange')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = orders.map(order => `
+              <tr>
+                <td><a href="https://natatiti.com/dashboard/reservations/${order.orderNumber}/invoice" target="_blank">${order.orderNumber}</a></td>
+                <td>${order.customerName}</td>
+                <td>${order.phone}</td>
+                <td>${order.location}</td>
+                <td>${order.comments}</td>
+                <td>${order.tarkeebDate || ""}</td>
+                <td>${order.sheelDate || ""}</td>
+                <td><span class="pill">${order.paymentMethod}</span></td>
+                <td>
+                    ${order.products.map(product => `
+                        <div class="product-item">
+                            <img src="${product.productImage}" alt="${t('productAlt')}">
+                            <span>${product.productName} (${product.productCategory})</span>
+                        </div>
+                    `).join('')}
+                </td>
+                <td>${order.grandTotal.toFixed(2)}</td>
+              </tr>`).join('');
+        }
+
+        function openWarehouseFromButton(button) {
+            const orderNumber = button && button.getAttribute ? button.getAttribute('data-order') : '';
+            if (orderNumber) {
+                openWarehouse(orderNumber);
+            }
+        }
+
+        function findOrderByNumber(orderNumber) {
+            const target = String(orderNumber);
+            return allOrders.find(order => String(order.orderNumber) === target) || null;
+        }
+
+        function openWarehouse(orderNumber) {
+            const order = findOrderByNumber(orderNumber);
+            const products = (order && order.products) ? order.products : [];
+            currentWarehouseOrder = {
+                orderNumber: orderNumber,
+                products: products
+            };
+            document.getElementById('warehouseOrderNumber').textContent = orderNumber;
+            renderWarehouseModal();
+            const modal = document.getElementById('warehouseModal');
+            modal.style.display = 'flex';
+
+            if (hasAppsScript()) {
+                google.script.run
+                    .withSuccessHandler((map) => {
+                        if (map) {
+                            Object.keys(map).forEach((key) => {
+                                warehouseLogs[key] = map[key];
+                            });
+                        }
+                        renderWarehouseModal();
+                    })
+                    .withFailureHandler((err) => console.error('Failed to refresh order logs', err))
+                    .getWarehouseLogs([orderNumber]);
+            }
+        }
+
+        function closeWarehouse() {
+            const modal = document.getElementById('warehouseModal');
+            modal.style.display = 'none';
+        }
+
+        function renderWarehouseModal() {
+            const body = document.getElementById('warehouseBody');
+            if (!currentWarehouseOrder) {
+                body.innerHTML = '';
+                return;
+            }
+
+            const orderNumber = currentWarehouseOrder.orderNumber;
+            const products = currentWarehouseOrder.products || [];
+            if (!products.length) {
+                body.innerHTML = `<p class="empty">${t('noProducts')}</p>`;
+                return;
+            }
+            const logs = warehouseLogs[orderNumber] || [];
+            const latestByKey = {};
+            logs.forEach((entry) => {
+                const key = `${entry.productIndex}-${entry.direction}`;
+                if (!latestByKey[key] || new Date(entry.timestamp) > new Date(latestByKey[key].timestamp)) {
+                    latestByKey[key] = entry;
+                }
+            });
+            const locale = currentLang === 'ar' ? 'ar' : undefined;
+
+            const headerNote = hasAppsScript()
+                ? ''
+                : `<p class="card-title" style="margin-top:0;">${t('uploadRequiresApp')}</p>`;
+
+            body.innerHTML = headerNote + products.map((product, index) => {
+                const outboundLog = latestByKey[`${index}-out`];
+                const inboundLog = latestByKey[`${index}-in`];
+                const productName = product.productName || t('unnamedProduct');
+                const productCategory = product.productCategory || '';
+                const productImage = product.productImage || 'https://via.placeholder.com/56';
+                const encodeName = encodeURIComponent(productName);
+
+                const outboundMeta = outboundLog
+                    ? `<div class="log-meta">${t('byOperator', { name: outboundLog.operator || '—' })} • ${new Date(outboundLog.timestamp).toLocaleString(locale)}</div>
+                       <img class="log-preview" src="${outboundLog.photoUrl}" alt="${t('outboundLabel')}">`
+                    : `<div class="card-title">${t('noOutboundPhoto')}</div>`;
+
+                const inboundMeta = inboundLog
+                    ? `<div class="log-meta">${t('byOperator', { name: inboundLog.operator || '—' })} • ${new Date(inboundLog.timestamp).toLocaleString(locale)}</div>
+                       <img class="log-preview" src="${inboundLog.photoUrl}" alt="${t('inboundLabel')}">`
+                    : `<div class="card-title">${t('noInboundPhoto')}</div>`;
+
+                return `
+                    <div class="product-card">
+                        <div class="product-card-header">
+                            <img src="${productImage}" alt="${t('productAlt')}">
+                            <div>
+                                <div style="font-weight:600;">${productName}</div>
+                                <div class="card-title">${productCategory}</div>
+                            </div>
+                        </div>
+                        <div class="log-columns">
+                            <div class="log-panel">
+                                <h4>${t('outboundLabel')}</h4>
+                                ${outboundMeta}
+                                <div class="log-controls">
+                                    <input type="file" accept="image/*" capture="environment" id="file-out-${index}">
+                                    <input type="text" placeholder="${t('notesPlaceholder')}" id="notes-out-${index}">
+                                    <button onclick="uploadWarehousePhoto('${orderNumber}', ${index}, '${encodeName}', 'out')">${t('upload')}</button>
+                                </div>
+                            </div>
+                            <div class="log-panel">
+                                <h4>${t('inboundLabel')}</h4>
+                                ${inboundMeta}
+                                <div class="log-controls">
+                                    <input type="file" accept="image/*" capture="environment" id="file-in-${index}">
+                                    <input type="text" placeholder="${t('notesPlaceholder')}" id="notes-in-${index}">
+                                    <button onclick="uploadWarehousePhoto('${orderNumber}', ${index}, '${encodeName}', 'in')">${t('upload')}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function uploadWarehousePhoto(orderNumber, productIndex, encodedProductName, direction) {
+            const fileInput = document.getElementById(`file-${direction}-${productIndex}`);
+            const notesInput = document.getElementById(`notes-${direction}-${productIndex}`);
+            const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+            if (!file) {
+                alert(t('chooseImageFirst'));
+                return;
+            }
+
+            if (!hasAppsScript()) {
+                alert(t('uploadsAvailable'));
+                return;
+            }
+
+            let actionButton = null;
+            if (fileInput && fileInput.parentNode) {
+                const children = fileInput.parentNode.children;
+                if (children && children.length >= 3) {
+                    actionButton = children[2];
+                }
+            }
+
+            if (actionButton) {
+                actionButton.disabled = true;
+                actionButton.textContent = t('uploading');
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                const dataUrl = reader.result;
+                const base64 = String(dataUrl).split(',')[1];
+                const payload = {
+                    orderNumber,
+                    productIndex,
+                    productName: decodeURIComponent(encodedProductName),
+                    direction,
+                    fileName: file.name,
+                    mimeType: file.type,
+                    base64,
+                    notes: notesInput ? notesInput.value : ''
+                };
+
+                google.script.run
+                    .withSuccessHandler((entry) => {
+                        if (!warehouseLogs[orderNumber]) {
+                            warehouseLogs[orderNumber] = [];
+                        }
+                        warehouseLogs[orderNumber].push(entry);
+
+                        if (actionButton) {
+                            actionButton.disabled = false;
+                            actionButton.textContent = t('upload');
+                        }
+                        if (fileInput) {
+                            fileInput.value = '';
+                        }
+                        if (notesInput) {
+                            notesInput.value = '';
+                        }
+
+                        renderWarehouseModal();
+                        updateOrderTable("tarkeebOrdersTableBody", currentTarkeebOrders, 'tarkeeb', warehouseLogs);
+                        updateOrderTable("sheelOrdersTableBody", currentSheelOrders, 'sheel', warehouseLogs);
+                    })
+                    .withFailureHandler((err) => {
+                        console.error('Upload failed', err);
+                        if (actionButton) {
+                            actionButton.disabled = false;
+                            actionButton.textContent = t('upload');
+                        }
+                        alert(t('uploadFailed'));
+                    })
+                    .uploadWarehousePhoto(payload);
+            };
+            reader.onerror = () => {
+                alert(t('failedToReadImage'));
+                if (actionButton) {
+                    actionButton.disabled = false;
+                    actionButton.textContent = t('upload');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function switchTab(tabId) {
+            return safeRun(function(){
+                var btns = document.querySelectorAll('.tab-button');
+                btns.forEach(function(b){ b.classList.remove('active'); });
+                btns.forEach(function(b){ if (b.getAttribute('data-tab-target') === tabId) b.classList.add('active'); });
+                var secs = document.querySelectorAll('.tab-content');
+                secs.forEach(function(s){ s.classList.remove('active'); });
+                secs.forEach(function(s){ if (s.getAttribute('data-tab') === tabId) s.classList.add('active'); });
+
+                if (tabId === 'tarkeeb') safeRun(refreshTarkeebTab, 'refreshTarkeebTab', { rethrow: false });
+                if (tabId === 'sheel') safeRun(refreshSheelTab, 'refreshSheelTab', { rethrow: false });
+                if (tabId === 'out') safeRun(refreshOutTab, 'refreshOutTab', { rethrow: false });
+                if (tabId === 'reporting') safeRun(refreshReportingTab, 'refreshReportingTab', { rethrow: false });
+            }, `switchTab:${tabId}`, { rethrow: false });
+        }
+
+        function initializeTabs() {
+            var tarkeebInputs = ['tarkeebFrom', 'tarkeebTo'];
+            tarkeebInputs.forEach(function(id){
+                var el = document.getElementById(id);
+                if (el && el.addEventListener) el.addEventListener('change', refreshTarkeebTab);
+            });
+
+            var sheelInputs = ['sheelFrom', 'sheelTo'];
+            sheelInputs.forEach(function(id){
+                var el = document.getElementById(id);
+                if (el && el.addEventListener) el.addEventListener('change', refreshSheelTab);
+            });
+
+            var outInputs = ['outFrom', 'outTo'];
+            outInputs.forEach(function(id){
+                var el = document.getElementById(id);
+                if (el && el.addEventListener) el.addEventListener('change', refreshOutTab);
+            });
+
+            var reportDateEl = document.getElementById('reportDate');
+            if (reportDateEl && reportDateEl.addEventListener) reportDateEl.addEventListener('change', refreshReportingTab);
+            var reportTimeEl = document.getElementById('reportTime');
+            if (reportTimeEl && reportTimeEl.addEventListener) reportTimeEl.addEventListener('change', refreshReportingTab);
+        }
+
+        function setDefaultRangeInputs() {
+            const today = new Date();
+            const todayStr = formatDateInput(today);
+            ['tarkeebFrom', 'tarkeebTo', 'sheelFrom', 'sheelTo'].forEach(id => {
+                const input = document.getElementById(id);
+                if (input && !input.value) {
+                    input.value = todayStr;
+                }
+            });
+
+            const outFromInput = document.getElementById('outFrom');
+            if (outFromInput && !outFromInput.value) {
+                const past = new Date();
+                past.setDate(today.getDate() - 7);
+                outFromInput.value = formatDateInput(past);
+            }
+
+            const outToInput = document.getElementById('outTo');
+            if (outToInput && !outToInput.value) {
+                outToInput.value = todayStr;
+            }
+
+            const reportDate = document.getElementById('reportDate');
+            if (reportDate && !reportDate.value) {
+                reportDate.value = todayStr;
+            }
+
+            const reportTime = document.getElementById('reportTime');
+            if (reportTime && !reportTime.value) {
+                reportTime.value = formatTimeInput(today);
+            }
+        }
+
+        function refreshAdditionalTabs() {
+            refreshTarkeebTab();
+            refreshSheelTab();
+            refreshOutTab();
+            refreshReportingTab();
+        }
+
+        function loadAllWarehouseLogs() {
+            if (allLogsLoaded || !hasAppsScript()) return;
+            const orderNumbers = allOrders.map(order => order.orderNumber);
+            if (!orderNumbers.length) return;
+
+            google.script.run
+                .withSuccessHandler((map) => {
+                    warehouseLogs = map || {};
+                    allLogsLoaded = true;
+                    updateOrderTable("tarkeebOrdersTableBody", currentTarkeebOrders, 'tarkeeb', warehouseLogs);
+                    updateOrderTable("sheelOrdersTableBody", currentSheelOrders, 'sheel', warehouseLogs);
+                    if (currentWarehouseOrder) {
+                        renderWarehouseModal();
+                    }
+                    refreshAdditionalTabs();
+                })
+                .withFailureHandler((err) => {
+                    appendDebug('Failed to load warehouse logs', formatDebugValue(err));
+                    nativeConsole.error('Failed to load warehouse logs', err);
+                })
+                .getWarehouseLogs(orderNumbers);
+        }
+
+        function refreshTarkeebTab() {
+            const tbody = document.getElementById('tarkeebItemsBody');
+            if (!tbody) return;
+            var fromEl = document.getElementById('tarkeebFrom');
+            var toEl = document.getElementById('tarkeebTo');
+            const from = fromEl ? fromEl.value : '';
+            const to = (toEl && toEl.value) ? toEl.value : from;
+            if (!from || !to) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="8">${t('selectRange')}</td></tr>`;
+                return;
+            }
+
+            const items = [];
+            allOrders.forEach(order => {
+                if (!order.tarkeebDate) return;
+                if (order.tarkeebDate < from || order.tarkeebDate > to) return;
+                (order.products || []).forEach((product, idx) => {
+                    const logs = warehouseLogs[order.orderNumber] || [];
+                    const outbound = getLatestLog(logs, idx, 'out');
+                    const inbound = getLatestLog(logs, idx, 'in');
+                    items.push({ order, product, idx, outbound, inbound });
+                });
+            });
+
+            if (!items.length) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="8">${t('noItemsRange')}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = items.map(item => {
+                const productCell = `
+                    <div class="product-item" style="margin-bottom:0;">
+                        <img src="${item.product.productImage || 'https://via.placeholder.com/60'}" alt="${t('productAlt')}">
+                        <div>
+                            <div>${item.product.productName || t('unnamedProduct')}</div>
+                            <div class="card-title">${item.product.productCategory || ''}</div>
+                        </div>
+                    </div>`;
+                return `
+                    <tr>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${item.order.orderNumber}/invoice" target="_blank">${item.order.orderNumber}</a></td>
+                        <td>${productCell}</td>
+                        <td>${item.order.customerName}</td>
+                        <td>${item.order.location}</td>
+                        <td>${formatDateTimeStrings(item.order.tarkeebDate, item.order.tarkeebTime)}</td>
+                        <td>${renderDirectionStatus(item.outbound, 'out')}</td>
+                        <td>${renderDirectionStatus(item.inbound, 'in')}</td>
+                        <td><button data-order="${item.order.orderNumber}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function refreshSheelTab() {
+            const tbody = document.getElementById('sheelItemsBody');
+            if (!tbody) return;
+            var fromEl = document.getElementById('sheelFrom');
+            var toEl = document.getElementById('sheelTo');
+            const from = fromEl ? fromEl.value : '';
+            const to = (toEl && toEl.value) ? toEl.value : from;
+            if (!from || !to) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="8">${t('selectRange')}</td></tr>`;
+                return;
+            }
+
+            const items = [];
+            allOrders.forEach(order => {
+                if (!order.sheelDate) return;
+                if (order.sheelDate < from || order.sheelDate > to) return;
+                (order.products || []).forEach((product, idx) => {
+                    const logs = warehouseLogs[order.orderNumber] || [];
+                    const outbound = getLatestLog(logs, idx, 'out');
+                    const inbound = getLatestLog(logs, idx, 'in');
+                    items.push({ order, product, idx, outbound, inbound });
+                });
+            });
+
+            if (!items.length) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="8">${t('noItemsRange')}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = items.map(item => {
+                const productCell = `
+                    <div class="product-item" style="margin-bottom:0;">
+                        <img src="${item.product.productImage || 'https://via.placeholder.com/60'}" alt="${t('productAlt')}">
+                        <div>
+                            <div>${item.product.productName || t('unnamedProduct')}</div>
+                            <div class="card-title">${item.product.productCategory || ''}</div>
+                        </div>
+                    </div>`;
+                return `
+                    <tr>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${item.order.orderNumber}/invoice" target="_blank">${item.order.orderNumber}</a></td>
+                        <td>${productCell}</td>
+                        <td>${item.order.customerName}</td>
+                        <td>${item.order.location}</td>
+                        <td>${formatDateTimeStrings(item.order.sheelDate, item.order.sheelTime)}</td>
+                        <td>${renderDirectionStatus(item.outbound, 'out')}</td>
+                        <td>${renderDirectionStatus(item.inbound, 'in')}</td>
+                        <td><button data-order="${item.order.orderNumber}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function refreshOutTab() {
+            const tbody = document.getElementById('outItemsBody');
+            if (!tbody) return;
+            var fromEl = document.getElementById('outFrom');
+            var toEl = document.getElementById('outTo');
+            const from = fromEl ? fromEl.value : '';
+            const to = (toEl && toEl.value) ? toEl.value : from;
+            if (!from || !to) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="8">${t('selectRange')}</td></tr>`;
+                return;
+            }
+
+            const fromDate = new Date(`${from}T00:00:00`);
+            const toDate = new Date(`${to}T23:59:59`);
+            const now = new Date();
+            const items = [];
+
+            allOrders.forEach(order => {
+                const logs = warehouseLogs[order.orderNumber] || [];
+                (order.products || []).forEach((product, idx) => {
+                    const outbound = getLatestLog(logs, idx, 'out');
+                    if (!outbound) return;
+                    const outboundDate = toDateObj(outbound.timestamp);
+                    if (!outboundDate || outboundDate < fromDate || outboundDate > toDate) return;
+                    const inbound = getLatestLog(logs, idx, 'in');
+                    if (inbound) {
+                        const inboundDate = toDateObj(inbound.timestamp);
+                        if (inboundDate && inboundDate >= outboundDate) {
+                            return; // already returned
+                        }
+                    }
+                    const duration = outboundDate ? now - outboundDate.getTime() : 0;
+                    items.push({
+                        order,
+                        product,
+                        idx,
+                        outbound,
+                        inbound,
+                        duration,
+                        scheduled: formatDateTimeStrings(order.sheelDate, order.sheelTime)
+                    });
+                });
+            });
+
+            if (!items.length) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="8">${t('noItemsOut')}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = items.map(item => {
+                const productCell = `
+                    <div class="product-item" style="margin-bottom:0;">
+                        <img src="${item.product.productImage || 'https://via.placeholder.com/60'}" alt="${t('productAlt')}">
+                        <div>
+                            <div>${item.product.productName || t('unnamedProduct')}</div>
+                            <div class="card-title">${item.product.productCategory || ''}</div>
+                        </div>
+                    </div>`;
+                return `
+                    <tr>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${item.order.orderNumber}/invoice" target="_blank">${item.order.orderNumber}</a></td>
+                        <td>${productCell}</td>
+                        <td>${item.order.customerName}</td>
+                        <td>${item.order.location}</td>
+                        <td>${formatTimestamp(item.outbound ? item.outbound.timestamp : '')}</td>
+                        <td>${item.scheduled}</td>
+                        <td>${formatDuration(item.duration)}</td>
+                        <td><button data-order="${item.order.orderNumber}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function refreshReportingTab() {
+            const tbody = document.getElementById('reportingBody');
+            if (!tbody) return;
+            var rd = document.getElementById('reportDate');
+            var rt = document.getElementById('reportTime');
+            const dateValue = rd ? rd.value : '';
+            const timeValue = (rt && rt.value) ? rt.value : '23:59';
+            if (!dateValue) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="7">${t('selectAsOfDate')}</td></tr>`;
+                return;
+            }
+
+            const asOf = new Date(`${dateValue}T${timeValue}`);
+            if (Number.isNaN(asOf.getTime())) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="7">${t('invalidAsOf')}</td></tr>`;
+                return;
+            }
+
+            const rows = [];
+            allOrders.forEach(order => {
+                if (!order.sheelDate) return;
+                const dueDate = new Date(`${order.sheelDate}T${order.sheelTime || '23:59:00'}`);
+                if (Number.isNaN(dueDate.getTime()) || dueDate > asOf) return;
+                const logs = warehouseLogs[order.orderNumber] || [];
+                (order.products || []).forEach((product, idx) => {
+                    const inbound = getLatestLog(logs, idx, 'in');
+                    const inboundDate = inbound ? toDateObj(inbound.timestamp) : null;
+                    if (inboundDate && inboundDate <= asOf) return;
+                    const outbound = getLatestLog(logs, idx, 'out');
+                    rows.push({ order, product, idx, dueDate, dueDisplay: formatDateTimeStrings(order.sheelDate, order.sheelTime), outbound, inbound });
+                });
+            });
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td class="empty" colspan="7">${t('noOverdue')}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(item => {
+                const productCell = `
+                    <div class="product-item" style="margin-bottom:0;">
+                        <img src="${item.product.productImage || 'https://via.placeholder.com/60'}" alt="${t('productAlt')}">
+                        <div>
+                            <div>${item.product.productName || t('unnamedProduct')}</div>
+                            <div class="card-title">${item.product.productCategory || ''}</div>
+                        </div>
+                    </div>`;
+                const overdueMs = asOf.getTime() - item.dueDate.getTime();
+                return `
+                    <tr>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${item.order.orderNumber}/invoice" target="_blank">${item.order.orderNumber}</a></td>
+                        <td>${productCell}</td>
+                        <td>${item.order.customerName}</td>
+                        <td>${item.dueDisplay}</td>
+                        <td>${renderReportingStatus(item.outbound, item.inbound)}</td>
+                        <td><span class="status-pill overdue">${formatDuration(overdueMs)}</span></td>
+                        <td><button data-order="${item.order.orderNumber}" onclick="openWarehouseFromButton(this)">${t('update')}</button></td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function getLatestLog(logs, productIndex, direction) {
+            if (!logs || !logs.length) return null;
+            let latest = null;
+            logs.forEach(log => {
+                if (Number(log.productIndex) === Number(productIndex) && log.direction === direction) {
+                    if (!latest || new Date(log.timestamp) > new Date(latest.timestamp)) {
+                        latest = log;
+                    }
+                }
+            });
+            return latest;
+        }
+
+        function renderDirectionStatus(log, direction) {
+            if (!log) {
+                const text = direction === 'in' ? t('pendingReturn') : t('pendingDispatch');
+                return `<span class="status-pill pending">${text}</span>`;
+            }
+            const label = direction === 'in' ? t('returned') : t('outboundLogged');
+            const css = direction === 'in' ? 'status-pill returned' : 'status-pill out';
+            const operator = log.operator || '—';
+            return `
+                <div>
+                    <span class="${css}">${label}</span>
+                    <div class="card-title">${t('byOperator', { name: operator })}</div>
+                    <div class="card-title">${formatTimestamp(log.timestamp)}</div>
+                    ${log.notes ? `<div class="card-title">${t('notesPrefix', { text: log.notes })}</div>` : ''}
+                </div>`;
+        }
+
+        function renderReportingStatus(outbound, inbound) {
+            if (inbound) {
+                return `<span class="status-pill returned">${t('returned')}</span>`;
+            }
+            if (outbound) {
+                return `
+                    <div>
+                        <span class="status-pill overdue">${t('awaitingReturn')}</span>
+                        <div class="card-title">${t('outboundLabel')}: ${formatTimestamp(outbound.timestamp)}</div>
+                        ${outbound.notes ? `<div class="card-title">${t('notesPrefix', { text: outbound.notes })}</div>` : ''}
+                    </div>`;
+            }
+            return `<span class="status-pill pending">${t('noOutboundRecord')}</span>`;
+        }
+
+        function formatDateTimeStrings(dateStr, timeStr) {
+            if (!dateStr) return '—';
+            const date = timeStr ? new Date(`${dateStr}T${timeStr}`) : new Date(`${dateStr}T00:00:00`);
+            if (Number.isNaN(date.getTime())) {
+                return `${dateStr}${timeStr ? ` ${timeStr}` : ''}`;
+            }
+            const locale = currentLang === 'ar' ? 'ar' : undefined;
+            const datePart = date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+            if (!timeStr) return datePart;
+            const timePart = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+            return `${datePart} • ${timePart}`;
+        }
+
+        function formatTimestamp(value) {
+            const date = toDateObj(value);
+            if (!date) return '—';
+            const locale = currentLang === 'ar' ? 'ar' : undefined;
+            const datePart = date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+            const timePart = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+            return `${datePart} • ${timePart}`;
+        }
+
+        function toDateObj(value) {
+            if (!value) return null;
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        function formatDuration(ms) {
+            if (ms <= 0) return t('lessThanHour');
+            const minutes = Math.floor(ms / 60000);
+            const days = Math.floor(minutes / (60 * 24));
+            const hours = Math.floor((minutes - days * 60 * 24) / 60);
+            const mins = minutes % 60;
+            const parts = [];
+            if (days) parts.push(`${days}${t('dayAbbrev')}`);
+            if (hours) parts.push(`${hours}${t('hourAbbrev')}`);
+            if (!days && mins && !hours) parts.push(`${mins}${t('minuteAbbrev')}`);
+            if (!parts.length) parts.push(t('lessThanHour'));
+            return parts.join(' ');
+        }
+
+        function formatDateInput(date) {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function formatTimeInput(date) {
+            const hh = String(date.getHours()).padStart(2, '0');
+            const mm = String(date.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
+        }
+    </script>
+</body>
+</html>

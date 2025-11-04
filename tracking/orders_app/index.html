@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orders Tracker</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #0f172a;
+      --muted: #8ea0b8;
+      --text: #e5eefb;
+      --primary: #4f46e5;
+      --primary-2: #6366f1;
+      --ok: #16a34a;
+      --warn: #f59e0b;
+      --border: #1f2a44;
+      --chip: #111827;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #f8fafc; --panel: #ffffff; --muted: #475569; --text: #0f172a; --border: #e2e8f0; --chip: #f1f5f9; }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+    header { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 16px; position: sticky; top: 0; background: var(--panel); border-bottom: 1px solid var(--border); z-index: 5; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+    .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); display: inline-block; }
+    .container { padding: 16px; }
+    .controls { display: flex; gap: 8px; align-items: center; }
+    .search { padding: 10px 12px; border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 8px; min-width: 260px; }
+    select, textarea, input[type="text"], input[type="file"], input[type="search"] { color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+    .stats { display: flex; gap: 16px; margin: 12px 0 20px; }
+    .stat { padding: 10px 14px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border); }
+    .grid { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: start; }
+    th { background: rgba(99,102,241,0.06); font-weight: 600; font-size: 13px; color: var(--muted); }
+    tr:hover td { background: rgba(99,102,241,0.05); }
+    .badge { display: inline-block; padding: 4px 10px; font-size: 12px; border-radius: 999px; background: var(--chip); color: var(--muted); border: 1px solid var(--border); }
+    .badge.ok { color: #10b981; border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.08); }
+    .badge.warn { color: #f59e0b; border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.08); }
+    .actions { display: flex; gap: 8px; }
+    .btn { padding: 8px 12px; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 8px; cursor: pointer; }
+    .btn.primary { background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; border-color: transparent; }
+    .btn.ghost { background: transparent; }
+    .panel { position: fixed; inset: 0; background: rgba(2,6,23,0.6); display: none; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; max-width: 820px; width: 96%; max-height: 90vh; overflow: auto; box-shadow: 0 20px 60px rgba(2,6,23,0.35); }
+    .row { display: flex; gap: 12px; margin: 10px 0; }
+    .row > * { flex: 1; }
+    .rtl { direction: rtl; }
+    .hidden { display: none; }
+    .muted { color: var(--muted); }
+    img.preview { max-width: 220px; max-height: 160px; border: 1px dashed var(--border); border-radius: 10px; }
+    .drop { border: 1px dashed var(--border); padding: 14px; border-radius: 10px; text-align: center; color: var(--muted); }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 16px; }
+    .chip { padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; color: var(--muted); }
+    .chip.active { background: rgba(99,102,241,0.12); color: #c7d2fe; border-color: rgba(99,102,241,0.35); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="dot"></span>
+      <h2 id="title" style="margin:0">Orders Tracker</h2>
+    </div>
+    <div class="controls">
+      <label><span data-i18n="language"></span>
+        <select id="lang" onchange="switchLang(this.value)">
+          <option value="en">English</option>
+          <option value="ar">العربية</option>
+        </select>
+      </label>
+      <div>
+        <label data-i18n="from"></label>
+        <input id="dateFrom" type="date" onchange="debouncedRefresh()" />
+      </div>
+      <div>
+        <label data-i18n="to"></label>
+        <input id="dateTo" type="date" onchange="debouncedRefresh()" />
+      </div>
+      <div>
+        <label data-i18n="dateFilter"></label>
+        <select id="dateMode" onchange="debouncedRefresh()">
+          <option value="both" data-i18n="dateBoth"></option>
+          <option value="tarkeeb" data-i18n="dateTarkeeb"></option>
+          <option value="sheel" data-i18n="dateSheel"></option>
+        </select>
+      </div>
+      <div>
+        <label data-i18n="sortBy"></label>
+        <select id="sortBy" onchange="debouncedRefresh()">
+          <option value="sheet" data-i18n="sheetOrder"></option>
+          <option value="created_at">created_at</option>
+          <option value="tarkeeb">Tarkeeb Date</option>
+          <option value="sheel">Sheel Date</option>
+          <option value="pickup">pickup_date_time</option>
+          <option value="dropoff">dropoff_date_time</option>
+        </select>
+      </div>
+      <div>
+        <label data-i18n="order"></label>
+        <select id="sortDir" onchange="debouncedRefresh()">
+          <option value="desc" data-i18n="desc"></option>
+          <option value="asc" data-i18n="asc"></option>
+        </select>
+      </div>
+      <div>
+        <label data-i18n="perPage"></label>
+        <select id="pageSize" onchange="changePageSize(this.value)">
+          <option value="20">20</option>
+          <option value="50">50</option>
+          <option value="250" selected>250</option>
+          <option value="all" data-i18n="all"></option>
+        </select>
+      </div>
+      <input id="search" class="search" type="search" placeholder="Search..." oninput="debouncedRefresh()" />
+      <button class="btn" onclick="refresh()" data-i18n="refresh"></button>
+      <button class="btn ghost" onclick="resetFilters()" data-i18n="reset"></button>
+      <button class="btn ghost" onclick="toggleDebug()" data-i18n="debug"></button>
+    </div>
+  </header>
+
+  <div class="container">
+  <section class="stats">
+    <div class="stat"><span data-i18n="total"></span>: <strong id="total">0</strong></div>
+    <div class="stat"><span data-i18n="withTarkeeb"></span>: <strong id="withTarkeeb">0</strong></div>
+    <div class="stat"><span data-i18n="withSheel"></span>: <strong id="withSheel">0</strong></div>
+  </section>
+  <div id="errorBanner" class="muted" style="margin: 2px 0 10px 2px; color:#ef4444;"></div>
+  <div id="metaBanner" class="muted" style="margin: 2px 0 10px 2px;"></div>
+  <div id="filtersChip" class="muted" style="margin: 2px 0 10px 2px;"></div>
+  <div id="debugPanel" class="muted" style="display:none; margin: 8px 0 16px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px;">
+    <div><strong data-i18n="debug"></strong></div>
+    <div id="dbgId"></div>
+    <div id="dbgChosen"></div>
+    <div id="dbgMissing"></div>
+    <div id="dbgDates"></div>
+    <div id="dbgSample"></div>
+    <div id="dbgHeaders" style="margin-top:6px; max-height:140px; overflow:auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; white-space: pre-wrap;"></div>
+  </div>
+  <div class="chips">
+    <span class="chip active" data-filter="all" onclick="setFilter('all', this)" data-i18n="all"></span>
+    <span class="chip" data-filter="pending" onclick="setFilter('pending', this)" data-i18n="pending"></span>
+    <span class="chip" data-filter="left" onclick="setFilter('left', this)" data-i18n="left"></span>
+    <span class="chip" data-filter="returned" onclick="setFilter('returned', this)" data-i18n="returned"></span>
+  </div>
+
+  <section class="grid">
+    <table id="ordersTable">
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </section>
+  <div style="display:flex;justify-content:center;margin:10px 0;">
+    <button class="btn" id="loadMoreBtn" onclick="loadMore()" data-i18n="loadMore"></button>
+  </div>
+  </div>
+
+  <div id="attachPanel" class="panel" onclick="panelBackdrop(event)">
+    <div class="card" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <h3 data-i18n="attachments"></h3>
+        <button class="btn" onclick="closePanel()" aria-label="Close">✕</button>
+      </div>
+      <div class="row">
+        <div>
+          <label data-i18n="orderId"></label>
+          <input id="p_orderId" type="text" disabled />
+        </div>
+        <div>
+          <label data-i18n="direction"></label>
+          <select id="p_direction">
+            <option value="out" data-i18n="out"></option>
+            <option value="in" data-i18n="in"></option>
+            <option value="other" data-i18n="other"></option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label data-i18n="file"></label>
+          <div class="drop" ondragover="event.preventDefault()" ondrop="dropFile(event)">
+            <div class="muted" id="dropText" data-i18n="drop"></div>
+            <input id="p_file" type="file" accept="image/*,application/pdf" multiple onchange="previewFile(event)" />
+          </div>
+        </div>
+        <div>
+          <label data-i18n="notes"></label>
+          <textarea id="p_notes" rows="3" placeholder="..."></textarea>
+        </div>
+      </div>
+      <div class="row" id="previewRow" style="display:none;">
+        <div>
+          <span class="muted" data-i18n="preview"></span><br />
+          <div id="p_previews" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="actions">
+          <button class="btn ghost" onclick="loadAttachmentsUI()" data-i18n="reload"></button>
+          <button class="btn" onclick="markLeft()" data-i18n="markLeft"></button>
+          <button class="btn" onclick="markReturned()" data-i18n="markReturned"></button>
+          <button class="btn primary" onclick="upload()" data-i18n="upload"></button>
+        </div>
+      </div>
+      <hr />
+      <div>
+        <h4 data-i18n="existing"></h4>
+        <div id="attachmentsList" class="muted"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================
+    // i18n
+    // =====================
+    const translations = {
+      en: {
+        title: 'Orders Tracker', language: 'Language', refresh: 'Refresh',
+        total: 'Total', withTarkeeb: 'With Tarkeeb Date', withSheel: 'With Sheel Date',
+        attachments: 'Attachments', orderId: 'Order ID', direction: 'Direction', out: 'Out', in: 'In', other: 'Other',
+        file: 'File', notes: 'Notes', preview: 'Preview', reload: 'Reload', upload: 'Upload', existing: 'Existing Attachments',
+        viewAdd: 'Attachments', attCount: 'attachments',
+        left: 'Left', returned: 'Returned', pending: 'Pending', all: 'All', status: 'Status',
+        dateFilter: 'Date Filter', dateBoth: 'Both (either)', dateTarkeeb: 'Tarkeeb Only', dateSheel: 'Sheel Only',
+        from: 'From', to: 'To', reset: 'Reset Filters', usingSheet: 'Using sheet', rows: 'rows', debug: 'Debug',
+        sortBy: 'Sort By', sheetOrder: 'Sheet Order', order: 'Order', asc: 'Oldest → Newest', desc: 'Newest → Oldest',
+        perPage: 'Rows', all: 'All',
+        loadMore: 'Load Older', filters: 'Filters',
+        markLeft: 'Mark Left', markReturned: 'Mark Returned',
+        drop: 'Drag & drop or choose a file'
+      },
+      ar: {
+        title: 'متابعة الطلبات', language: 'اللغة', refresh: 'تحديث',
+        total: 'الإجمالي', withTarkeeb: 'مع تاريخ التركيب', withSheel: 'مع تاريخ الشيل',
+        attachments: 'المرفقات', orderId: 'رقم الطلب', direction: 'الاتجاه', out: 'خارج', in: 'داخل', other: 'أخرى',
+        file: 'ملف', notes: 'ملاحظات', preview: 'معاينة', reload: 'إعادة تحميل', upload: 'رفع', existing: 'المرفقات الحالية',
+        viewAdd: 'مرفقات', attCount: 'مرفق',
+        left: 'خرج', returned: 'عاد', pending: 'قيد الانتظار', all: 'الكل', status: 'الحالة',
+        dateFilter: 'تصفية حسب التاريخ', dateBoth: 'كلاهما', dateTarkeeb: 'التركيب فقط', dateSheel: 'الشيل فقط',
+        from: 'من تاريخ', to: 'إلى تاريخ', reset: 'إعادة تعيين المرشحات', usingSheet: 'المصدر', rows: 'صفوف', debug: 'تصحيح',
+        sortBy: 'ترتيب حسب', sheetOrder: 'ترتيب الورقة', order: 'الاتجاه', asc: 'الأقدم → الأحدث', desc: 'الأحدث → الأقدم',
+        perPage: 'عدد الصفوف', all: 'الكل',
+        loadMore: 'تحميل الأقدم', filters: 'المرشحات',
+        markLeft: 'تسجيل خروج', markReturned: 'تسجيل عودة',
+        drop: 'اسحب الملف وأفلته أو اختر ملفًا'
+      }
+    };
+    let lang = 'en';
+
+    function t(key) { return (translations[lang] && translations[lang][key]) || key; }
+    function applyI18n() {
+      document.getElementById('title').textContent = t('title');
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+      });
+      document.body.classList.toggle('rtl', lang === 'ar');
+    }
+    function switchLang(v) { lang = v; applyI18n(); }
+
+    // =====================
+    // Apps Script RPC shim (for local preview)
+    // =====================
+    if (!window.google) {
+      window.google = { script: { run: new Proxy({}, {
+        get(_, fn) { return (...args) => { console.log('Mock call', fn, args); return { withSuccessHandler: (cb) => ({ withFailureHandler: () => ({ }) }) } } }
+      }) } };
+    }
+
+    let state = { headers: [], rows: [], counts: { total: 0, withTarkeeb: 0, withSheel: 0 }, config: {}, meta: {}, error: '', debugVisible: false, page: 1, pageSize: 250 };
+    let debounceTimer;
+    function debouncedRefresh() { clearTimeout(debounceTimer); debounceTimer = setTimeout(refresh, 250); }
+
+    function refresh(append=false) {
+      const q = document.getElementById('search').value.trim();
+      const from = document.getElementById('dateFrom').value || '';
+      const to = document.getElementById('dateTo').value || '';
+      const dateMode = (document.getElementById('dateMode') && document.getElementById('dateMode').value) || 'both';
+      const sortBy = (document.getElementById('sortBy') && document.getElementById('sortBy').value) || 'sheet';
+      const sortDir = (document.getElementById('sortDir') && document.getElementById('sortDir').value) || 'desc';
+      const page = state.page || 1;
+      let pageSize = state.pageSize || 250;
+      if (String(pageSize) === 'all') {
+        const maxAll = (state.config && state.config.maxDashboardRows) || 1500;
+        pageSize = maxAll;
+      }
+      google.script.run
+        .withSuccessHandler((data) => {
+          state.headers = data.headers || [];
+          state.rows = append ? state.rows.concat(data.rows || []) : (data.rows || []);
+          state.counts = data.counts || { total: 0, withTarkeeb: 0, withSheel: 0 };
+          state.meta = data.meta || {};
+          state.error = data.error || '';
+          render();
+        })
+        .withFailureHandler((err) => { state.error = (err && err.message) || 'Failed to load data'; render(); })
+        .getDashboardData({ q, from, to, dateMode, sortBy, sortDir, page, pageSize });
+    }
+
+    function render() {
+      document.getElementById('total').textContent = state.counts.total;
+      document.getElementById('withTarkeeb').textContent = state.counts.withTarkeeb;
+      document.getElementById('withSheel').textContent = state.counts.withSheel;
+      const meta = state.meta || {}; const b = document.getElementById('metaBanner'); const eb = document.getElementById('errorBanner');
+      if (b) b.textContent = meta.sheetName ? `${t('usingSheet')}: ${meta.sheetName} (${meta.totalRows || 0} ${t('rows')})` : '';
+      if (eb) eb.textContent = state.error ? `${t('errorLoading')}: ${state.error}` : '';
+      const fc = document.getElementById('filtersChip');
+      const q = document.getElementById('search').value.trim();
+      const from = document.getElementById('dateFrom').value || '';
+      const to = document.getElementById('dateTo').value || '';
+      const dateMode = (document.getElementById('dateMode') && document.getElementById('dateMode').value) || 'both';
+      const status = state.statusFilter || 'all';
+      const bits = [];
+      if (q) bits.push(`q:"${q}"`);
+      if (from || to) bits.push(`date:${from||'*'}→${to||'*'}`);
+      if (dateMode !== 'both') bits.push(`mode:${dateMode}`);
+      if (status !== 'all') bits.push(`status:${status}`);
+      if (fc) fc.textContent = bits.length ? `${t('filters')}: ${bits.join('  ')}` : '';
+
+      const dp = document.getElementById('debugPanel');
+      if (dp) dp.style.display = state.debugVisible ? 'block' : 'none';
+      if (state.debugVisible && meta.debug) {
+        try {
+          const dbg = meta.debug;
+          const idEl = document.getElementById('dbgId');
+          const chEl = document.getElementById('dbgChosen');
+          const msEl = document.getElementById('dbgMissing');
+          const dtEl = document.getElementById('dbgDates');
+          const smEl = document.getElementById('dbgSample');
+          const hdEl = document.getElementById('dbgHeaders');
+          if (idEl) idEl.textContent = `ID header: ${dbg?.idHeader || ''}`;
+          if (chEl) chEl.textContent = `Chosen columns: ${(dbg?.chosenColumns || []).join(', ')}\nFound columns: ${(dbg?.foundColumns || []).join(', ')}${dbg?.window ? `\nWindow: startRow=${dbg.window.startRow}, count=${dbg.window.count}` : ''}`;
+          if (msEl) msEl.textContent = `Missing columns: ${(dbg?.missingColumns || []).join(', ')}`;
+          if (dtEl) {
+            const d = dbg?.dateDiagnostics || {};
+            const srcT = (d.sources && d.sources.tarkeeb) ? Array.from(new Set(d.sources.tarkeeb)).join(', ') : '';
+            const srcS = (d.sources && d.sources.sheel) ? Array.from(new Set(d.sources.sheel)).join(', ') : '';
+            const safe = (x) => ({ present: (x && x.present) || 0, valid: (x && x.valid) || 0, invalid: (x && x.invalid) || 0, samples: (x && x.invalidSamples) ? x.invalidSamples.join(', ') : '' });
+            const st = safe(d.tarkeeb), ss = safe(d.sheel), sp = safe(d.pickup), sd = safe(d.dropoff), sc = safe(d.created);
+            dtEl.textContent = `Date diagnostics:\n Tarkeeb: present=${st.present}, valid=${st.valid}, invalid=${st.invalid}${st.samples ? `, invalid samples=[${st.samples}]` : ''}; sources=[${srcT}]\n Sheel:   present=${ss.present}, valid=${ss.valid}, invalid=${ss.invalid}${ss.samples ? `, invalid samples=[${ss.samples}]` : ''}; sources=[${srcS}]\n Pickup:  present=${sp.present}, valid=${sp.valid}, invalid=${sp.invalid}${sp.samples ? `, invalid samples=[${sp.samples}]` : ''}\n Dropoff: present=${sd.present}, valid=${sd.valid}, invalid=${sd.invalid}${sd.samples ? `, invalid samples=[${sd.samples}]` : ''}\n Created: present=${sc.present}, valid=${sc.valid}, invalid=${sc.invalid}${sc.samples ? `, invalid samples=[${sc.samples}]` : ''}`;
+          }
+          if (smEl) smEl.textContent = `Sample IDs: ${(dbg?.sampleIds || []).join(', ')}\nCounts: pre=${dbg?.counts ? dbg.counts.pre : 0}, afterSearch=${dbg?.counts ? dbg.counts.afterSearch : 0}, afterDate=${dbg?.counts ? dbg.counts.afterDate : 0}\nFilters: q='${(dbg?.filters && dbg.filters.q) || ''}', from='${(dbg?.filters && dbg.filters.from) || ''}', to='${(dbg?.filters && dbg.filters.to) || ''}', mode='${(dbg?.filters && dbg.filters.dateMode) || ''}'`;
+          if (hdEl) hdEl.textContent = `Sheet headers (${(dbg?.sheetHeaders || []).length}):\n- ${ (dbg?.sheetHeaders || []).join('\n- ') }`;
+        } catch (e) {
+          const eb = document.getElementById('errorBanner'); if (eb) eb.textContent = `${t('errorLoading')}: ${e && e.message ? e.message : e}`;
+        }
+      }
+
+      const thead = document.getElementById('thead');
+      const tbody = document.getElementById('tbody');
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+
+      // Use All Orders formatting: id, code, name, city_id, phone_number, payment_method, grand_total, Tarkeeb/Sheel, Category/Warehouse
+      const preferred = [ state.headers[0], 'code', 'name', 'city_id', 'phone_number', 'payment_method', 'grand_total', 'Tarkeeb Date', 'Sheel Date', 'Category Names', 'Warehouse Names' ];
+      const wanted = new Set(preferred.filter(Boolean));
+      const cols = state.headers.filter(h => wanted.has(h));
+      const trh = document.createElement('tr');
+      cols.forEach(h => { const th = document.createElement('th'); th.textContent = h; trh.appendChild(th); });
+      const thS = document.createElement('th'); thS.textContent = t('status'); trh.appendChild(thS);
+      const thA = document.createElement('th'); thA.textContent = t('attachments'); trh.appendChild(thA);
+      thead.appendChild(trh);
+
+      const statusFilter = state.statusFilter || 'all';
+      let rendered = 0;
+      state.rows.forEach(obj => {
+        if (statusFilter !== 'all' && obj._status !== statusFilter) return;
+        const tr = document.createElement('tr');
+        cols.forEach(h => {
+          const td = document.createElement('td');
+          td.textContent = obj[h] != null ? obj[h] : '';
+          tr.appendChild(td);
+        });
+        const tdS = document.createElement('td');
+        const badge = document.createElement('span');
+        const st = obj._status || 'pending';
+        badge.className = 'badge ' + (st === 'left' ? 'warn' : st === 'returned' ? 'ok' : '');
+        badge.textContent = st === 'left' ? t('left') : st === 'returned' ? t('returned') : t('pending');
+        tdS.appendChild(badge);
+        tr.appendChild(tdS);
+        const tdA = document.createElement('td');
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        const count = obj._attachmentCount || 0;
+        btn.textContent = `${t('viewAdd')} (${count})`;
+        btn.onclick = () => openPanel(String(obj[state.headers[0]]));
+        tdA.appendChild(btn);
+        const btn2 = document.createElement('button');
+        btn2.className = 'btn primary';
+        btn2.style.marginInlineStart = '8px';
+        btn2.textContent = t('markLeft');
+        btn2.onclick = () => { openPanel(String(obj[state.headers[0]])); document.getElementById('p_direction').value = 'out'; };
+        const btn3 = document.createElement('button');
+        btn3.className = 'btn';
+        btn3.style.marginInlineStart = '8px';
+        btn3.textContent = t('markReturned');
+        btn3.onclick = () => { openPanel(String(obj[state.headers[0]])); document.getElementById('p_direction').value = 'in'; };
+        tdA.appendChild(btn2);
+        tdA.appendChild(btn3);
+        tr.appendChild(tdA);
+        tbody.appendChild(tr);
+        rendered++;
+      });
+      if (rendered === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td'); td.colSpan = cols.length + 2; td.className = 'muted'; td.textContent = state.error ? '' : 'No rows match current filters.';
+        tr.appendChild(td); tbody.appendChild(tr);
+      }
+
+      const lm = document.getElementById('loadMoreBtn');
+      if (lm) lm.style.display = (meta && meta.totalRows && (state.page * state.pageSize) < meta.totalRows) ? 'inline-flex' : 'none';
+    }
+
+    function resetFilters() {
+      const df = document.getElementById('dateFrom');
+      const dt = document.getElementById('dateTo');
+      const dm = document.getElementById('dateMode');
+      const s = document.getElementById('search');
+      if (df) df.value = '';
+      if (dt) dt.value = '';
+      if (dm) dm.value = 'both';
+      if (s) s.value = '';
+      setFilter('all');
+      state.page = 1;
+      const ps = document.getElementById('pageSize'); if (ps) ps.value = '250'; state.pageSize = 250;
+      refresh();
+    }
+
+    function loadMore() {
+      state.page = (state.page || 1) + 1;
+      refresh(true);
+    }
+
+    function changePageSize(v) {
+      state.pageSize = v;
+      state.page = 1;
+      refresh(false);
+    }
+    function toggleDebug() {
+      state.debugVisible = !state.debugVisible;
+      render();
+    }
+
+    function panelBackdrop(e) { if (e.target === e.currentTarget) closePanel(); }
+    function openPanel(orderId) {
+      document.getElementById('p_orderId').value = orderId;
+      document.getElementById('p_direction').value = 'out';
+      document.getElementById('p_notes').value = '';
+      document.getElementById('p_file').value = '';
+      document.getElementById('previewRow').style.display = 'none';
+      document.getElementById('attachPanel').style.display = 'flex';
+      loadAttachmentsUI();
+    }
+    function closePanel() { document.getElementById('attachPanel').style.display = 'none'; }
+
+    function loadAttachmentsUI() {
+      const orderId = document.getElementById('p_orderId').value;
+      const box = document.getElementById('attachmentsList');
+      box.textContent = '...';
+      google.script.run
+        .withSuccessHandler((rows) => {
+          if (!rows || !rows.length) { box.textContent = '—'; return; }
+          box.innerHTML = '';
+          rows.forEach(r => {
+            const line = document.createElement('div'); line.style.display='flex'; line.style.alignItems='center'; line.style.gap='8px'; line.style.margin='6px 0';
+            if ((r.MimeType || '').startsWith('image/')) {
+              const img = document.createElement('img'); img.src = r.Url; img.alt = r.FileName; img.style.width='56px'; img.style.height='42px'; img.style.objectFit='cover'; img.style.borderRadius='6px'; img.style.border='1px solid var(--border)'; line.appendChild(img);
+            }
+            const a = document.createElement('a'); a.href = r.Url; a.target = '_blank'; a.textContent = r.FileName || r.Url; line.appendChild(a);
+            const meta = document.createElement('span'); meta.className = 'muted'; meta.textContent = ` • ${r.Direction || ''} • ${r.UploadedAt || ''}`; line.appendChild(meta);
+            box.appendChild(line);
+          });
+        })
+        .getAttachments(orderId);
+    }
+
+    let selectedFiles = [];
+    function previewFile(evt) {
+      const files = Array.from((evt.target && evt.target.files) || []);
+      selectedFiles = [];
+      const row = document.getElementById('previewRow');
+      const box = document.getElementById('p_previews');
+      box.innerHTML = '';
+      if (!files.length) { row.style.display = 'none'; return; }
+      row.style.display = 'flex';
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const url = e.target.result;
+          const item = { name: file.name, mimeType: file.type || 'application/octet-stream', data: url };
+          selectedFiles.push(item);
+          if (String(file.type).startsWith('image/')) {
+            const img = document.createElement('img'); img.className = 'preview'; img.src = url; img.alt = file.name; box.appendChild(img);
+          } else {
+            const span = document.createElement('span'); span.className = 'badge'; span.textContent = file.name; box.appendChild(span);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    function dropFile(evt) {
+      evt.preventDefault();
+      const files = Array.from(evt.dataTransfer.files || []);
+      if (!files.length) return;
+      // assign to input for consistency
+      document.getElementById('p_file').files = evt.dataTransfer.files;
+      previewFile({ target: { files } });
+    }
+
+    function upload() {
+      const orderId = document.getElementById('p_orderId').value.trim();
+      const direction = document.getElementById('p_direction').value;
+      const notes = document.getElementById('p_notes').value.trim();
+      if (!orderId) { alert('Missing order id'); return; }
+      if (!selectedFiles.length) { alert('Select a file'); return; }
+
+      const btns = document.querySelectorAll('.card .btn');
+      btns.forEach(b => b.disabled = true);
+      const files = [...selectedFiles];
+      const uploadOne = () => {
+        const f = files.shift();
+        if (!f) { btns.forEach(b => b.disabled = false); loadAttachmentsUI(); refresh(); alert('Uploaded'); return; }
+        const payload = { orderId, direction, notes, file: f };
+        google.script.run
+          .withSuccessHandler(() => uploadOne())
+          .withFailureHandler((err) => { btns.forEach(b => b.disabled = false); alert(err && err.message ? err.message : 'Failed'); })
+          .uploadAttachment(payload);
+      };
+      uploadOne();
+    }
+
+    function markLeft() {
+      const orderId = document.getElementById('p_orderId').value.trim();
+      const notes = document.getElementById('p_notes').value.trim();
+      if (!orderId) { alert('Missing order id'); return; }
+      const btns = document.querySelectorAll('.card .btn');
+      btns.forEach(b => b.disabled = true);
+      const payload = { orderId, notes };
+      if (selectedFiles.length) payload.file = selectedFiles[0];
+      google.script.run
+        .withSuccessHandler((res) => {
+          btns.forEach(b => b.disabled = false);
+          selectedFiles = []; document.getElementById('p_file').value=''; document.getElementById('previewRow').style.display='none';
+          loadAttachmentsUI();
+          refresh();
+          alert('Saved');
+        })
+        .withFailureHandler((err) => {
+          btns.forEach(b => b.disabled = false);
+          alert(err && err.message ? err.message : 'Failed');
+        })
+        .markLeftWarehouse(payload);
+    }
+
+    function markReturned() {
+      const orderId = document.getElementById('p_orderId').value.trim();
+      const notes = document.getElementById('p_notes').value.trim();
+      if (!orderId) { alert('Missing order id'); return; }
+      const btns = document.querySelectorAll('.card .btn');
+      btns.forEach(b => b.disabled = true);
+      const payload = { orderId, notes };
+      if (selectedFiles.length) payload.file = selectedFiles[0];
+      google.script.run
+        .withSuccessHandler((res) => {
+          btns.forEach(b => b.disabled = false);
+          selectedFiles = []; document.getElementById('p_file').value=''; document.getElementById('previewRow').style.display='none';
+          loadAttachmentsUI();
+          refresh();
+          alert('Saved');
+        })
+        .withFailureHandler((err) => {
+          btns.forEach(b => b.disabled = false);
+          alert(err && err.message ? err.message : 'Failed');
+        })
+        .markReturnedWarehouse(payload);
+    }
+
+    function init() {
+      // load config if needed
+      if (google && google.script && google.script.run && google.script.run.getConfig) {
+        google.script.run.withSuccessHandler(cfg => { state.config = cfg || {}; }).getConfig();
+      }
+      applyI18n();
+      refresh();
+    }
+
+    function setFilter(name, el) {
+      state.statusFilter = name;
+      document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-filter') === name));
+      render();
+    }
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>

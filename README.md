@@ -63,6 +63,8 @@ If the ID is missing and the script is not bound to a spreadsheet, calls to `get
 
 When deploying as a web app, ensure the published script has access to the configured spreadsheet and, if necessary, update the Drive folder permissions for uploaded files.
 
+ 
+
 ## License renewals & history tracking
 
 The backend exposes dedicated helpers for updating existing rows and for fetching their revision history:
