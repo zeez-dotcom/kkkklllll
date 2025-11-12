@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8" />
+  <title>Credit Ledger</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <style>
+    :root {
+      --bg: #05070c;
+      --panel: #10131c;
+      --panel-alt: #0d111a;
+      --text: #f7f8fd;
+      --muted: #8f9ab3;
+      --border: rgba(255,255,255,.08);
+      --accent: #5d8aff;
+      --accent-2: #00d1ff;
+      --danger: #ff6b6b;
+      --success: #4ade80;
+      --warn: #fbbf24;
+      --input: rgba(255,255,255,.06);
+      --shadow: 0 20px 50px rgba(2,6,23,.55);
+      --radius: 16px;
+    }
+    body[data-theme="light"] {
+      --bg: #f3f5fb;
+      --panel: #ffffff;
+      --panel-alt: #f7f8fe;
+      --text: #0f172a;
+      --muted: #6b7280;
+      --border: rgba(15,23,42,.12);
+      --accent: #3056ff;
+      --accent-2: #00bcd4;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --warn: #d97706;
+      --input: #f1f3fb;
+      --shadow: 0 20px 45px rgba(15,23,42,.15);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      min-height:100vh;
+      background: radial-gradient(circle at top, rgba(93,138,255,.15), transparent 45%), var(--bg);
+      color:var(--text);
+      font: 15px/1.5 "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    h1,h2,h3,h4 { margin:0; font-weight:600; }
+    button,input,select,textarea { font: inherit; }
+    .app-bar {
+      position:sticky;
+      top:0;
+      z-index:10;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:16px clamp(16px,4vw,40px);
+      background:rgba(5,7,12,.75);
+      backdrop-filter: blur(16px) saturate(140%);
+      border-bottom:1px solid var(--border);
+    }
+    .brand { display:flex; align-items:center; gap:16px; }
+    .brand-badge {
+      width:44px; height:44px; border-radius:14px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow:var(--shadow);
+    }
+    .layout {
+      display:grid;
+      grid-template-columns: clamp(260px,22vw,320px) 1fr;
+      gap:20px;
+      padding:24px clamp(16px,4vw,40px) 60px;
+    }
+    @media (max-width:960px){ .layout { grid-template-columns:1fr; } }
+    .panel {
+      background: var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+    }
+    label { display:block; font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px; }
+    input, select, textarea {
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--input);
+      color:var(--text);
+      outline:none;
+      transition:border .2s, box-shadow .2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(93,138,255,.25);
+    }
+    textarea { min-height:80px; resize:vertical; }
+    .btn {
+      border:none;
+      border-radius:10px;
+      padding:10px 16px;
+      font-weight:600;
+      cursor:pointer;
+      transition:transform .2s, filter .2s;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    .btn_primary { background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; }
+    .btn_secondary { background:var(--input); color:var(--text); border:1px solid var(--border); }
+    .btn_danger { background:var(--danger); color:#fff; }
+    .btn:hover:not(:disabled) { filter:brightness(1.1); transform:translateY(-1px); }
+    .filters-grid { display:flex; flex-direction:column; gap:14px; }
+    .filters-grid .split { display:flex; gap:12px; }
+    .filters-grid .split > div { flex:1; }
+    .tabs { display:flex; gap:10px; margin-bottom:18px; }
+    .tab {
+      flex:1;
+      padding:10px;
+      border-radius:999px;
+      background:var(--panel-alt);
+      border:1px solid var(--border);
+      color:var(--muted);
+      cursor:pointer;
+      text-align:center;
+      font-weight:600;
+    }
+    .tab.active { background:var(--accent); color:#fff; border-color:transparent; }
+    .view { display:none; }
+    .view.active { display:block; }
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px; }
+    .stat { background:var(--panel-alt); border:1px solid var(--border); border-radius:14px; padding:14px; }
+    .stat-label { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+    .stat-value { font-size:22px; font-weight:700; margin-top:6px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:12px 10px; border-bottom:1px solid var(--border); text-align:left; }
+    th { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+    th button { background:none; border:none; color:inherit; font:inherit; cursor:pointer; }
+    .right { text-align:right; }
+    .chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+    .chip.bad { background:rgba(255,107,107,.1); color:var(--danger); }
+    .chip.good { background:rgba(74,222,128,.12); color:var(--success); }
+    .chip.warn { background:rgba(251,191,36,.15); color:var(--warn); }
+    .people-list { display:flex; flex-direction:column; gap:12px; }
+    .person-card { border:1px solid var(--border); border-radius:14px; padding:14px; background:var(--panel-alt); display:flex; justify-content:space-between; gap:14px; }
+    .person-info { display:flex; gap:12px; align-items:flex-start; }
+    .avatar { width:42px; height:42px; border-radius:12px; background:rgba(255,255,255,.08); display:grid; place-items:center; font-weight:700; border:1px solid var(--border); overflow:hidden; }
+    .avatar img { width:100%; height:100%; object-fit:cover; }
+    .toast {
+      position:fixed;
+      bottom:24px; left:50%; transform:translateX(-50%);
+      padding:12px 18px;
+      border-radius:12px;
+      background:#101828;
+      color:#fff;
+      font-weight:600;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .25s, transform .25s;
+      z-index:30;
+    }
+    .toast.show { opacity:1; transform:translate(-50%,0); }
+    .toast.error { background:var(--danger); }
+    .toast.success { background:var(--success); color:#04140a; }
+    .toast.warn { background:var(--warn); color:#140a04; }
+    .floating-actions { position:fixed; bottom:24px; right:24px; display:flex; flex-direction:column; gap:12px; z-index:5; }
+    .modal-overlay {
+      position:fixed; inset:0; background:rgba(4,6,12,.8); display:none; align-items:center; justify-content:center; z-index:40;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal {
+      width:min(520px,92vw);
+      max-height:90vh;
+      overflow:auto;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:22px;
+      box-shadow:var(--shadow);
+      display:flex; flex-direction:column; gap:18px;
+    }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; }
+    .drop-zone {
+      border:1.5px dashed var(--border);
+      border-radius:14px;
+      padding:16px;
+      text-align:center;
+      color:var(--muted);
+      cursor:pointer;
+      background:var(--panel-alt);
+    }
+    .preview { margin-top:10px; }
+    .preview img { width:70px; height:70px; border-radius:12px; object-fit:cover; border:1px solid var(--border); }
+    .loading-overlay {
+      position:fixed; inset:0;
+      background:rgba(5,7,12,.85);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    .loading-overlay.show { display:flex; }
+    .loading-box {
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:24px;
+      width:min(360px,90vw);
+      text-align:center;
+      box-shadow:var(--shadow);
+    }
+    .loading-bar { width:100%; height:6px; border-radius:999px; background:var(--input); margin-top:12px; overflow:hidden; border:1px solid var(--border); }
+    .loading-bar span { display:block; height:100%; width:0%; border-radius:inherit; background:linear-gradient(135deg,var(--accent),var(--accent-2)); transition:width .3s; }
+    .placeholder { padding:40px; text-align:center; color:var(--muted); border:1px dashed var(--border); border-radius:14px; }
+  </style>
+</head>
+<body>
+  <header class="app-bar">
+    <div class="brand">
+      <div class="brand-badge"></div>
+      <div>
+        <h2>Credit Ledger</h2>
+        <div style="color:var(--muted); font-size:13px;">Track credit, payments, and people from one screen</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button class="btn btn_secondary" id="themeToggle">Toggle Theme</button>
+      <button class="btn btn_primary" id="sendAlertsBtn">Send Alerts</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <h3 style="margin-bottom:14px;">Filters</h3>
+      <div class="filters-grid">
+        <div>
+          <label for="filterPerson">Person</label>
+          <select id="filterPerson"></select>
+        </div>
+        <div class="split">
+          <div>
+            <label for="filterFrom">From</label>
+            <input type="date" id="filterFrom">
+          </div>
+          <div>
+            <label for="filterTo">To</label>
+            <input type="date" id="filterTo">
+          </div>
+        </div>
+        <div class="split">
+          <div>
+            <label for="filterType">Type</label>
+            <select id="filterType">
+              <option value="">All</option>
+              <option value="CREDIT">Credit</option>
+              <option value="PAYMENT">Payment</option>
+            </select>
+          </div>
+          <div>
+            <label for="filterReceipt">Receipt</label>
+            <select id="filterReceipt">
+              <option value="">All</option>
+              <option value="has">Has receipt</option>
+              <option value="none">Missing receipt</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label for="searchInput">Search</label>
+          <input id="searchInput" placeholder="Name, phone, notes…">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn_secondary" style="flex:1;" id="resetFiltersBtn">Reset</button>
+          <button class="btn btn_primary" style="flex:1;" id="refreshBtn">Refresh</button>
+        </div>
+        <div style="font-size:13px; color:var(--muted); line-height:1.5;">
+          Tips:<br>
+          • Switch tabs to view totals, transactions, or people.<br>
+          • Use search to filter both summary and people.<br>
+          • Click "Collect" on a person to prefill a payment entry.
+        </div>
+      </div>
+    </aside>
+
+    <section class="panel">
+      <div class="stat-grid" id="statGrid">
+        <div class="stat">
+          <div class="stat-label">Outstanding</div>
+          <div class="stat-value" id="statOutstanding">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total Credit</div>
+          <div class="stat-value" id="statCredit">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total Payments</div>
+          <div class="stat-value" id="statPayment">0</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="summary">Summary</button>
+        <button class="tab" data-tab="transactions">Transactions</button>
+        <button class="tab" data-tab="people">People</button>
+      </div>
+
+      <div id="view-summary" class="view active"></div>
+      <div id="view-transactions" class="view"></div>
+      <div id="view-people" class="view"></div>
+    </section>
+  </main>
+
+  <div class="floating-actions">
+    <button class="btn btn_primary" id="addEntryBtn">＋ Add Entry</button>
+    <button class="btn btn_secondary" id="addPersonBtn">＋ Add Person</button>
+    <button class="btn btn_secondary" id="exportBtn">⬇︎ Export Summary</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <div id="loadingMessage">Loading…</div>
+      <div class="loading-bar"><span id="loadingBar"></span></div>
+    </div>
+  </div>
+
+  <!-- Entry Modal -->
+  <div class="modal-overlay" id="entryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Add Credit / Payment</h3>
+        <button class="btn btn_secondary" data-close="entryModal">✕</button>
+      </div>
+      <div>
+        <label for="entryPerson">Person *</label>
+        <select id="entryPerson"></select>
+      </div>
+      <div class="split">
+        <div>
+          <label for="entryType">Type *</label>
+          <select id="entryType">
+            <option value="CREDIT">Credit (customer owes)</option>
+            <option value="PAYMENT">Payment (customer paid)</option>
+          </select>
+        </div>
+        <div>
+          <label for="entryDate">Date *</label>
+          <input type="date" id="entryDate">
+        </div>
+      </div>
+      <div class="split">
+        <div>
+          <label for="entryAmount">Amount (KWD) *</label>
+          <input type="number" id="entryAmount" min="0.001" step="0.001" placeholder="0.000">
+        </div>
+        <div>
+          <label for="entryNote">Note</label>
+          <input id="entryNote" maxlength="200" placeholder="Items, reference…">
+        </div>
+      </div>
+      <div>
+        <label for="entryReceipt">Receipt (optional)</label>
+        <div class="drop-zone" id="entryReceiptZone">Click to attach receipt (image/PDF)</div>
+        <input type="file" id="entryReceipt" accept="image/*,.pdf" hidden>
+        <div class="preview" id="entryReceiptPreview"></div>
+      </div>
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn btn_secondary" data-close="entryModal">Cancel</button>
+        <button class="btn btn_primary" id="saveEntryBtn">Save Entry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Person Modal -->
+  <div class="modal-overlay" id="personModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="personModalTitle">Add Person</h3>
+        <button class="btn btn_secondary" data-close="personModal">✕</button>
+      </div>
+      <div>
+        <label for="personName">Name *</label>
+        <input id="personName" maxlength="120" placeholder="Full name">
+      </div>
+      <div class="split">
+        <div>
+          <label for="personPhone">Phone</label>
+          <input id="personPhone" placeholder="+965…">
+        </div>
+        <div>
+          <label for="personLocation">Location</label>
+          <input id="personLocation" placeholder="Area / Block">
+        </div>
+      </div>
+      <div>
+        <label for="personNotes">Notes</label>
+        <textarea id="personNotes" placeholder="History, reminders…"></textarea>
+      </div>
+      <div>
+        <label for="personPhoto">Profile photo</label>
+        <div class="drop-zone" id="personPhotoZone">Click to choose image</div>
+        <input type="file" id="personPhoto" accept="image/*" hidden>
+        <div class="preview" id="personPhotoPreview"></div>
+      </div>
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn btn_secondary" data-close="personModal">Cancel</button>
+        <button class="btn btn_primary" id="savePersonBtn">Save Person</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const App = {
+      state: {
+        summary: [],
+        people: [],
+        transactions: [],
+        totals: { outstanding: 0, credit: 0, payment: 0 },
+        search: '',
+        sort: { key: 'balance', dir: 'desc' },
+        tab: 'summary',
+        currency: 'KWD',
+        editingPersonId: ''
+      },
+      init() {
+        this.cacheDom();
+        this.bindEvents();
+        this.restoreTheme();
+        this.dom.entryDate.value = this.todayISO();
+        this.loadAll();
+      },
+      cacheDom() {
+        this.dom = {
+          filterPerson: byId('filterPerson'),
+          filterFrom: byId('filterFrom'),
+          filterTo: byId('filterTo'),
+          filterType: byId('filterType'),
+          filterReceipt: byId('filterReceipt'),
+          searchInput: byId('searchInput'),
+          refreshBtn: byId('refreshBtn'),
+          resetFiltersBtn: byId('resetFiltersBtn'),
+          tabs: document.querySelectorAll('.tab'),
+          summaryView: byId('view-summary'),
+          transactionsView: byId('view-transactions'),
+          peopleView: byId('view-people'),
+          toast: byId('toast'),
+          loadingOverlay: byId('loadingOverlay'),
+          loadingMessage: byId('loadingMessage'),
+          loadingBar: byId('loadingBar'),
+          statOutstanding: byId('statOutstanding'),
+          statCredit: byId('statCredit'),
+          statPayment: byId('statPayment'),
+          sendAlertsBtn: byId('sendAlertsBtn'),
+          themeToggle: byId('themeToggle'),
+          exportBtn: byId('exportBtn'),
+          addEntryBtn: byId('addEntryBtn'),
+          addPersonBtn: byId('addPersonBtn'),
+          entryModal: byId('entryModal'),
+          personModal: byId('personModal'),
+          entryPerson: byId('entryPerson'),
+          entryType: byId('entryType'),
+          entryDate: byId('entryDate'),
+          entryAmount: byId('entryAmount'),
+          entryNote: byId('entryNote'),
+          entryReceipt: byId('entryReceipt'),
+          entryReceiptZone: byId('entryReceiptZone'),
+          entryReceiptPreview: byId('entryReceiptPreview'),
+          saveEntryBtn: byId('saveEntryBtn'),
+          personModalTitle: byId('personModalTitle'),
+          personName: byId('personName'),
+          personPhone: byId('personPhone'),
+          personLocation: byId('personLocation'),
+          personNotes: byId('personNotes'),
+          personPhoto: byId('personPhoto'),
+          personPhotoZone: byId('personPhotoZone'),
+          personPhotoPreview: byId('personPhotoPreview'),
+          savePersonBtn: byId('savePersonBtn')
+        };
+      },
+      bindEvents() {
+        ['filterPerson','filterFrom','filterTo','filterType','filterReceipt'].forEach(id => {
+          this.dom[id].addEventListener('change', () => this.loadAll());
+        });
+        this.dom.refreshBtn.addEventListener('click', () => this.loadAll());
+        this.dom.resetFiltersBtn.addEventListener('click', () => this.resetFilters());
+        this.dom.searchInput.addEventListener('input', () => {
+          this.state.search = this.dom.searchInput.value.trim().toLowerCase();
+          this.renderActiveView();
+        });
+        this.dom.tabs.forEach(tab => tab.addEventListener('click', () => this.switchTab(tab.dataset.tab)));
+        this.dom.sendAlertsBtn.addEventListener('click', () => this.sendAlerts());
+        this.dom.themeToggle.addEventListener('click', () => this.toggleTheme());
+        this.dom.exportBtn.addEventListener('click', () => this.exportSummary());
+        this.dom.addEntryBtn.addEventListener('click', () => this.openEntryModal());
+        this.dom.addPersonBtn.addEventListener('click', () => this.openPersonModal());
+        this.dom.entryReceiptZone.addEventListener('click', () => this.dom.entryReceipt.click());
+        this.dom.entryReceipt.addEventListener('change', () => this.previewFile(this.dom.entryReceiptPreview, this.dom.entryReceipt.files[0]));
+        this.dom.personPhotoZone.addEventListener('click', () => this.dom.personPhoto.click());
+        this.dom.personPhoto.addEventListener('change', () => this.previewFile(this.dom.personPhotoPreview, this.dom.personPhoto.files[0]));
+        document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => this.closeModal(btn.dataset.close)));
+        this.dom.saveEntryBtn.addEventListener('click', () => this.saveEntry());
+        this.dom.savePersonBtn.addEventListener('click', () => this.savePerson());
+      },
+      async loadAll() {
+        try {
+          const filters = this.collectFilters();
+          this.setLoading(true, 'Loading dashboard…');
+          const [dashboard, people] = await Promise.all([
+            run('apiGetDashboard', filters),
+            run('apiListPeople')
+          ]);
+          this.setDashboardState(dashboard || {});
+          this.setPeople(Array.isArray(people) ? people : []);
+          if (this.state.tab === 'transactions') {
+            await this.loadTransactions();
+          }
+          this.renderAll();
+        } catch (error) {
+          this.toast('Failed to load data: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.setLoading(false);
+        }
+      },
+      setDashboardState(data) {
+        this.state.summary = Array.isArray(data.summary) ? data.summary.slice() : [];
+        this.state.currency = data.currency || 'KWD';
+        this.state.filters = this.collectFilters();
+        this.applySort();
+        this.computeTotals();
+      },
+      setPeople(list) {
+        const ordered = list.slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
+        this.state.people = ordered;
+        const summaryIds = new Set(this.state.summary.map(r => r.personId));
+        ordered.forEach(person => {
+          if (!summaryIds.has(person.id)) {
+            this.state.summary.push({
+              personId: person.id,
+              name: person.name,
+              phone: person.phone,
+              location: person.location,
+              notes: person.notes,
+              profileFileId: person.profileFileId,
+              balance: 0,
+              totalCredit: 0,
+              totalPayment: 0,
+              lastTranDate: ''
+            });
+          }
+        });
+        this.applySort();
+        this.populateSelectors();
+      },
+      async loadTransactions() {
+        try {
+          this.setSectionLoading('transactions', true);
+          const rows = await run('apiListTransactions', this.collectFilters());
+          this.state.transactions = Array.isArray(rows) ? rows : [];
+          this.renderTransactions();
+        } catch (error) {
+          this.toast('Failed to load transactions: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.setSectionLoading('transactions', false);
+        }
+      },
+      collectFilters() {
+        const hasReceipt = this.dom.filterReceipt.value === 'has'
+          ? true
+          : this.dom.filterReceipt.value === 'none'
+            ? false
+            : undefined;
+        return {
+          personId: this.dom.filterPerson.value || undefined,
+          dateFrom: this.dom.filterFrom.value || undefined,
+          dateTo: this.dom.filterTo.value || undefined,
+          type: this.dom.filterType.value || undefined,
+          hasReceipt
+        };
+      },
+      resetFilters() {
+        this.dom.filterPerson.value = '';
+        this.dom.filterFrom.value = '';
+        this.dom.filterTo.value = '';
+        this.dom.filterType.value = '';
+        this.dom.filterReceipt.value = '';
+        this.dom.searchInput.value = '';
+        this.state.search = '';
+        this.loadAll();
+      },
+      populateSelectors() {
+        const personOptions = [{ value: '', label: 'All people' }].concat(
+          this.state.people.map(p => ({ value: p.id, label: p.name || 'Untitled' }))
+        );
+        this.fillSelect(this.dom.filterPerson, personOptions, this.dom.filterPerson.value);
+        const entryOptions = [{ value: '', label: this.state.people.length ? 'Select person' : 'Add a person first' }].concat(
+          this.state.people.map(p => ({ value: p.id, label: p.name || 'Untitled' }))
+        );
+        this.fillSelect(this.dom.entryPerson, entryOptions, this.dom.entryPerson.value);
+        this.dom.entryPerson.disabled = this.state.people.length === 0;
+      },
+      fillSelect(select, options, currentValue) {
+        const prev = currentValue ?? select.value;
+        select.innerHTML = '';
+        options.forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.textContent = opt.label;
+          select.appendChild(option);
+        });
+        if (options.some(opt => opt.value === prev)) {
+          select.value = prev;
+        }
+      },
+      renderAll() {
+        this.renderTotals();
+        this.renderSummary();
+        this.renderPeople();
+        if (this.state.tab === 'transactions') {
+          this.renderTransactions();
+        }
+      },
+      renderActiveView() {
+        if (this.state.tab === 'summary') this.renderSummary();
+        if (this.state.tab === 'people') this.renderPeople();
+        if (this.state.tab === 'transactions') this.renderTransactions();
+      },
+      renderTotals() {
+        const fmt = this.formatMoney.bind(this);
+        this.dom.statOutstanding.textContent = fmt(this.state.totals.outstanding);
+        this.dom.statCredit.textContent = fmt(this.state.totals.credit);
+        this.dom.statPayment.textContent = fmt(this.state.totals.payment);
+      },
+      renderSummary() {
+        const rows = this.filteredSummary();
+        if (!rows.length) {
+          this.dom.summaryView.innerHTML = '<div class="placeholder">No matching people yet. Add entries or adjust filters.</div>';
+          return;
+        }
+        const table = [`<table><thead><tr>
+          <th><button data-sort="name">Person</button></th>
+          <th class="right"><button data-sort="totalCredit">Credit</button></th>
+          <th class="right"><button data-sort="totalPayment">Payment</button></th>
+          <th class="right"><button data-sort="balance">Balance</button></th>
+          <th>Last Txn</th>
+          <th></th>
+        </tr></thead><tbody>`];
+        rows.forEach(row => {
+          const badgeClass = row.balance > 0 ? 'chip bad' : 'chip good';
+          table.push(`<tr>
+            <td>
+              <div style="font-weight:600;">${esc(row.name || 'Unnamed')}</div>
+              <div style="color:var(--muted); font-size:12px;">${esc(row.phone || '')} ${row.location ? ' • ' + esc(row.location) : ''}</div>
+            </td>
+            <td class="right">${this.formatMoney(row.totalCredit)}</td>
+            <td class="right">${this.formatMoney(row.totalPayment)}</td>
+            <td class="right"><span class="${badgeClass}">${this.formatMoney(row.balance)}</span></td>
+            <td>${row.lastTranDate || '—'}</td>
+            <td class="right"><button class="btn btn_secondary" data-review="${row.personId}">Collect</button></td>
+          </tr>`);
+        });
+        table.push('</tbody></table>');
+        this.dom.summaryView.innerHTML = table.join('');
+        this.dom.summaryView.querySelectorAll('[data-review]').forEach(btn => {
+          btn.addEventListener('click', () => this.collectPayment(btn.dataset.review));
+        });
+        this.dom.summaryView.querySelectorAll('th button').forEach(btn => {
+          btn.addEventListener('click', () => this.changeSort(btn.dataset.sort));
+        });
+      },
+      renderPeople() {
+        if (!this.state.people.length) {
+          this.dom.peopleView.innerHTML = '<div class="placeholder">No people yet. Add one to get started.</div>';
+          return;
+        }
+        const query = this.state.search;
+        const cards = this.state.people
+          .filter(p => {
+            if (!query) return true;
+            const hay = [p.name, p.phone, p.location, p.notes].map(x => (x || '').toLowerCase()).join(' ');
+            return hay.includes(query);
+          })
+          .map(p => {
+            const summary = this.state.summary.find(s => s.personId === p.id) || { balance:0, totalCredit:0, totalPayment:0 };
+            const badgeClass = summary.balance > 0 ? 'chip bad' : summary.balance < 0 ? 'chip good' : 'chip warn';
+            return `<div class="person-card">
+              <div class="person-info">
+                ${this.avatarTemplate(p)}
+                <div>
+                  <div style="font-weight:600; font-size:16px;">${esc(p.name || 'Unnamed')}</div>
+                  <div style="color:var(--muted); font-size:13px;">${esc(p.phone || '')}${p.location ? ' • ' + esc(p.location) : ''}</div>
+                  ${p.notes ? `<div style="margin-top:6px; color:var(--muted); font-size:13px;">${esc(p.notes)}</div>` : ''}
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+                <div class="${badgeClass}">Balance: ${this.formatMoney(summary.balance)}</div>
+                <div style="display:flex; gap:8px;">
+                  <button class="btn btn_secondary" data-edit-person="${p.id}">Edit</button>
+                  <button class="btn btn_primary" data-collect="${p.id}">Collect</button>
+                </div>
+              </div>
+            </div>`;
+          });
+        this.dom.peopleView.innerHTML = `<div class="people-list">${cards.join('')}</div>`;
+        this.dom.peopleView.querySelectorAll('[data-edit-person]').forEach(btn => btn.addEventListener('click', () => this.openPersonModal(btn.dataset.editPerson)));
+        this.dom.peopleView.querySelectorAll('[data-collect]').forEach(btn => btn.addEventListener('click', () => this.collectPayment(btn.dataset.collect)));
+      },
+      renderTransactions() {
+        const query = this.state.search;
+        const rows = (this.state.transactions || []).filter(row => {
+          if (!query) return true;
+          const person = this.state.people.find(p => p.id === row.personId);
+          const hay = [person?.name, row.note, person?.phone, person?.location].map(x => (x || '').toLowerCase()).join(' ');
+          return hay.includes(query);
+        });
+        if (!rows.length) {
+          this.dom.transactionsView.innerHTML = '<div class="placeholder">No transactions for the current filters.</div>';
+          return;
+        }
+        const table = [`<table><thead><tr>
+          <th>Date</th>
+          <th>Person</th>
+          <th>Type</th>
+          <th class="right">Amount</th>
+          <th>Note</th>
+          <th>Receipt</th>
+        </tr></thead><tbody>`];
+        rows.forEach(row => {
+          const person = this.state.people.find(p => p.id === row.personId);
+          table.push(`<tr>
+            <td>${row.tranDate || '—'}</td>
+            <td>${esc(person?.name || row.personId)}</td>
+            <td><span class="chip ${row.type === 'PAYMENT' ? 'good' : 'warn'}">${row.type}</span></td>
+            <td class="right">${this.formatMoney(row.amountKWD)}</td>
+            <td>${esc(row.note || '')}</td>
+            <td>${row.receiptFileId ? `<a target="_blank" href="${this.fileUrl(row.receiptFileId)}">View</a>` : '—'}</td>
+          </tr>`);
+        });
+        table.push('</tbody></table>');
+        this.dom.transactionsView.innerHTML = table.join('');
+      },
+      filteredSummary() {
+        const query = this.state.search;
+        return this.state.summary.filter(row => {
+          if (!query) return true;
+          const hay = [row.name, row.phone, row.location, row.notes]
+            .map(x => (x || '').toLowerCase())
+            .join(' ');
+          return hay.includes(query);
+        });
+      },
+      computeTotals() {
+        this.state.totals = this.state.summary.reduce((acc, row) => {
+          const balance = Number(row.balance) || 0;
+          const credit = Number(row.totalCredit) || 0;
+          const payment = Number(row.totalPayment) || 0;
+          if (balance > 0) acc.outstanding += balance;
+          acc.credit += credit;
+          acc.payment += payment;
+          return acc;
+        }, { outstanding: 0, credit: 0, payment: 0 });
+      },
+      applySort() {
+        const { key, dir } = this.state.sort;
+        const multiplier = dir === 'asc' ? 1 : -1;
+        this.state.summary.sort((a,b) => {
+          const va = a[key] ?? '';
+          const vb = b[key] ?? '';
+          if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * multiplier;
+          return String(va).localeCompare(String(vb)) * multiplier;
+        });
+      },
+      changeSort(key) {
+        if (this.state.sort.key === key) {
+          this.state.sort.dir = this.state.sort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          this.state.sort = { key, dir: 'desc' };
+        }
+        this.applySort();
+        this.renderSummary();
+      },
+      switchTab(tab) {
+        if (this.state.tab === tab) return;
+        this.state.tab = tab;
+        this.dom.tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+        document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === `view-${tab}`));
+        if (tab === 'transactions') {
+          this.loadTransactions();
+        }
+        this.renderActiveView();
+      },
+      openEntryModal(personId, type = 'PAYMENT') {
+        if (!this.state.people.length) {
+          this.toast('Add a person first.', 'warn');
+          return;
+        }
+        this.dom.entryPerson.value = personId || this.dom.entryPerson.value || '';
+        this.dom.entryType.value = type;
+        this.dom.entryAmount.value = '';
+        this.dom.entryNote.value = '';
+        this.dom.entryDate.value = this.todayISO();
+        this.dom.entryReceipt.value = '';
+        this.dom.entryReceiptPreview.innerHTML = '';
+        this.openModal('entryModal');
+      },
+      async saveEntry() {
+        try {
+          this.dom.saveEntryBtn.disabled = true;
+          const payload = {
+            personId: this.dom.entryPerson.value,
+            type: this.dom.entryType.value,
+            amountKWD: Number(this.dom.entryAmount.value),
+            tranDate: this.dom.entryDate.value,
+            note: this.dom.entryNote.value.trim()
+          };
+          if (!payload.personId) throw new Error('Choose a person.');
+          if (!payload.tranDate) throw new Error('Pick a date.');
+          if (!(payload.amountKWD > 0)) throw new Error('Enter a valid amount.');
+          const receipt = this.dom.entryReceipt.files[0];
+          if (receipt) {
+            if (receipt.size > 5 * 1024 * 1024) throw new Error('Receipt must be ≤ 5MB');
+            payload.receiptBase64 = await this.fileToBase64(receipt);
+            payload.receiptName = receipt.name;
+          }
+          await run('apiAddEntry', payload);
+          this.toast('Entry saved', 'success');
+          this.closeModal('entryModal');
+          await this.loadAll();
+        } catch (error) {
+          this.toast('Failed to save entry: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.dom.saveEntryBtn.disabled = false;
+        }
+      },
+      collectPayment(personId) {
+        const summary = this.state.summary.find(s => s.personId === personId);
+        const balance = summary ? Number(summary.balance) : 0;
+        this.openEntryModal(personId, 'PAYMENT');
+        if (balance > 0) this.dom.entryAmount.value = balance.toFixed(3);
+        this.dom.entryNote.value = 'Payment collection';
+      },
+      openPersonModal(personId) {
+        this.state.editingPersonId = personId || '';
+        if (personId) {
+          const person = this.state.people.find(p => p.id === personId);
+          if (!person) {
+            this.toast('Person not found', 'error');
+            return;
+          }
+          this.dom.personModalTitle.textContent = 'Edit Person';
+          this.dom.personName.value = person.name || '';
+          this.dom.personPhone.value = person.phone || '';
+          this.dom.personLocation.value = person.location || '';
+          this.dom.personNotes.value = person.notes || '';
+          this.dom.personPhotoPreview.innerHTML = person.profileFileId ? `<img src="${this.fileUrl(person.profileFileId)}" alt="profile">` : '';
+        } else {
+          this.dom.personModalTitle.textContent = 'Add Person';
+          this.dom.personName.value = '';
+          this.dom.personPhone.value = '';
+          this.dom.personLocation.value = '';
+          this.dom.personNotes.value = '';
+          this.dom.personPhoto.value = '';
+          this.dom.personPhotoPreview.innerHTML = '';
+        }
+        this.openModal('personModal');
+      },
+      async savePerson() {
+        try {
+          this.dom.savePersonBtn.disabled = true;
+          const payload = {
+            id: this.state.editingPersonId,
+            name: this.dom.personName.value.trim(),
+            phone: this.dom.personPhone.value.trim(),
+            location: this.dom.personLocation.value.trim(),
+            notes: this.dom.personNotes.value.trim()
+          };
+          if (!payload.name) throw new Error('Name is required');
+          const saved = await run('apiUpsertPerson', payload);
+          const photo = this.dom.personPhoto.files[0];
+          if (photo) {
+            if (photo.size > 5 * 1024 * 1024) throw new Error('Photo must be ≤ 5MB');
+            await run('apiSetPersonProfilePic', saved.id, await this.fileToBase64(photo), photo.name);
+          }
+          this.toast('Person saved', 'success');
+          this.closeModal('personModal');
+          await this.loadAll();
+        } catch (error) {
+          this.toast('Failed to save person: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.dom.savePersonBtn.disabled = false;
+          this.state.editingPersonId = '';
+        }
+      },
+      async sendAlerts() {
+        if (!confirm('Send outstanding balance email now?')) return;
+        try {
+          this.dom.sendAlertsBtn.disabled = true;
+          const result = await run('sendMonthlyAlerts');
+          this.toast(`Alerts sent to ${result.count || 0} people`, 'success');
+        } catch (error) {
+          this.toast('Failed to send alerts: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.dom.sendAlertsBtn.disabled = false;
+        }
+      },
+      exportSummary() {
+        const headers = ['Name','Phone','Location','Credit','Payment','Balance','Last Transaction'];
+        const rows = this.state.summary.map(r => [
+          r.name || '', r.phone || '', r.location || '', r.totalCredit || 0, r.totalPayment || 0, r.balance || 0, r.lastTranDate || ''
+        ]);
+        const csv = [headers.join(','), ...rows.map(row => row.map(value => `"${String(value).replace(/"/g,'""')}"`).join(','))].join('\n');
+        const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `credit_summary_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        this.toast('Summary exported', 'success');
+      },
+      openModal(id) {
+        const modal = byId(id);
+        if (modal) modal.classList.add('open');
+      },
+      closeModal(id) {
+        const modal = byId(id);
+        if (modal) modal.classList.remove('open');
+      },
+      setLoading(active, message) {
+        this.dom.loadingOverlay.classList.toggle('show', !!active);
+        if (message) this.dom.loadingMessage.textContent = message;
+        this.dom.loadingBar.style.width = active ? '70%' : '0%';
+      },
+      setSectionLoading(section, active) {
+        if (section === 'transactions' && active) {
+          this.dom.transactionsView.innerHTML = '<div class="placeholder">Loading transactions…</div>';
+        }
+      },
+      todayISO() {
+        const d = new Date();
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+      },
+      formatMoney(value) {
+        const num = Number(value);
+        if (isNaN(num)) return '0.000 ' + this.state.currency;
+        return num.toFixed(3) + ' ' + (this.state.currency || 'KWD');
+      },
+      avatarTemplate(person) {
+        if (person.profileFileId) {
+          return `<div class="avatar"><img src="${this.fileUrl(person.profileFileId)}" alt="${esc(person.name || '')}"></div>`;
+        }
+        const initials = (person.name || '?').split(' ').map(part => part[0]).slice(0,2).join('').toUpperCase();
+        return `<div class="avatar">${esc(initials)}</div>`;
+      },
+      toggleTheme() {
+        const current = document.body.dataset.theme || 'dark';
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.body.dataset.theme = next;
+        localStorage.setItem('cl_theme', next);
+        this.toast(`Theme: ${next}`, 'success');
+      },
+      restoreTheme() {
+        const stored = localStorage.getItem('cl_theme');
+        if (stored) document.body.dataset.theme = stored;
+      },
+      previewFile(container, file) {
+        if (!file) { container.innerHTML = ''; return; }
+        if (!file.type.startsWith('image/')) {
+          container.textContent = file.name;
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = e => {
+          container.innerHTML = `<img src="${e.target.result}" alt="preview">`;
+        };
+        reader.readAsDataURL(file);
+      },
+      async fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      },
+      toast(message, type) {
+        this.dom.toast.textContent = message;
+        this.dom.toast.className = 'toast show' + (type ? ' ' + type : '');
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => this.dom.toast.classList.remove('show'), 3000);
+      },
+      fileUrl(id) {
+        return id ? `https://drive.google.com/uc?id=${encodeURIComponent(id)}` : '';
+      }
+    };
+
+    function byId(id){ return document.getElementById(id); }
+    function esc(str){ return String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+    function run(fn, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(err => reject(err))
+          [fn](...args);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>

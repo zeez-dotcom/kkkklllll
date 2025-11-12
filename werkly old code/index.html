@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .product-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .product-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            margin-right: 10px;
+            border-radius: 5px;
+        }
+        footer {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #777;
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .cancelled-column {
+            display: none; /* Initially hidden */
+        }
+        .tracking-section {
+            margin-top: 40px;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 30px;
+        }
+        .tracking-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .tracking-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fafafa;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+        .tracking-card h4 {
+            margin-top: 0;
+        }
+        .tracking-form-group {
+            margin-bottom: 15px;
+        }
+        .tracking-form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .tracking-form-group input,
+        .tracking-form-group select,
+        .tracking-form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .tracking-form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .tracking-status {
+            display: none;
+            margin-bottom: 15px;
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .tracking-status.success {
+            background: #e8f5e9;
+            color: #256029;
+            border: 1px solid #c8e6c9;
+        }
+        .tracking-status.error {
+            background: #ffebee;
+            color: #b71c1c;
+            border: 1px solid #ffcdd2;
+        }
+        .tracking-status.info {
+            background: #e3f2fd;
+            color: #0d47a1;
+            border: 1px solid #bbdefb;
+        }
+        .tracking-items {
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: #fff;
+        }
+        .tracking-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .tracking-item:last-child {
+            margin-bottom: 0;
+        }
+        .tracking-item input {
+            margin-right: 8px;
+        }
+        .tracking-file-hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            display: block;
+        }
+        .tracking-item-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .tracking-item-actions button {
+            flex: 1;
+            min-width: 120px;
+        }
+        .tracking-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .secondary-button {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        .secondary-button:hover {
+            background-color: #ccc;
+        }
+        .status-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            background: #e0e0e0;
+            color: #333;
+            text-transform: capitalize;
+        }
+        .status-pill.status-ready {
+            background: #e0f7fa;
+            color: #006064;
+        }
+        .status-pill.status-out_for_delivery {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-pill.status-delivered {
+            background: #e8f5e9;
+            color: #256029;
+        }
+        .status-pill.status-returned_to_warehouse {
+            background: #ffe0b2;
+            color: #bf360c;
+        }
+        .status-pill.status-cancelled {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .tracking-timeline-container {
+            max-height: 440px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .timeline-entry {
+            border-left: 3px solid #4CAF50;
+            margin-bottom: 15px;
+            padding-left: 12px;
+        }
+        .timeline-entry:last-child {
+            margin-bottom: 0;
+        }
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 10px;
+        }
+        .timeline-date {
+            font-size: 12px;
+            color: #666;
+        }
+        .timeline-body p {
+            margin: 4px 0;
+            font-size: 13px;
+        }
+        .helper-text {
+            margin: 0;
+            font-size: 13px;
+            color: #777;
+        }
+        @media print {
+            th {
+                position: static;
+            }
+            .table-container {
+                overflow: visible;
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Order Report</h1>
+        <label for="datePicker">Select Date:</label>
+        <input type="date" id="datePicker" onchange="filterData()">
+    </header>
+    <div class="container">
+        <h2>Summary</h2>
+        <div class="table-container">
+            <table id="summaryTable">
+                <thead>
+                    <tr>
+                        <th>Tarkeeb Orders</th>
+                        <th>Sheel Orders</th>
+                        <th>Tarkeeb Grand Total</th>
+                        <th>Sheel Grand Total</th>
+                        <th>Combined Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody id="summaryTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3>Location Breakdown</h3>
+        <div class="table-container">
+            <table id="locationTable">
+                <thead>
+                    <tr>
+                        <th>Location</th>
+                        <th>Tarkeeb Orders</th>
+                        <th>Sheel Orders</th>
+                        <th>Total Orders</th>
+                        <th class="cancelled-column">Cancelled Orders</th>
+                    </tr>
+                </thead>
+                <tbody id="locationTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3>Tarkeeb Orders</h3>
+        <div class="table-container">
+            <table id="tarkeebOrdersTable">
+                <thead>
+                    <tr>
+                        <th>Order Number</th>
+                        <th>Customer Name</th>
+                        <th>Phone</th>
+                        <th>Location</th>
+                        <th>Comments</th>
+                        <th>Tarkeeb Time</th>
+                        <th>Payment Method</th>
+                        <th>Products</th>
+                        <th>Grand Total</th>
+                        <th class="cancelled-column">Cancelled Order Price</th>
+                    </tr>
+                </thead>
+                <tbody id="tarkeebOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3>Sheel Orders</h3>
+        <div class="table-container">
+            <table id="sheelOrdersTable">
+                <thead>
+                    <tr>
+                        <th>Order Number</th>
+                        <th>Customer Name</th>
+                        <th>Phone</th>
+                        <th>Location</th>
+                        <th>Comments</th>
+                        <th>Sheel Time</th>
+                        <th>Payment Method</th>
+                        <th>Products</th>
+                        <th>Grand Total</th>
+                        <th class="cancelled-column">Cancelled Order Price</th>
+                    </tr>
+                </thead>
+                <tbody id="sheelOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3>Maintenance Orders</h3>
+        <div class="table-container">
+            <table id="maintenanceOrdersTable">
+                <thead>
+                    <tr>
+                        <th>Order Number</th>
+                        <th>Customer Name</th>
+                        <th>Phone</th>
+                        <th>Location</th>
+                        <th>Comments</th>
+                        <th>Maintenance Start Date</th>
+                        <th>Maintenance Complete Date</th>
+                        <th>Payment Method</th>
+                        <th>Products</th>
+                        <th>Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody id="maintenanceOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <section class="tracking-section" id="trackingSection">
+            <h2>Fulfillment Tracking Console</h2>
+            <p class="helper-text">Capture outbound and return events, driver notes, and photos for each order.</p>
+            <div id="trackingStatus" class="tracking-status"></div>
+            <div class="tracking-grid">
+                <div class="tracking-card">
+                    <h4>Create Movement Event</h4>
+                    <form id="trackingForm" onsubmit="submitTrackingEvent(event)">
+                        <div class="tracking-form-group">
+                            <label for="trackingOrderSelect">Order</label>
+                            <select id="trackingOrderSelect" onchange="handleTrackingOrderChange(event)">
+                                <option value="">Select Order</option>
+                            </select>
+                        </div>
+                        <div class="tracking-form-group" id="trackingOrderMeta">
+                            <p class="helper-text">Pick an order to view customer info and items.</p>
+                        </div>
+                        <div class="tracking-form-group">
+                            <label for="trackingEventType">Event Type</label>
+                            <select id="trackingEventType">
+                                <option value="">Select Event Type</option>
+                            </select>
+                        </div>
+                        <div class="tracking-form-group">
+                            <label for="trackingDriver">Driver Name</label>
+                            <input type="text" id="trackingDriver" placeholder="Driver responsible for this run">
+                        </div>
+                        <div class="tracking-form-group">
+                            <label for="trackingTimestamp">Timestamp</label>
+                            <input type="datetime-local" id="trackingTimestamp">
+                        </div>
+                        <div class="tracking-form-group">
+                            <label for="trackingLocationNote">Location / Pin</label>
+                            <input type="text" id="trackingLocationNote" placeholder="GPS link, block, or notes">
+                        </div>
+                        <div class="tracking-form-group">
+                            <label for="trackingNotes">Internal Notes</label>
+                            <textarea id="trackingNotes" placeholder="Damages, customer requests, reason for return, etc."></textarea>
+                        </div>
+                        <div class="tracking-form-group">
+                            <label>Items Leaving / Returning</label>
+                            <div class="tracking-items" id="trackingItemsContainer">
+                                <p class="helper-text">Items populate automatically once an order is selected.</p>
+                            </div>
+                            <p class="helper-text">Leave unchecked to apply the event to the full order.</p>
+                            <div class="tracking-item-actions">
+                                <button type="button" class="secondary-button" onclick="toggleAllTrackingItems(true)">Select All</button>
+                                <button type="button" class="secondary-button" onclick="toggleAllTrackingItems(false)">Clear</button>
+                            </div>
+                        </div>
+                        <div class="tracking-form-group">
+                            <label for="trackingPhotos">Photos / Proof</label>
+                            <input type="file" id="trackingPhotos" accept="image/*" multiple capture="environment">
+                            <small id="trackingFileHint" class="tracking-file-hint">Attach up to 5 photos (5MB each).</small>
+                        </div>
+                        <div class="tracking-actions">
+                            <button type="submit" id="trackingSubmitBtn">Log Event</button>
+                            <button type="button" class="secondary-button" onclick="resetTrackingForm(true)">Reset</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="tracking-card">
+                    <h4>Order Timeline</h4>
+                    <div class="tracking-timeline-container" id="trackingTimeline">
+                        <p class="helper-text">Select an order to see its movement history.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="button-container">
+            <button onclick="printReport()">Print Report</button>
+            <button onclick="exportToExcel()">Export to Excel</button>
+        </div>
+    </div>
+    <footer>
+        Generated by Order Management System
+    </footer>
+
+    <!-- Hidden checkbox placed at bottom-right of screen for toggling cancelled columns -->
+    <input type="checkbox" id="showCancelled" onchange="toggleCancelledColumns()"
+           style="position:fixed; bottom:10px; right:10px; width:20px; height:20px; opacity:0.5; z-index:9999; cursor:pointer;">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set today's date as default and show maintenance ongoing orders
+            const datePicker = document.getElementById("datePicker");
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            datePicker.value = `${yyyy}-${mm}-${dd}`;
+
+            filterData();
+            toggleCancelledColumns(); // Ensure correct initial state on load
+            initTrackingConsole();
+        });
+
+        const allOrders = JSON.parse('<?= allOrders ?>');
+        const maintenanceOrders = JSON.parse('<?= maintenanceOrders ?>');
+        const trackingMediaLimits = { maxFiles: 5, maxBytes: 5 * 1024 * 1024 };
+        const defaultStatusMap = {
+            READY: "READY",
+            OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
+            DELIVERED: "DELIVERED",
+            RETURNED_TO_WAREHOUSE: "RETURNED_TO_WAREHOUSE",
+            CANCELLED: "CANCELLED",
+        };
+        const defaultEventTypes = ["OUT_FOR_DELIVERY", "DELIVERED", "RETURNED_TO_WAREHOUSE", "CANCELLED"];
+        let trackingState = {
+            orders: [],
+            items: [],
+            events: [],
+            media: [],
+            eventTypes: defaultEventTypes.slice(),
+            statusMap: { ...defaultStatusMap },
+        };
+        let selectedTrackingOrder = "";
+
+        function filterData() {
+            const selectedDate = document.getElementById("datePicker").value;
+            const tarkeebOrders = allOrders.filter(order => order.tarkeebDate === selectedDate);
+            const sheelOrders = allOrders.filter(order => order.sheelDate === selectedDate);
+            const filteredMaintenanceOrders = maintenanceOrders.filter(order => order.maintenanceDates.includes(selectedDate));
+
+            updateSummary(tarkeebOrders, sheelOrders);
+            updateLocationBreakdown(tarkeebOrders, sheelOrders);
+            updateOrderTable("tarkeebOrdersTableBody", tarkeebOrders);
+            updateOrderTable("sheelOrdersTableBody", sheelOrders);
+            updateMaintenanceOrdersTable(filteredMaintenanceOrders);
+
+            // Ensure cancelled columns match the checkbox state after data updates
+            toggleCancelledColumns();
+        }
+
+        function toggleCancelledColumns() {
+            const showCancelled = document.getElementById("showCancelled").checked;
+            const cancelledColumns = document.querySelectorAll(".cancelled-column");
+            cancelledColumns.forEach(column => {
+                column.style.display = showCancelled ? "table-cell" : "none";
+            });
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        function exportToExcel() {
+            const selectedDate = document.getElementById("datePicker").value;
+            const currentDate = new Date();
+            const formattedDate = selectedDate ? selectedDate.replace(/-/g, '') 
+                : `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+            const currentTime = currentDate.toLocaleTimeString().replace(/:/g, '-');
+            const filename = `Order_Report_${formattedDate}_${currentTime}.xlsx`;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("tarkeebOrdersTable")), "Tarkeeb Orders");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("sheelOrdersTable")), "Sheel Orders");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("summaryTable")), "Summary");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("locationTable")), "Location Breakdown");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.table_to_sheet(document.getElementById("maintenanceOrdersTable")), "Maintenance Orders");
+
+            XLSX.writeFile(wb, filename);
+        }
+
+        function updateSummary(tarkeebOrders, sheelOrders) {
+            const tarkeebTotal = tarkeebOrders.reduce((sum, order) => sum + order.grandTotal, 0);
+            const sheelTotal = sheelOrders.reduce((sum, order) => sum + order.grandTotal, 0);
+
+            document.getElementById("summaryTableBody").innerHTML = `
+              <tr>
+                <td>${tarkeebOrders.length}</td>
+                <td>${sheelOrders.length}</td>
+                <td>${tarkeebTotal.toFixed(2)}</td>
+                <td>${sheelTotal.toFixed(2)}</td>
+                <td>${(tarkeebTotal + sheelTotal).toFixed(2)}</td>
+              </tr>`;
+        }
+
+        function updateLocationBreakdown(tarkeebOrders, sheelOrders) {
+            const priorityLocations = [
+             "الوفرة-Wafra",
+             "الخيران-Al Khairan",
+             "مدينة صباح الأحمد-Sabah Al Ahmad City",
+              "ميناء عبدالله-Mina Abdullah",
+             "النويصيب-Nuwaiseeb",
+             "بنيدر-Bneidar",
+             "الظبية-Al Thabaeiya",    
+             "العبدلي-Al Abdali",
+              "كبد-Kabd" ,
+            ];
+
+            const locationSummary = {};
+
+            tarkeebOrders.forEach(order => {
+              if (!locationSummary[order.location]) {
+                locationSummary[order.location] = { 
+                    tarkeeb: 0, 
+                    sheel: 0, 
+                    total: 0, 
+                    tarkeebCancelled: 0, 
+                    sheelCancelled: 0 
+                };
+              }
+              locationSummary[order.location].tarkeeb++;
+              locationSummary[order.location].total++;
+              if (order.isCancelled) locationSummary[order.location].tarkeebCancelled++;
+            });
+
+            sheelOrders.forEach(order => {
+              if (!locationSummary[order.location]) {
+                locationSummary[order.location] = { 
+                    tarkeeb: 0, 
+                    sheel: 0, 
+                    total: 0, 
+                    tarkeebCancelled: 0, 
+                    sheelCancelled: 0 
+                };
+              }
+              locationSummary[order.location].sheel++;
+              locationSummary[order.location].total++;
+              if (order.isCancelled) locationSummary[order.location].sheelCancelled++;
+            });
+
+            const sortedLocations = [
+              ...priorityLocations.filter(location => locationSummary[location]),
+              ...Object.keys(locationSummary).filter(location => !priorityLocations.includes(location)),
+            ];
+
+            document.getElementById("locationTableBody").innerHTML = sortedLocations.map(location => {
+              const data = locationSummary[location];
+              const cancelledInfo = [];
+              if (data.tarkeebCancelled > 0) cancelledInfo.push(`Tarkeeb: ${data.tarkeebCancelled}`);
+              if (data.sheelCancelled > 0) cancelledInfo.push(`Sheel: ${data.sheelCancelled}`);
+
+              return `
+                <tr>
+                  <td>${location}</td>
+                  <td>${data.tarkeeb}</td>
+                  <td>${data.sheel}</td>
+                  <td>${data.total}</td>
+                  <td class="cancelled-column">${cancelledInfo.length > 0 ? cancelledInfo.join(", ") : "None"}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // Extract first occurrence of "<number>KD" from comments
+        function extractCancelledOrderPrice(comment) {
+            const cancelPattern = /(\d+(?:\.\d+)?)KD/i;
+            const match = cancelPattern.exec(comment);
+            return match ? match[0] : 'N/A'; 
+        }
+
+        function updateOrderTable(tableId, orders) {
+            document.getElementById(tableId).innerHTML = orders.map(order => {
+                let cancelledPrice = extractCancelledOrderPrice(order.comments);
+                return `
+                    <tr>
+                        <td><a href="https://natatiti.com/dashboard/reservations/${order.orderNumber}/invoice" target="_blank">${order.orderNumber}</a></td>
+                        <td>${order.customerName}</td>
+                        <td>${order.phone}</td>
+                        <td>${order.location}</td>
+                        <td>${order.comments}</td>
+                        <td>${tableId.includes("sheel") ? order.sheelTime : order.tarkeebTime}</td>
+                        <td>${order.paymentMethod}</td>
+                        <td>
+                            ${order.products.map(product => `
+                                <div class="product-item">
+                                    <img src="${product.productImage}" alt="Product Image">
+                                    <span>${product.productName} (${product.productCategory})</span>
+                                </div>
+                            `).join('')}
+                        </td>
+                        <td>${order.grandTotal.toFixed(2)}</td>
+                        <td class="cancelled-column">${cancelledPrice}</td>
+                    </tr>`;
+            }).join('');
+        }
+
+        function updateMaintenanceOrdersTable(orders) {
+            document.getElementById("maintenanceOrdersTableBody").innerHTML = orders.map(order => `
+              <tr>
+                <td><a href="https://natatiti.com/dashboard/reservations/${order.orderNumber}/invoice" target="_blank">${order.orderNumber}</a></td>
+                <td>${order.customerName}</td>
+                <td>${order.phone}</td>
+                <td>${order.location}</td>
+                <td>${order.comments}</td>
+                <td>${order.tarkeebDate || ""}</td>
+                <td>${order.sheelDate || ""}</td>
+                <td>${order.paymentMethod}</td>
+                <td>
+                    ${order.products.map(product => `
+                        <div class="product-item">
+                            <img src="${product.productImage}" alt="Product Image">
+                            <span>${product.productName} (${product.productCategory})</span>
+                        </div>
+                    `).join('')}
+                </td>
+                <td>${order.grandTotal.toFixed(2)}</td>
+              </tr>`).join('');
+        }
+
+        function initTrackingConsole() {
+            populateEventTypeOptions();
+            populateTrackingOrderSelect();
+            setNowAsTrackingTimestamp();
+            updateTrackingFileHint();
+            const photoInput = document.getElementById("trackingPhotos");
+            if (photoInput) {
+                photoInput.addEventListener("change", updateTrackingFileHint);
+            }
+            if (window.google && google.script && google.script.run) {
+                refreshTrackingData();
+            } else {
+                setTrackingStatus("Tracking console activates once the app runs inside Google Apps Script.", "info");
+                const submitBtn = document.getElementById("trackingSubmitBtn");
+                if (submitBtn) submitBtn.disabled = true;
+            }
+        }
+
+        function refreshTrackingData() {
+            if (!(window.google && google.script && google.script.run)) return;
+            google.script.run
+                .withSuccessHandler(data => {
+                    trackingState = {
+                        ...trackingState,
+                        orders: Array.isArray(data.orders) ? data.orders : [],
+                        items: Array.isArray(data.items) ? data.items : [],
+                        events: Array.isArray(data.events) ? data.events : [],
+                        media: Array.isArray(data.media) ? data.media : [],
+                        eventTypes: Array.isArray(data.eventTypes) && data.eventTypes.length ? data.eventTypes : trackingState.eventTypes,
+                        statusMap: data.statusMap || trackingState.statusMap,
+                    };
+                    populateEventTypeOptions();
+                    populateTrackingOrderSelect();
+                    if (selectedTrackingOrder) {
+                        const snapshot = getTrackingOrderSnapshot(selectedTrackingOrder);
+                        renderTrackingOrderMeta(snapshot);
+                        renderTrackingTimeline(selectedTrackingOrder);
+                    }
+                })
+                .withFailureHandler(err => {
+                    setTrackingStatus((err && err.message) || "Unable to load tracking data.", "error");
+                })
+                .getTrackingData();
+        }
+
+        function populateTrackingOrderSelect() {
+            const select = document.getElementById("trackingOrderSelect");
+            if (!select) return;
+
+            const combined = new Map();
+            if (Array.isArray(allOrders)) {
+                allOrders.forEach(order => {
+                    if (!order || !order.orderNumber) return;
+                    combined.set(String(order.orderNumber), {
+                        orderNumber: String(order.orderNumber),
+                        customerName: order.customerName || "Customer",
+                        location: order.location || "Unknown",
+                        status: defaultStatusMap.READY,
+                        phone: order.phone || "",
+                    });
+                });
+            }
+
+            if (Array.isArray(trackingState.orders)) {
+                trackingState.orders.forEach(order => {
+                    if (!order || !order.order_number) return;
+                    const key = String(order.order_number);
+                    const existing = combined.get(key) || {};
+                    combined.set(key, {
+                        orderNumber: key,
+                        customerName: order.customer_name || existing.customerName || "Customer",
+                        location: order.location || existing.location || "Unknown",
+                        status: order.status || existing.status || defaultStatusMap.READY,
+                        phone: order.phone || existing.phone || "",
+                    });
+                });
+            }
+
+            const options = Array.from(combined.values()).sort((a, b) =>
+                String(b.orderNumber).localeCompare(String(a.orderNumber), undefined, { numeric: true, sensitivity: "base" })
+            );
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Order</option>' + options.map(order => (
+                `<option value="${escapeHtml(order.orderNumber)}">${escapeHtml(order.orderNumber)} • ${escapeHtml(order.customerName)} (${formatStatusLabel(order.status)})</option>`
+            )).join('');
+
+            if (selectedTrackingOrder && combined.has(selectedTrackingOrder)) {
+                select.value = selectedTrackingOrder;
+            } else if (currentValue && combined.has(currentValue)) {
+                select.value = currentValue;
+                selectedTrackingOrder = currentValue;
+            }
+        }
+
+        function populateEventTypeOptions() {
+            const select = document.getElementById("trackingEventType");
+            if (!select) return;
+            const existingValue = select.value;
+            const eventTypes = trackingState.eventTypes && trackingState.eventTypes.length
+                ? trackingState.eventTypes
+                : defaultEventTypes;
+            select.innerHTML = '<option value="">Select Event Type</option>' + eventTypes.map(type => (
+                `<option value="${type}">${formatStatusLabel(type)}</option>`
+            )).join('');
+            if (eventTypes.includes(existingValue)) {
+                select.value = existingValue;
+            }
+        }
+
+        function handleTrackingOrderChange(event) {
+            selectedTrackingOrder = event && event.target ? event.target.value : "";
+            if (!selectedTrackingOrder) {
+                renderTrackingOrderMeta(null);
+                renderTrackingTimeline("");
+                return;
+            }
+            const snapshot = getTrackingOrderSnapshot(selectedTrackingOrder);
+            renderTrackingOrderMeta(snapshot);
+            renderTrackingTimeline(selectedTrackingOrder);
+            setNowAsTrackingTimestamp();
+        }
+
+        function getTrackingOrderSnapshot(orderNumber) {
+            if (!orderNumber) return null;
+            const base = Array.isArray(allOrders)
+                ? allOrders.find(order => String(order.orderNumber) === String(orderNumber))
+                : null;
+            const tracked = Array.isArray(trackingState.orders)
+                ? trackingState.orders.find(order => String(order.order_number) === String(orderNumber))
+                : null;
+            return {
+                orderNumber,
+                customerName: (tracked && tracked.customer_name) || (base && base.customerName) || "Customer",
+                phone: (tracked && tracked.phone) || (base && base.phone) || "",
+                location: (tracked && tracked.location) || (base && base.location) || "Unknown",
+                status: (tracked && tracked.status) || defaultStatusMap.READY,
+                notes: (tracked && tracked.notes) || (base && base.comments) || "",
+                products: base && Array.isArray(base.products) ? base.products : [],
+            };
+        }
+
+        function renderTrackingOrderMeta(snapshot) {
+            const metaContainer = document.getElementById("trackingOrderMeta");
+            if (!metaContainer) return;
+            if (!snapshot) {
+                metaContainer.innerHTML = '<p class="helper-text">Pick an order to view customer info and items.</p>';
+                const itemsContainer = document.getElementById("trackingItemsContainer");
+                if (itemsContainer) {
+                    itemsContainer.innerHTML = '<p class="helper-text">Items populate automatically once an order is selected.</p>';
+                }
+                return;
+            }
+            metaContainer.innerHTML = `
+                <p><strong>Customer:</strong> ${escapeHtml(snapshot.customerName)}</p>
+                <p><strong>Phone:</strong> ${escapeHtml(snapshot.phone || "N/A")}</p>
+                <p><strong>Location:</strong> ${escapeHtml(snapshot.location)}</p>
+                <p><strong>Status:</strong> <span class="status-pill status-${(snapshot.status || "ready").toLowerCase()}">${formatStatusLabel(snapshot.status)}</span></p>
+            `;
+            renderTrackingItems(snapshot);
+        }
+
+        function renderTrackingItems(snapshot) {
+            const container = document.getElementById("trackingItemsContainer");
+            if (!container) return;
+            if (!snapshot) {
+                container.innerHTML = '<p class="helper-text">Items populate automatically once an order is selected.</p>';
+                return;
+            }
+            const itemMap = new Map();
+            if (Array.isArray(snapshot.products)) {
+                snapshot.products.forEach(product => {
+                    if (!product || !product.productName) return;
+                    itemMap.set(product.productName, {
+                        label: product.productName,
+                        category: product.productCategory || "",
+                    });
+                });
+            }
+            if (Array.isArray(trackingState.items)) {
+                trackingState.items
+                    .filter(item => String(item.order_number) === String(snapshot.orderNumber))
+                    .forEach(item => {
+                        const key = item.item_label || "";
+                        if (!key) return;
+                        if (!itemMap.has(key)) {
+                            itemMap.set(key, {
+                                label: key,
+                                category: item.item_category || "",
+                            });
+                        }
+                    });
+            }
+
+            const items = Array.from(itemMap.values());
+            if (!items.length) {
+                container.innerHTML = '<p class="helper-text">No products found for this order yet.</p>';
+                return;
+            }
+            container.innerHTML = items.map(item => `
+                <label class="tracking-item">
+                    <input type="checkbox" name="trackingItem" value="${escapeHtml(item.label)}">
+                    <span>${escapeHtml(item.label)}${item.category ? ` <small>${escapeHtml(item.category)}</small>` : ""}</span>
+                </label>
+            `).join('');
+        }
+
+        function renderTrackingTimeline(orderNumber) {
+            const timeline = document.getElementById("trackingTimeline");
+            if (!timeline) return;
+            if (!orderNumber) {
+                timeline.innerHTML = '<p class="helper-text">Select an order to see its movement history.</p>';
+                return;
+            }
+            const events = getOrderTimelineEvents(orderNumber);
+            if (!events.length) {
+                timeline.innerHTML = '<p class="helper-text">No events recorded for this order yet.</p>';
+                return;
+            }
+            timeline.innerHTML = events.map(event => {
+                const mediaMarkup = buildMediaLinksMarkup(event);
+                return `
+                    <div class="timeline-entry">
+                        <div class="timeline-header">
+                            <span class="status-pill status-${(event.status_after || "ready").toLowerCase()}">${formatStatusLabel(event.status_after)}</span>
+                            <span class="timeline-date">${formatDateTime(event.recorded_at)}</span>
+                        </div>
+                        <div class="timeline-body">
+                            ${event.items && event.items.length ? `<p><strong>Items:</strong> ${event.items.map(escapeHtml).join(", ")}</p>` : ""}
+                            <p><strong>Driver:</strong> ${escapeHtml(event.driver_name || "Unassigned")}</p>
+                            ${event.location_note ? `<p><strong>Location:</strong> ${escapeHtml(event.location_note)}</p>` : ""}
+                            ${event.notes ? `<p><strong>Notes:</strong> ${escapeHtml(event.notes)}</p>` : ""}
+                            ${mediaMarkup}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getOrderTimelineEvents(orderNumber) {
+            if (!Array.isArray(trackingState.events)) return [];
+            const filtered = trackingState.events.filter(event => String(event.order_number) === String(orderNumber));
+            const grouped = new Map();
+            filtered.forEach(event => {
+                const key = event.timeline_group || event.event_uuid;
+                if (!grouped.has(key)) {
+                    grouped.set(key, { ...event, items: [] });
+                }
+                if (event.item_label) {
+                    grouped.get(key).items.push(event.item_label);
+                }
+            });
+            return Array.from(grouped.values()).sort((a, b) => {
+                const dateA = new Date(a.recorded_at || a.recordedAt || 0);
+                const dateB = new Date(b.recorded_at || b.recordedAt || 0);
+                return dateB - dateA;
+            });
+        }
+
+        async function submitTrackingEvent(event) {
+            if (event) event.preventDefault();
+            if (!(window.google && google.script && google.script.run)) {
+                setTrackingStatus("Tracking console is only available inside the live app.", "error");
+                return;
+            }
+            if (!selectedTrackingOrder) {
+                setTrackingStatus("Select an order before logging an event.", "error");
+                return;
+            }
+            const eventType = document.getElementById("trackingEventType").value;
+            if (!eventType) {
+                setTrackingStatus("Event type is required.", "error");
+                return;
+            }
+            const driverInput = document.getElementById("trackingDriver");
+            const driverName = driverInput ? driverInput.value.trim() : "";
+            if (!driverName && eventType !== "CANCELLED") {
+                setTrackingStatus("Driver name is required for delivery and return events.", "error");
+                return;
+            }
+            const notesField = document.getElementById("trackingNotes");
+            const locationField = document.getElementById("trackingLocationNote");
+            const timestampInput = document.getElementById("trackingTimestamp");
+            const timestampValue = timestampInput && timestampInput.value ? timestampInput.value : "";
+            const recordedAt = timestampValue ? new Date(timestampValue).toISOString() : new Date().toISOString();
+            const selectedItems = Array.from(document.querySelectorAll('#trackingItemsContainer input[name="trackingItem"]:checked'))
+                .map(input => input.value);
+            const filesInput = document.getElementById("trackingPhotos");
+            const fileList = filesInput && filesInput.files ? filesInput.files : [];
+            let files = [];
+            try {
+                files = await readFilesAsBase64(fileList);
+            } catch (fileError) {
+                setTrackingStatus(fileError.message, "error");
+                return;
+            }
+
+            const payload = {
+                orderNumber: selectedTrackingOrder,
+                eventType,
+                driverName,
+                notes: notesField ? notesField.value.trim() : "",
+                locationNote: locationField ? locationField.value.trim() : "",
+                recordedAt,
+                itemLabels: selectedItems,
+                files,
+                orderMetadata: getTrackingOrderSnapshot(selectedTrackingOrder),
+            };
+
+            setTrackingStatus("Saving event...", "info");
+            toggleTrackingSubmit(true);
+            google.script.run
+                .withSuccessHandler(() => {
+                    setTrackingStatus("Event recorded successfully.", "success");
+                    resetTrackingForm(false);
+                    toggleTrackingSubmit(false);
+                    refreshTrackingData();
+                })
+                .withFailureHandler(err => {
+                    setTrackingStatus((err && err.message) || "Failed to record the event.", "error");
+                    toggleTrackingSubmit(false);
+                })
+                .recordOrderEvent(payload);
+        }
+
+        function readFilesAsBase64(fileList) {
+            if (!fileList || !fileList.length) return Promise.resolve([]);
+            validateTrackingFiles(fileList);
+            const readers = Array.from(fileList).map(file => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve({
+                    name: file.name,
+                    mimeType: file.type,
+                    dataUrl: reader.result,
+                });
+                reader.onerror = () => reject(new Error(`Unable to read ${file.name}`));
+                reader.readAsDataURL(file);
+            }));
+            return Promise.all(readers);
+        }
+
+        function validateTrackingFiles(fileList) {
+            if (!fileList) return;
+            if (fileList.length > trackingMediaLimits.maxFiles) {
+                throw new Error(`Please attach up to ${trackingMediaLimits.maxFiles} photos per event.`);
+            }
+            for (let i = 0; i < fileList.length; i++) {
+                const file = fileList[i];
+                if (file.size && file.size > trackingMediaLimits.maxBytes) {
+                    const maxMb = (trackingMediaLimits.maxBytes / (1024 * 1024)).toFixed(1);
+                    throw new Error(`"${file.name}" exceeds the ${maxMb}MB limit.`);
+                }
+            }
+        }
+
+        function toggleAllTrackingItems(shouldSelect) {
+            document.querySelectorAll('#trackingItemsContainer input[name="trackingItem"]').forEach(input => {
+                input.checked = !!shouldSelect;
+            });
+        }
+
+        function resetTrackingForm(hardReset = false) {
+            const form = document.getElementById("trackingForm");
+            if (!form) return;
+            if (hardReset) {
+                form.reset();
+                selectedTrackingOrder = "";
+                renderTrackingOrderMeta(null);
+                renderTrackingTimeline("");
+            } else {
+                const notes = document.getElementById("trackingNotes");
+                if (notes) notes.value = "";
+                const location = document.getElementById("trackingLocationNote");
+                if (location) location.value = "";
+                const photos = document.getElementById("trackingPhotos");
+                if (photos) photos.value = "";
+                toggleAllTrackingItems(false);
+            }
+            updateTrackingFileHint();
+            setNowAsTrackingTimestamp();
+        }
+
+        function setTrackingStatus(message, type = "info") {
+            const statusEl = document.getElementById("trackingStatus");
+            if (!statusEl) return;
+            statusEl.textContent = message || "";
+            statusEl.className = `tracking-status ${type}`;
+            statusEl.style.display = message ? "block" : "none";
+        }
+
+        function toggleTrackingSubmit(disabled) {
+            const btn = document.getElementById("trackingSubmitBtn");
+            if (!btn) return;
+            if (!btn.dataset.defaultLabel) {
+                btn.dataset.defaultLabel = btn.textContent;
+            }
+            btn.disabled = disabled;
+            btn.textContent = disabled ? "Saving..." : btn.dataset.defaultLabel;
+        }
+
+        function updateTrackingFileHint() {
+            const hint = document.getElementById("trackingFileHint");
+            const input = document.getElementById("trackingPhotos");
+            if (!hint) return;
+            const count = input && input.files ? input.files.length : 0;
+            if (count) {
+                hint.textContent = `${count} file${count > 1 ? "s" : ""} selected.`;
+            } else {
+                const maxMb = (trackingMediaLimits.maxBytes / (1024 * 1024)).toFixed(0);
+                hint.textContent = `Attach up to ${trackingMediaLimits.maxFiles} photos (${maxMb}MB each).`;
+            }
+        }
+
+        function setNowAsTrackingTimestamp() {
+            const field = document.getElementById("trackingTimestamp");
+            if (!field) return;
+            field.value = formatDateTimeLocal(new Date());
+        }
+
+        function formatDateTimeLocal(date) {
+            if (!(date instanceof Date) || isNaN(date.getTime())) return "";
+            const pad = value => String(value).padStart(2, "0");
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        function formatDateTime(value) {
+            if (!value) return "n/a";
+            const date = value instanceof Date ? value : new Date(value);
+            if (isNaN(date.getTime())) return "n/a";
+            return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        function formatStatusLabel(value) {
+            if (!value) return "Ready";
+            return String(value).toLowerCase().split("_").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+        }
+
+        function buildMediaLinksMarkup(event) {
+            const urls = parseMediaLinks(event && event.media_urls);
+            if (!urls.length) return "";
+            const links = urls.map((url, index) => `<a href="${sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">Photo ${index + 1}</a>`);
+            return `<p><strong>Photos:</strong> ${links.join(" • ")}</p>`;
+        }
+
+        function parseMediaLinks(raw) {
+            if (!raw) return [];
+            if (Array.isArray(raw)) return raw;
+            try {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (err) {
+                return [];
+            }
+        }
+
+        function sanitizeUrl(url) {
+            if (!url) return "#";
+            try {
+                const parsed = new URL(url);
+                return parsed.href;
+            } catch (err) {
+                return "#";
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? "" : value).replace(/[&<>"']/g, char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+            }[char]));
+        }
+    </script>
+</body>
+</html>

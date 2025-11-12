@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8" />
+  <title>Credit Ledger</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <style>
+    :root {
+      --bg: #05070c;
+      --panel: #10131c;
+      --panel-alt: #0d111a;
+      --text: #f7f8fd;
+      --muted: #8f9ab3;
+      --border: rgba(255,255,255,.08);
+      --accent: #5d8aff;
+      --accent-2: #00d1ff;
+      --danger: #ff6b6b;
+      --success: #4ade80;
+      --warn: #fbbf24;
+      --input: rgba(255,255,255,.06);
+      --shadow: 0 18px 40px rgba(5,7,12,.55);
+      --radius: 16px;
+    }
+    body[data-theme="light"] {
+      --bg: #f5f7ff;
+      --panel: #ffffff;
+      --panel-alt: #f2f4ff;
+      --text: #0f172a;
+      --muted: #6b7280;
+      --border: rgba(15,23,42,.12);
+      --accent: #3056ff;
+      --accent-2: #00bcd4;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --warn: #d97706;
+      --input: #eef1ff;
+      --shadow: 0 18px 35px rgba(15,23,42,.18);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      font:15px/1.5 "Inter","Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;
+      background: radial-gradient(circle at top, rgba(93,138,255,.16), transparent 45%), var(--bg);
+      color: var(--text);
+      min-height:100vh;
+    }
+    h1,h2,h3,h4 { margin:0; font-weight:600; }
+    button,input,select,textarea { font:inherit; }
+    .app-bar {
+      position:sticky; top:0; z-index:20;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px clamp(16px,4vw,40px);
+      background:rgba(5,7,12,.8);
+      backdrop-filter: blur(14px) saturate(140%);
+      border-bottom:1px solid var(--border);
+    }
+    .brand { display:flex; align-items:center; gap:14px; }
+    .brand-badge {
+      width:44px; height:44px; border-radius:14px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow:var(--shadow);
+    }
+    .layout {
+      display:grid;
+      grid-template-columns: clamp(260px,22vw,320px) 1fr;
+      gap:20px;
+      padding:24px clamp(16px,4vw,40px) 60px;
+    }
+    @media (max-width:960px) { .layout { grid-template-columns:1fr; } }
+    .panel {
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+    }
+    label { display:block; font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px; }
+    input, select, textarea {
+      width:100%; border-radius:10px; border:1px solid var(--border);
+      background:var(--input); color:var(--text);
+      padding:10px 12px; outline:none; transition:border .2s, box-shadow .2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(93,138,255,.25);
+    }
+    textarea { min-height:80px; resize:vertical; }
+    .btn {
+      border:none; border-radius:10px; padding:10px 16px;
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      font-weight:600; cursor:pointer; transition:transform .2s, filter .2s;
+    }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+    .btn_primary { background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; }
+    .btn_secondary { background:var(--input); color:var(--text); border:1px solid var(--border); }
+    .btn:hover:not(:disabled) { filter:brightness(1.08); transform:translateY(-1px); }
+    .filters { display:flex; flex-direction:column; gap:14px; }
+    .row-2 { display:flex; gap:12px; }
+    .row-2 > div { flex:1; }
+    @media (max-width:640px) {
+      .row-2 { flex-direction:column; }
+      .floating-actions { right:16px; bottom:16px; }
+      .btn { padding:12px 16px; }
+      .app-bar { flex-direction:column; gap:12px; text-align:center; }
+      .filters .row-2 > div { flex:1 1 auto; }
+    }
+    .tabs { display:flex; gap:10px; margin-bottom:18px; }
+    .tab { flex:1; padding:10px; border-radius:999px; background:var(--panel-alt); border:1px solid var(--border); color:var(--muted); cursor:pointer; text-align:center; font-weight:600; }
+    .tab.active { background:var(--accent); color:#fff; border-color:transparent; }
+    .view { display:none; }
+    .view.active { display:block; }
+    .placeholder { padding:36px; text-align:center; color:var(--muted); border:1px dashed var(--border); border-radius:14px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:12px 10px; border-bottom:1px solid var(--border); text-align:left; }
+    th { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+    th button { background:none; border:none; color:inherit; font:inherit; cursor:pointer; }
+    .chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+    .chip.bad { background:rgba(255,107,107,.12); color:var(--danger); }
+    .chip.good { background:rgba(74,222,128,.15); color:var(--success); }
+    .chip.warn { background:rgba(251,191,36,.15); color:var(--warn); }
+    .people-list { display:flex; flex-direction:column; gap:12px; }
+    .person-card { display:flex; justify-content:space-between; gap:12px; border:1px solid var(--border); border-radius:14px; padding:14px; background:var(--panel-alt); }
+    .avatar { width:42px; height:42px; border-radius:12px; background:rgba(255,255,255,.08); display:grid; place-items:center; font-weight:600; border:1px solid var(--border); overflow:hidden; }
+    .avatar img { width:100%; height:100%; object-fit:cover; }
+    .floating-actions { position:fixed; bottom:24px; right:24px; display:flex; flex-direction:column; gap:12px; z-index:10; }
+    .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); padding:12px 18px; border-radius:12px; background:#101828; color:#fff; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:40; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast.error { background:var(--danger); }
+    .toast.success { background:var(--success); color:#0f2a17; }
+    .toast.warn { background:var(--warn); color:#3b2500; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(4,6,12,.78); display:none; align-items:center; justify-content:center; z-index:50; padding:20px; }
+    .modal-overlay.open { display:flex; }
+    .modal { width:min(520px,92vw); max-height:90vh; overflow:auto; background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:22px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:16px; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; }
+    .drop-zone { border:1.5px dashed var(--border); border-radius:14px; padding:16px; text-align:center; color:var(--muted); cursor:pointer; background:var(--panel-alt); }
+    .preview img { width:70px; height:70px; border-radius:12px; object-fit:cover; border:1px solid var(--border); margin-top:10px; }
+    .loading-overlay { position:fixed; inset:0; background:rgba(5,7,12,.85); display:none; align-items:center; justify-content:center; z-index:60; }
+    .loading-overlay.show { display:flex; }
+    .loading-box { background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:24px; width:min(360px,90vw); text-align:center; box-shadow:var(--shadow); }
+    .loading-bar { width:100%; height:6px; border-radius:999px; background:var(--input); margin-top:12px; overflow:hidden; border:1px solid var(--border); }
+    .loading-bar span { display:block; height:100%; width:0%; border-radius:inherit; background:linear-gradient(135deg,var(--accent),var(--accent-2)); transition:width .3s ease; }
+  </style>
+</head>
+<body>
+  <header class="app-bar">
+    <div class="brand">
+      <div class="brand-badge"></div>
+      <div>
+        <h2>Credit Ledger</h2>
+        <div style="color:var(--muted); font-size:13px;">Track people, credits, and collections</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button class="btn btn_secondary" id="themeToggle">Toggle Theme</button>
+      <button class="btn btn_primary" id="sendAlertsBtn">Send Alerts</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <h3 style="margin-bottom:14px;">Filters</h3>
+      <div class="filters">
+        <div>
+          <label for="filterPerson">Person</label>
+          <select id="filterPerson"></select>
+        </div>
+        <div class="row-2">
+          <div>
+            <label for="filterFrom">From</label>
+            <input type="date" id="filterFrom">
+          </div>
+          <div>
+            <label for="filterTo">To</label>
+            <input type="date" id="filterTo">
+          </div>
+        </div>
+        <div class="row-2">
+          <div>
+            <label for="filterType">Type</label>
+            <select id="filterType">
+              <option value="">All</option>
+              <option value="CREDIT">Credit</option>
+              <option value="PAYMENT">Payment</option>
+            </select>
+          </div>
+          <div>
+            <label for="filterReceipt">Receipt</label>
+            <select id="filterReceipt">
+              <option value="">All</option>
+              <option value="has">Has receipt</option>
+              <option value="none">No receipt</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label for="searchInput">Search</label>
+          <input id="searchInput" placeholder="Name, phone, notes…">
+        </div>
+        <div class="row-2">
+          <button class="btn btn_secondary" id="resetFiltersBtn">Reset</button>
+          <button class="btn btn_primary" id="refreshBtn">Refresh</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="panel">
+      <div class="stat-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px;">
+        <div class="panel" style="background:var(--panel-alt);">
+          <div style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">Outstanding</div>
+          <div id="statOutstanding" style="font-size:24px; font-weight:700; margin-top:6px;">0</div>
+        </div>
+        <div class="panel" style="background:var(--panel-alt);">
+          <div style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">Total Credit</div>
+          <div id="statCredit" style="font-size:24px; font-weight:700; margin-top:6px;">0</div>
+        </div>
+        <div class="panel" style="background:var(--panel-alt);">
+          <div style="font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">Total Payment</div>
+          <div id="statPayment" style="font-size:24px; font-weight:700; margin-top:6px;">0</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="summary">Summary</button>
+        <button class="tab" data-tab="transactions">Transactions</button>
+        <button class="tab" data-tab="people">People</button>
+      </div>
+
+      <div id="view-summary" class="view active"></div>
+      <div id="view-transactions" class="view"></div>
+      <div id="view-people" class="view"></div>
+    </section>
+  </main>
+
+  <div class="floating-actions">
+    <button class="btn btn_primary" id="addEntryBtn">＋ Add Entry</button>
+    <button class="btn btn_secondary" id="addPersonBtn">＋ Add Person</button>
+    <button class="btn btn_secondary" id="exportBtn">⬇︎ Export</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <div id="loadingMessage">Loading…</div>
+      <div class="loading-bar"><span id="loadingBar"></span></div>
+    </div>
+  </div>
+
+  <!-- Entry Modal -->
+  <div class="modal-overlay" id="entryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Add Entry</h3>
+        <button class="btn btn_secondary" data-close="entryModal">✕</button>
+      </div>
+      <div>
+        <label for="entryPerson">Person *</label>
+        <select id="entryPerson"></select>
+      </div>
+      <div class="row-2">
+        <div>
+          <label for="entryType">Type *</label>
+          <select id="entryType">
+            <option value="CREDIT">Credit (customer owes)</option>
+            <option value="PAYMENT">Payment (customer paid)</option>
+          </select>
+        </div>
+        <div>
+          <label for="entryDate">Date *</label>
+          <input type="date" id="entryDate">
+        </div>
+      </div>
+      <div class="row-2">
+        <div>
+          <label for="entryAmount">Amount (KWD) *</label>
+          <input type="number" step="0.001" min="0.001" id="entryAmount" placeholder="0.000">
+        </div>
+        <div>
+          <label for="entryNote">Note</label>
+          <input id="entryNote" placeholder="Reference / items">
+        </div>
+      </div>
+      <div>
+        <label for="entryReceipt">Receipt</label>
+        <div class="drop-zone" id="entryReceiptZone">Tap to take a picture or attach receipt (image/PDF ≤ 5MB)</div>
+        <input type="file" id="entryReceipt" accept="image/*,.pdf" capture="environment" hidden>
+        <div class="preview" id="entryReceiptPreview"></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn_secondary" data-close="entryModal">Cancel</button>
+        <button class="btn btn_primary" id="saveEntryBtn">Save Entry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Person Modal -->
+  <div class="modal-overlay" id="personModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="personModalTitle">Add Person</h3>
+        <button class="btn btn_secondary" data-close="personModal">✕</button>
+      </div>
+      <div>
+        <label for="personName">Name *</label>
+        <input id="personName" maxlength="120" placeholder="Full name">
+      </div>
+      <div class="row-2">
+        <div>
+          <label for="personPhone">Phone</label>
+          <input id="personPhone" placeholder="+965…">
+        </div>
+        <div>
+          <label for="personLocation">Location</label>
+          <input id="personLocation" placeholder="Area / Block">
+        </div>
+      </div>
+      <div>
+        <label for="personNotes">Notes</label>
+        <textarea id="personNotes" placeholder="History, reminders…"></textarea>
+      </div>
+      <div>
+        <label for="personPhoto">Profile photo</label>
+        <div class="drop-zone" id="personPhotoZone">Tap to take a picture or attach photo (≤ 5MB)</div>
+        <input type="file" id="personPhoto" accept="image/*" capture="environment" hidden>
+        <div class="preview" id="personPhotoPreview"></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn_secondary" data-close="personModal">Cancel</button>
+        <button class="btn btn_primary" id="savePersonBtn">Save Person</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const App = {
+      state: {
+        summary: [],
+        people: [],
+        transactions: [],
+        currency: 'KWD',
+        tab: 'summary',
+        search: '',
+        sort: { key: 'balance', dir: 'desc' },
+        totals: { outstanding: 0, credit: 0, payment: 0 },
+        editingPersonId: ''
+      },
+      init() {
+        this.cacheDom();
+        this.bindEvents();
+        this.restoreTheme();
+        this.dom.entryDate.value = this.todayISO();
+        this.loadAll();
+      },
+      cacheDom() {
+        this.dom = {
+          filterPerson: document.getElementById('filterPerson'),
+          filterFrom: document.getElementById('filterFrom'),
+          filterTo: document.getElementById('filterTo'),
+          filterType: document.getElementById('filterType'),
+          filterReceipt: document.getElementById('filterReceipt'),
+          searchInput: document.getElementById('searchInput'),
+          refreshBtn: document.getElementById('refreshBtn'),
+          resetFiltersBtn: document.getElementById('resetFiltersBtn'),
+          tabs: document.querySelectorAll('.tab'),
+          summaryView: document.getElementById('view-summary'),
+          transactionsView: document.getElementById('view-transactions'),
+          peopleView: document.getElementById('view-people'),
+          toast: document.getElementById('toast'),
+          loadingOverlay: document.getElementById('loadingOverlay'),
+          loadingMessage: document.getElementById('loadingMessage'),
+          loadingBar: document.getElementById('loadingBar'),
+          statOutstanding: document.getElementById('statOutstanding'),
+          statCredit: document.getElementById('statCredit'),
+          statPayment: document.getElementById('statPayment'),
+          sendAlertsBtn: document.getElementById('sendAlertsBtn'),
+          themeToggle: document.getElementById('themeToggle'),
+          exportBtn: document.getElementById('exportBtn'),
+          addEntryBtn: document.getElementById('addEntryBtn'),
+          addPersonBtn: document.getElementById('addPersonBtn'),
+          entryModal: document.getElementById('entryModal'),
+          personModal: document.getElementById('personModal'),
+          entryPerson: document.getElementById('entryPerson'),
+          entryType: document.getElementById('entryType'),
+          entryDate: document.getElementById('entryDate'),
+          entryAmount: document.getElementById('entryAmount'),
+          entryNote: document.getElementById('entryNote'),
+          entryReceipt: document.getElementById('entryReceipt'),
+          entryReceiptZone: document.getElementById('entryReceiptZone'),
+          entryReceiptPreview: document.getElementById('entryReceiptPreview'),
+          saveEntryBtn: document.getElementById('saveEntryBtn'),
+          personModalTitle: document.getElementById('personModalTitle'),
+          personName: document.getElementById('personName'),
+          personPhone: document.getElementById('personPhone'),
+          personLocation: document.getElementById('personLocation'),
+          personNotes: document.getElementById('personNotes'),
+          personPhoto: document.getElementById('personPhoto'),
+          personPhotoZone: document.getElementById('personPhotoZone'),
+          personPhotoPreview: document.getElementById('personPhotoPreview'),
+          savePersonBtn: document.getElementById('savePersonBtn')
+        };
+      },
+      bindEvents() {
+        ['filterPerson','filterFrom','filterTo','filterType','filterReceipt'].forEach(id => {
+          this.dom[id].addEventListener('change', () => this.loadAll());
+        });
+        this.dom.refreshBtn.addEventListener('click', () => this.loadAll());
+        this.dom.resetFiltersBtn.addEventListener('click', () => this.resetFilters());
+        this.dom.searchInput.addEventListener('input', () => {
+          this.state.search = this.dom.searchInput.value.trim().toLowerCase();
+          this.renderActiveView();
+        });
+        this.dom.tabs.forEach(tab => tab.addEventListener('click', () => this.switchTab(tab.dataset.tab)));
+        this.dom.themeToggle.addEventListener('click', () => this.toggleTheme());
+        this.dom.sendAlertsBtn.addEventListener('click', () => this.sendAlerts());
+        this.dom.exportBtn.addEventListener('click', () => this.exportSummary());
+        this.dom.addEntryBtn.addEventListener('click', () => this.openEntryModal());
+        this.dom.addPersonBtn.addEventListener('click', () => this.openPersonModal());
+        document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => this.closeModal(btn.dataset.close)));
+        this.dom.entryReceiptZone.addEventListener('click', () => this.dom.entryReceipt.click());
+        this.dom.entryReceipt.addEventListener('change', () => this.previewFile(this.dom.entryReceiptPreview, this.dom.entryReceipt.files[0]));
+        this.dom.personPhotoZone.addEventListener('click', () => this.dom.personPhoto.click());
+        this.dom.personPhoto.addEventListener('change', () => this.previewFile(this.dom.personPhotoPreview, this.dom.personPhoto.files[0]));
+        this.dom.saveEntryBtn.addEventListener('click', () => this.saveEntry());
+        this.dom.savePersonBtn.addEventListener('click', () => this.savePerson());
+      },
+      async loadAll() {
+        try {
+          this.setLoading(true, 'Loading dashboard…');
+          const filters = this.collectFilters();
+          const [dashboard, people] = await Promise.all([
+            run('apiGetDashboard', filters),
+            run('apiListPeople')
+          ]);
+          this.setDashboardState(dashboard || {});
+          this.setPeople(Array.isArray(people) ? people : []);
+          if (this.state.tab === 'transactions') {
+            await this.loadTransactions();
+          }
+          this.renderAll();
+        } catch (error) {
+          this.toast('Failed to load data: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.setLoading(false);
+        }
+      },
+      async loadTransactions() {
+        try {
+          this.setSectionLoading(true);
+          const rows = await run('apiListTransactions', this.collectFilters());
+          this.state.transactions = Array.isArray(rows) ? rows : [];
+          this.renderTransactions();
+        } catch (error) {
+          this.toast('Failed to load transactions: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.setSectionLoading(false);
+        }
+      },
+      setDashboardState(data) {
+        this.state.summary = Array.isArray(data.summary) ? data.summary.slice() : [];
+        this.state.currency = data.currency || 'KWD';
+        this.applySort();
+        this.computeTotals();
+      },
+      setPeople(rawList) {
+        const list = Array.isArray(rawList) && rawList.length
+          ? rawList
+          : this.state.summary.map(row => ({
+              id: row.personId,
+              name: row.name,
+              phone: row.phone,
+              location: row.location,
+              notes: row.notes,
+              profileFileId: row.profileFileId || ''
+            }));
+        const deduped = [];
+        const seen = new Set();
+        list.forEach(person => {
+          if (!person || !person.id || seen.has(person.id)) return;
+          seen.add(person.id);
+          deduped.push({
+            id: person.id,
+            name: person.name || '',
+            phone: person.phone || '',
+            location: person.location || '',
+            notes: person.notes || '',
+            profileFileId: person.profileFileId || ''
+          });
+        });
+        const ordered = deduped.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+        this.state.people = ordered;
+        const summaryIds = new Set(this.state.summary.map(row => row.personId));
+        ordered.forEach(person => {
+          if (!summaryIds.has(person.id)) {
+            this.state.summary.push({
+              personId: person.id,
+              name: person.name,
+              phone: person.phone,
+              location: person.location,
+              notes: person.notes,
+              profileFileId: person.profileFileId,
+              totalCredit: 0,
+              totalPayment: 0,
+              balance: 0,
+              lastTranDate: ''
+            });
+          }
+        });
+        this.applySort();
+        this.populateSelectors();
+      },
+      collectFilters() {
+        const receiptValue = this.dom.filterReceipt.value;
+        let hasReceipt;
+        if (receiptValue === 'has') hasReceipt = true;
+        else if (receiptValue === 'none') hasReceipt = false;
+        return {
+          personId: this.dom.filterPerson.value || undefined,
+          dateFrom: this.dom.filterFrom.value || undefined,
+          dateTo: this.dom.filterTo.value || undefined,
+          type: this.dom.filterType.value || undefined,
+          hasReceipt
+        };
+      },
+      resetFilters() {
+        ['filterPerson','filterFrom','filterTo','filterType','filterReceipt'].forEach(id => this.dom[id].value = '');
+        this.dom.searchInput.value = '';
+        this.state.search = '';
+        this.loadAll();
+      },
+      populateSelectors() {
+        const personOptions = [{ value: '', label: 'All people' }].concat(
+          this.state.people.map(p => ({ value: p.id, label: p.name || 'Untitled' }))
+        );
+        this.fillSelect(this.dom.filterPerson, personOptions);
+        const entryOptions = [{ value: '', label: this.state.people.length ? 'Select person' : 'Add a person first' }].concat(
+          this.state.people.map(p => ({ value: p.id, label: p.name || 'Untitled' }))
+        );
+        this.fillSelect(this.dom.entryPerson, entryOptions);
+        this.dom.entryPerson.disabled = this.state.people.length === 0;
+      },
+      fillSelect(select, options) {
+        const previous = select.value;
+        select.innerHTML = '';
+        options.forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.textContent = opt.label;
+          select.appendChild(option);
+        });
+        if (options.some(opt => opt.value === previous)) {
+          select.value = previous;
+        }
+      },
+      renderAll() {
+        this.renderTotals();
+        this.renderActiveView();
+      },
+      renderActiveView() {
+        this.dom.summaryView.classList.toggle('active', this.state.tab === 'summary');
+        this.dom.transactionsView.classList.toggle('active', this.state.tab === 'transactions');
+        this.dom.peopleView.classList.toggle('active', this.state.tab === 'people');
+        if (this.state.tab === 'summary') this.renderSummary();
+        if (this.state.tab === 'transactions') this.renderTransactions();
+        if (this.state.tab === 'people') this.renderPeople();
+      },
+      renderTotals() {
+        this.dom.statOutstanding.textContent = this.formatMoney(this.state.totals.outstanding);
+        this.dom.statCredit.textContent = this.formatMoney(this.state.totals.credit);
+        this.dom.statPayment.textContent = this.formatMoney(this.state.totals.payment);
+      },
+      renderSummary() {
+        const rows = this.filterBySearch(this.state.summary);
+        if (!rows.length) {
+          this.dom.summaryView.innerHTML = '<div class="placeholder">No matching people yet.</div>';
+          return;
+        }
+        const table = [`<table><thead><tr>
+          <th><button data-sort="name">Person</button></th>
+          <th class="right"><button data-sort="totalCredit">Credit</button></th>
+          <th class="right"><button data-sort="totalPayment">Payment</button></th>
+          <th class="right"><button data-sort="balance">Balance</button></th>
+          <th>Last Txn</th>
+          <th></th>
+        </tr></thead><tbody>`];
+        rows.forEach(row => {
+          const badgeClass = row.balance > 0 ? 'chip bad' : row.balance < 0 ? 'chip good' : 'chip warn';
+          table.push(`<tr>
+            <td>
+              <div style="font-weight:600;">${esc(row.name || 'Unnamed')}</div>
+              <div style="color:var(--muted); font-size:12px;">${esc(row.phone || '')}${row.location ? ' • ' + esc(row.location) : ''}</div>
+            </td>
+            <td class="right">${this.formatMoney(row.totalCredit)}</td>
+            <td class="right">${this.formatMoney(row.totalPayment)}</td>
+            <td class="right"><span class="${badgeClass}">${this.formatMoney(row.balance)}</span></td>
+            <td>${row.lastTranDate || '—'}</td>
+            <td class="right"><button class="btn btn_secondary" data-collect="${row.personId}">Collect</button></td>
+          </tr>`);
+        });
+        table.push('</tbody></table>');
+        this.dom.summaryView.innerHTML = table.join('');
+        this.dom.summaryView.querySelectorAll('th button').forEach(btn => btn.addEventListener('click', () => this.changeSort(btn.dataset.sort)));
+        this.dom.summaryView.querySelectorAll('[data-collect]').forEach(btn => btn.addEventListener('click', () => this.collectPayment(btn.dataset.collect)));
+      },
+      renderPeople() {
+        if (!this.state.people.length) {
+          this.dom.peopleView.innerHTML = '<div class="placeholder">No people yet. Add one to get started.</div>';
+          return;
+        }
+        const cards = this.filterBySearch(this.state.people.map(person => {
+          const sum = this.state.summary.find(row => row.personId === person.id) || { balance: 0, totalCredit: 0, totalPayment: 0 };
+          return { person, sum };
+        }), item => [item.person.name, item.person.phone, item.person.location, item.person.notes]);
+        if (!cards.length) {
+          this.dom.peopleView.innerHTML = '<div class="placeholder">No people match your search.</div>';
+          return;
+        }
+        this.dom.peopleView.innerHTML = '<div class="people-list">' + cards.map(item => {
+          const badgeClass = item.sum.balance > 0 ? 'chip bad' : item.sum.balance < 0 ? 'chip good' : 'chip warn';
+          return `<div class="person-card">
+            <div style="display:flex; gap:12px;">
+              ${this.avatarTemplate(item.person)}
+              <div>
+                <div style="font-weight:600; font-size:16px;">${esc(item.person.name || 'Unnamed')}</div>
+                <div style="color:var(--muted); font-size:13px;">${esc(item.person.phone || '')}${item.person.location ? ' • ' + esc(item.person.location) : ''}</div>
+                ${item.person.notes ? `<div style="margin-top:6px; color:var(--muted); font-size:13px;">${esc(item.person.notes)}</div>` : ''}
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+              <div class="${badgeClass}">Balance: ${this.formatMoney(item.sum.balance)}</div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn_secondary" data-edit-person="${item.person.id}">Edit</button>
+                <button class="btn btn_primary" data-collect="${item.person.id}">Collect</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('') + '</div>';
+        this.dom.peopleView.querySelectorAll('[data-edit-person]').forEach(btn => btn.addEventListener('click', () => this.openPersonModal(btn.dataset.editPerson)));
+        this.dom.peopleView.querySelectorAll('[data-collect]').forEach(btn => btn.addEventListener('click', () => this.collectPayment(btn.dataset.collect)));
+      },
+      renderTransactions() {
+        const rows = this.filterBySearch(this.state.transactions, row => {
+          const person = this.state.people.find(p => p.id === row.personId);
+          return [person?.name, row.note, person?.phone, person?.location];
+        });
+        if (!rows.length) {
+          this.dom.transactionsView.innerHTML = '<div class="placeholder">No transactions for the current filters.</div>';
+          return;
+        }
+        const table = [`<table><thead><tr>
+          <th>Date</th>
+          <th>Person</th>
+          <th>Type</th>
+          <th class="right">Amount</th>
+          <th>Note</th>
+          <th>Receipt</th>
+        </tr></thead><tbody>`];
+        rows.forEach(row => {
+          const person = this.state.people.find(p => p.id === row.personId);
+          table.push(`<tr>
+            <td>${row.tranDate || '—'}</td>
+            <td>${esc(person?.name || row.personId)}</td>
+            <td><span class="chip ${row.type === 'PAYMENT' ? 'good' : 'warn'}">${row.type}</span></td>
+            <td class="right">${this.formatMoney(row.amountKWD)}</td>
+            <td>${esc(row.note || '')}</td>
+            <td>${row.receiptFileId ? `<a target="_blank" href="${this.fileUrl(row.receiptFileId)}">View</a>` : '—'}</td>
+          </tr>`);
+        });
+        table.push('</tbody></table>');
+        this.dom.transactionsView.innerHTML = table.join('');
+      },
+      filterBySearch(list, mapper) {
+        if (!this.state.search) return list;
+        return list.filter(item => {
+          const fields = mapper ? mapper(item) : [item.name, item.phone, item.location, item.notes];
+          return fields.some(value => String(value || '').toLowerCase().includes(this.state.search));
+        });
+      },
+      computeTotals() {
+        this.state.totals = this.state.summary.reduce((totals, row) => {
+          const bal = Number(row.balance) || 0;
+          const credit = Number(row.totalCredit) || 0;
+          const payment = Number(row.totalPayment) || 0;
+          if (bal > 0) totals.outstanding += bal;
+          totals.credit += credit;
+          totals.payment += payment;
+          return totals;
+        }, { outstanding: 0, credit: 0, payment: 0 });
+      },
+      applySort() {
+        const { key, dir } = this.state.sort;
+        const direction = dir === 'asc' ? 1 : -1;
+        this.state.summary.sort((a,b) => {
+          const va = a[key] ?? '';
+          const vb = b[key] ?? '';
+          if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * direction;
+          return String(va).localeCompare(String(vb)) * direction;
+        });
+      },
+      changeSort(key) {
+        if (this.state.sort.key === key) {
+          this.state.sort.dir = this.state.sort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          this.state.sort = { key, dir: 'desc' };
+        }
+        this.applySort();
+        this.renderSummary();
+      },
+      switchTab(tab) {
+        if (this.state.tab === tab) return;
+        this.state.tab = tab;
+        this.dom.tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+        if (tab === 'transactions') {
+          this.loadTransactions();
+        } else {
+          this.renderActiveView();
+        }
+      },
+      openEntryModal() {
+        if (!this.state.people.length) {
+          this.toast('Add a person first.', 'warn');
+          return;
+        }
+        this.dom.entryPerson.value = this.dom.entryPerson.value || this.state.people[0].id;
+        this.dom.entryType.value = 'CREDIT';
+        this.dom.entryDate.value = this.todayISO();
+        this.dom.entryAmount.value = '';
+        this.dom.entryNote.value = '';
+        this.dom.entryReceipt.value = '';
+        this.dom.entryReceiptPreview.innerHTML = '';
+        this.openModal('entryModal');
+      },
+      async saveEntry() {
+        try {
+          this.dom.saveEntryBtn.disabled = true;
+          const payload = {
+            personId: this.dom.entryPerson.value,
+            type: this.dom.entryType.value,
+            amountKWD: Number(this.dom.entryAmount.value),
+            tranDate: this.dom.entryDate.value,
+            note: this.dom.entryNote.value.trim()
+          };
+          if (!payload.personId) throw new Error('Choose a person');
+          if (!payload.tranDate) throw new Error('Pick a date');
+          if (!(payload.amountKWD > 0)) throw new Error('Amount must be greater than 0');
+          const receipt = this.dom.entryReceipt.files[0];
+          if (receipt) {
+            if (receipt.size > 5 * 1024 * 1024) throw new Error('Receipt must be ≤ 5MB');
+            payload.receiptBase64 = await this.fileToBase64(receipt);
+            payload.receiptName = receipt.name;
+          }
+          await run('apiAddEntry', payload);
+          this.toast('Entry saved', 'success');
+          this.closeModal('entryModal');
+          await this.loadAll();
+        } catch (error) {
+          this.toast('Failed to save entry: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.dom.saveEntryBtn.disabled = false;
+        }
+      },
+      collectPayment(personId) {
+        const row = this.state.summary.find(item => item.personId === personId);
+        this.openEntryModal();
+        this.dom.entryPerson.value = personId;
+        this.dom.entryType.value = 'PAYMENT';
+        if (row && row.balance > 0) {
+          this.dom.entryAmount.value = row.balance.toFixed(3);
+          this.dom.entryNote.value = 'Payment collection';
+        }
+      },
+      openPersonModal(personId) {
+        this.state.editingPersonId = personId || '';
+        if (personId) {
+          const person = this.state.people.find(p => p.id === personId);
+          if (!person) {
+            this.toast('Person not found', 'error');
+            return;
+          }
+          this.dom.personModalTitle.textContent = 'Edit Person';
+          this.dom.personName.value = person.name || '';
+          this.dom.personPhone.value = person.phone || '';
+          this.dom.personLocation.value = person.location || '';
+          this.dom.personNotes.value = person.notes || '';
+          this.dom.personPhotoPreview.innerHTML = person.profileFileId ? `<img src="${this.fileUrl(person.profileFileId)}" alt="profile">` : '';
+        } else {
+          this.dom.personModalTitle.textContent = 'Add Person';
+          this.dom.personName.value = '';
+          this.dom.personPhone.value = '';
+          this.dom.personLocation.value = '';
+          this.dom.personNotes.value = '';
+          this.dom.personPhoto.value = '';
+          this.dom.personPhotoPreview.innerHTML = '';
+        }
+        this.openModal('personModal');
+      },
+      async savePerson() {
+        try {
+          this.dom.savePersonBtn.disabled = true;
+          const payload = {
+            id: this.state.editingPersonId,
+            name: this.dom.personName.value.trim(),
+            phone: this.dom.personPhone.value.trim(),
+            location: this.dom.personLocation.value.trim(),
+            notes: this.dom.personNotes.value.trim()
+          };
+          if (!payload.name) throw new Error('Name is required');
+          const saved = await run('apiUpsertPerson', payload);
+          const photo = this.dom.personPhoto.files[0];
+          if (photo) {
+            if (photo.size > 5 * 1024 * 1024) throw new Error('Photo must be ≤ 5MB');
+            await run('apiSetPersonProfilePic', saved.id, await this.fileToBase64(photo), photo.name);
+          }
+          this.toast('Person saved', 'success');
+          this.closeModal('personModal');
+          this.state.editingPersonId = '';
+          await this.loadAll();
+        } catch (error) {
+          this.toast('Failed to save person: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.dom.savePersonBtn.disabled = false;
+        }
+      },
+      async sendAlerts() {
+        if (!confirm('Send outstanding balance email now?')) return;
+        try {
+          this.dom.sendAlertsBtn.disabled = true;
+          const result = await run('sendOutstandingAlerts');
+          const count = result?.count || 0;
+          this.toast(`Alerts sent to ${count} people`, 'success');
+        } catch (error) {
+          this.toast('Failed to send alerts: ' + (error?.message || error), 'error');
+          console.error(error);
+        } finally {
+          this.dom.sendAlertsBtn.disabled = false;
+        }
+      },
+      exportSummary() {
+        const headers = ['Name','Phone','Location','Total Credit','Total Payment','Balance','Last Transaction'];
+        const rows = this.state.summary.map(row => [
+          row.name || '',
+          row.phone || '',
+          row.location || '',
+          row.totalCredit || 0,
+          row.totalPayment || 0,
+          row.balance || 0,
+          row.lastTranDate || ''
+        ]);
+        const csv = [headers.join(','), ...rows.map(r => r.map(value => `"${String(value).replace(/"/g,'""')}"`).join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `credit_summary_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        this.toast('Summary exported', 'success');
+      },
+      openModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.add('open');
+      },
+      closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.remove('open');
+      },
+      setLoading(active, message) {
+        this.dom.loadingOverlay.classList.toggle('show', !!active);
+        if (message) this.dom.loadingMessage.textContent = message;
+        this.dom.loadingBar.style.width = active ? '70%' : '0%';
+      },
+      setSectionLoading(active) {
+        if (active) {
+          this.dom.transactionsView.innerHTML = '<div class="placeholder">Loading transactions…</div>';
+        }
+      },
+      todayISO() {
+        const now = new Date();
+        const offset = now.getTime() - now.getTimezoneOffset() * 60000;
+        return new Date(offset).toISOString().slice(0,10);
+      },
+      formatMoney(value) {
+        const num = Number(value);
+        if (isNaN(num)) return '0.000 ' + this.state.currency;
+        return num.toFixed(3) + ' ' + (this.state.currency || 'KWD');
+      },
+      avatarTemplate(person) {
+        if (person.profileFileId) {
+          return `<div class="avatar"><img src="${this.fileUrl(person.profileFileId)}" alt="${esc(person.name || '')}"></div>`;
+        }
+        const initials = (person.name || '?')
+          .split(' ')
+          .filter(Boolean)
+          .map(part => part[0])
+          .slice(0,2)
+          .join('')
+          .toUpperCase();
+        return `<div class="avatar">${esc(initials)}</div>`;
+      },
+      toggleTheme() {
+        const next = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+        document.body.dataset.theme = next;
+        localStorage.setItem('cl_theme', next);
+        this.toast(`Theme: ${next}`, 'success');
+      },
+      restoreTheme() {
+        const saved = localStorage.getItem('cl_theme');
+        if (saved) document.body.dataset.theme = saved;
+      },
+      previewFile(container, file) {
+        if (!file) { container.innerHTML = ''; return; }
+        if (!file.type.startsWith('image/')) {
+          container.textContent = file.name;
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = e => { container.innerHTML = `<img src="${e.target.result}" alt="preview">`; };
+        reader.readAsDataURL(file);
+      },
+      async fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      },
+      toast(message, type) {
+        this.dom.toast.textContent = message;
+        this.dom.toast.className = 'toast show' + (type ? ' ' + type : '');
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => this.dom.toast.classList.remove('show'), 3000);
+      },
+      fileUrl(id) {
+        return id ? `https://drive.google.com/uc?id=${encodeURIComponent(id)}` : '';
+      }
+    };
+
+    function esc(value) {
+      const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+      return String(value || '').replace(/[&<>"']/g, ch => map[ch] || ch);
+    }
+
+    function run(fn, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(err => reject(err))
+          [fn](...args);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<header>
+        <div class="header-inner">
+            <h1 class="header-title" data-i18n="orderReport">Order Report</h1>
+            <div class="toolbar">
+                <div class="field">
+                    <label for="datePicker" style="min-width:90px;" data-i18n="dateLabel">Date</label>
+                    <input type="date" id="datePicker" onchange="filterData()" data-i18n-aria-label="ariaSelectDate">
+                </div>
+                <div class="field">
+                    <label for="searchInput" style="min-width:90px;" data-i18n="searchLabel">Search</label>
+                    <input type="text" id="searchInput" placeholder="Name, phone, order, location…" data-i18n-placeholder="searchPlaceholder" data-i18n-aria-label="ariaSearchOrders" oninput="filterData()">
+                </div>
+                <div class="toggle" id="toggleCancelledContainer">
+                    <input type="checkbox" id="toggleCancelled" onchange="toggleCancelledColumns()" data-i18n-aria-label="ariaShowCancelled">
+                    <label for="toggleCancelled" data-i18n="showCancelled">Show cancelled</label>
+                </div>
+                <div class="actions">
+                    <button class="secondary" onclick="exportToExcel()" data-i18n="export">Export</button>
+                    <button onclick="printReport()" data-i18n="print">Print</button>
+                </div>
+                <div class="preferences">
+                    <select id="languageSelect" data-i18n-aria-label="ariaLanguage">
+                        <option value="en" data-i18n-option="langEnglish">English</option>
+                        <option value="ar" data-i18n-option="langArabic">العربية</option>
+                    </select>
+                    <button type="button" id="themeToggle" class="toggle-button" data-i18n="darkMode" data-i18n-aria-label="ariaTheme">Dark mode</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="tab-nav">
+        <button class="tab-button active" data-tab-target="dashboard" onclick="switchTab('dashboard')" data-i18n="tabDashboard">Dashboard</button>
+        <button class="tab-button" data-tab-target="tarkeeb" onclick="switchTab('tarkeeb')" data-i18n="tabTarkeeb">Tarkeeb Items</button>
+        <button class="tab-button" data-tab-target="sheel" onclick="switchTab('sheel')" data-i18n="tabSheel">Sheel Items</button>
+        <button class="tab-button" data-tab-target="out" onclick="switchTab('out')" data-i18n="tabOut">Currently Out</button>
+        <button class="tab-button" data-tab-target="reporting" onclick="switchTab('reporting')" data-i18n="tabReporting">Reporting</button>
+    </div>
+
+    <div class="tab-content active" data-tab="dashboard">
+    <div class="container">
+        <div id="debugConsole" class="debug-console" style="display:none;"></div>
+        <h2 data-i18n="summary">Summary</h2>
+        <div class="cards" id="summaryCards">
+            <div class="card"><div class="card-title" data-i18n="cardTarkeeb">Tarkeeb Orders</div><div class="card-value" id="cardTarkeebCount">0</div></div>
+            <div class="card"><div class="card-title" data-i18n="cardSheel">Sheel Orders</div><div class="card-value" id="cardSheelCount">0</div></div>
+            <div class="card"><div class="card-title" data-i18n="cardCombined">Combined Total</div><div class="card-value" id="cardGrandTotal">0.00</div></div>
+        </div>
+        <div class="table-container">
+            <table id="summaryTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thTarkeebOrders">Tarkeeb Orders</th>
+                        <th data-i18n="thSheelOrders">Sheel Orders</th>
+                        <th data-i18n="thTarkeebTotal">Tarkeeb Grand Total</th>
+                        <th data-i18n="thSheelTotal">Sheel Grand Total</th>
+                        <th data-i18n="thCombinedTotal">Combined Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody id="summaryTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title" data-i18n="locationBreakdown">Location Breakdown</h3>
+        <div class="table-container">
+            <table id="locationTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thLocation">Location</th>
+                        <th data-i18n="thTarkeebOrders">Tarkeeb Orders</th>
+                        <th data-i18n="thSheelOrders">Sheel Orders</th>
+                        <th data-i18n="thTotalOrders">Total Orders</th>
+                        <th class="cancelled-column" data-i18n="thCancelledOrders">Cancelled Orders</th>
+                    </tr>
+                </thead>
+                <tbody id="locationTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title"><span data-i18n="tarkeebOrders">Tarkeeb Orders</span> <span class="badge" id="tarkeebCount">0</span></h3>
+        <div class="table-container">
+            <table id="tarkeebOrdersTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thOrderNumber">Order Number</th>
+                        <th data-i18n="thCustomer">Customer</th>
+                        <th data-i18n="thPhone">Phone</th>
+                        <th data-i18n="thLocation">Location</th>
+                        <th data-i18n="thComments">Comments</th>
+                        <th data-i18n="thTarkeebTime">Tarkeeb Time</th>
+                        <th data-i18n="thPayment">Payment Method</th>
+                        <th data-i18n="thProducts">Products</th>
+                        <th data-i18n="thGrandTotal">Grand Total</th>
+                        <th class="cancelled-column" data-i18n="thCancelledPrice">Cancelled Order Price</th>
+                        <th data-i18n="thWarehouse">Warehouse</th>
+                    </tr>
+                </thead>
+                <tbody id="tarkeebOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title"><span data-i18n="sheelOrders">Sheel Orders</span> <span class="badge" id="sheelCount">0</span></h3>
+        <div class="table-container">
+            <table id="sheelOrdersTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thOrderNumber">Order Number</th>
+                        <th data-i18n="thCustomer">Customer</th>
+                        <th data-i18n="thPhone">Phone</th>
+                        <th data-i18n="thLocation">Location</th>
+                        <th data-i18n="thComments">Comments</th>
+                        <th data-i18n="thSheelTime">Sheel Time</th>
+                        <th data-i18n="thPayment">Payment Method</th>
+                        <th data-i18n="thProducts">Products</th>
+                        <th data-i18n="thGrandTotal">Grand Total</th>
+                        <th class="cancelled-column" data-i18n="thCancelledPrice">Cancelled Order Price</th>
+                        <th data-i18n="thWarehouse">Warehouse</th>
+                    </tr>
+                </thead>
+                <tbody id="sheelOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title"><span data-i18n="maintenanceOrders">Maintenance Orders</span> <span class="badge" id="maintenanceCount">0</span></h3>
+        <div class="table-container">
+            <table id="maintenanceOrdersTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="thOrderNumber">Order Number</th>
+                        <th data-i18n="thCustomer">Customer</th>
+                        <th data-i18n="thPhone">Phone</th>
+                        <th data-i18n="thLocation">Location</th>
+                        <th data-i18n="thComments">Comments</th>
+                        <th data-i18n="thMaintenanceStart">Maintenance Start Date</th>
+                        <th data-i18n="thMaintenanceComplete">Maintenance Complete Date</th>
+                        <th data-i18n="thPayment">Payment Method</th>
+                        <th data-i18n="thProducts">Products</th>
+                        <th data-i18n="thGrandTotal">Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody id="maintenanceOrdersTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="button-container">
+            <button class="secondary" onclick="exportToExcel()" data-i18n="export">Export</button>
+            <button onclick="printReport()" data-i18n="print">Print</button>
+        </div>
+    </div>
+    <footer>
+        <span data-i18n="footer">Generated by Order Management System</span>
+    </footer>
+    </div>
+
+    <div class="tab-content" data-tab="tarkeeb">
+        <div class="container">
+            <h2 data-i18n="tarkeebTabTitle">Tarkeeb Items</h2>
+            <p class="card-title" data-i18n="tarkeebTabHelp">Use this tab to plan items scheduled to leave the warehouse.</p>
+            <div class="range-filter">
+                <label for="tarkeebFrom" data-i18n="fromLabel">From</label><input type="date" id="tarkeebFrom">
+                <label for="tarkeebTo" data-i18n="toLabel">To</label><input type="date" id="tarkeebTo">
+            </div>
+            <div class="table-container">
+                <table id="tarkeebItemsTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thOrder">Order</th>
+                            <th data-i18n="thProduct">Product</th>
+                            <th data-i18n="thCustomer">Customer</th>
+                            <th data-i18n="thLocation">Location</th>
+                            <th data-i18n="thTarkeebDate">Tarkeeb Date</th>
+                            <th data-i18n="thOutbound">Outbound</th>
+                            <th data-i18n="thInbound">Inbound</th>
+                            <th data-i18n="thActions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tarkeebItemsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="sheel">
+        <div class="container">
+            <h2 data-i18n="sheelTabTitle">Sheel Items</h2>
+            <p class="card-title" data-i18n="sheelTabHelp">Track items scheduled to return from installations.</p>
+            <div class="range-filter">
+                <label for="sheelFrom" data-i18n="fromLabel">From</label><input type="date" id="sheelFrom">
+                <label for="sheelTo" data-i18n="toLabel">To</label><input type="date" id="sheelTo">
+            </div>
+            <div class="table-container">
+                <table id="sheelItemsTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thOrder">Order</th>
+                            <th data-i18n="thProduct">Product</th>
+                            <th data-i18n="thCustomer">Customer</th>
+                            <th data-i18n="thLocation">Location</th>
+                            <th data-i18n="thSheelDate">Sheel Date</th>
+                            <th data-i18n="thOutbound">Outbound</th>
+                            <th data-i18n="thInbound">Inbound</th>
+                            <th data-i18n="thActions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sheelItemsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="out">
+        <div class="container">
+            <h2 data-i18n="outTabTitle">Items Currently Out</h2>
+            <p class="card-title" data-i18n="outTabHelp">Shows items that left the warehouse but are not yet recorded as returned.</p>
+            <div class="range-filter">
+                <label for="outFrom" data-i18n="outboundFrom">Outbound From</label><input type="date" id="outFrom">
+                <label for="outTo" data-i18n="outboundTo">Outbound To</label><input type="date" id="outTo">
+            </div>
+            <div class="table-container">
+                <table id="outItemsTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thOrder">Order</th>
+                            <th data-i18n="thProduct">Product</th>
+                            <th data-i18n="thCustomer">Customer</th>
+                            <th data-i18n="thLocation">Location</th>
+                            <th data-i18n="thOutboundTime">Outbound Time</th>
+                            <th data-i18n="thExpectedReturn">Expected Return</th>
+                            <th data-i18n="thDaysOut">Days Out</th>
+                            <th data-i18n="thActions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="outItemsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="reporting">
+        <div class="container">
+            <h2 data-i18n="reportingTitle">Return Compliance Report</h2>
+            <p class="card-title" data-i18n="reportingHelp">Highlights items that should have been returned by the selected time but are still pending.</p>
+            <div class="range-filter">
+                <label for="reportDate" data-i18n="asOfDate">As of Date</label><input type="date" id="reportDate">
+                <label for="reportTime" data-i18n="asOfTime">As of Time</label><input type="time" id="reportTime" step="900">
+            </div>
+            <div class="table-container">
+                <table id="reportingTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="thOrder">Order</th>
+                            <th data-i18n="thProduct">Product</th>
+                            <th data-i18n="thCustomer">Customer</th>
+                            <th data-i18n="thDueBack">Due Back</th>
+                            <th data-i18n="thStatus">Status</th>
+                            <th data-i18n="thOverdue">Overdue</th>
+                            <th data-i18n="thActions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportingBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden checkbox retained for backward compatibility, synced with visible toggle -->
+    <input type="checkbox" id="showCancelled" onchange="toggleCancelledColumns()" style="display:none;">
+
+    <div id="warehouseModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title"><span data-i18n="warehouseUpdateTitle">Warehouse Update — Order</span> <span id="warehouseOrderNumber"></span></div>
+                <button class="modal-close" onclick="closeWarehouse()" data-i18n="closeButton">Close</button>
+            </div>
+            <div class="modal-body" id="warehouseBody"></div>
+        </div>
+    </div>

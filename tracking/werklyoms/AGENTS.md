@@ -8,12 +8,18 @@ This guide documents how the Werkly Order Management view works in this folder, 
 - Track warehouse handover by capturing per‑item photos when orders leave (outbound) and when items return (inbound).
 
 ## Files
-- `werklyoms.gs` — Apps Script backend: reads the `Order` sheet and implements warehouse logging endpoints.
-- `werklytemp.html` — Client UI: tables, search/filters, warehouse modal and upload logic.
+- `werkly_app.gs` — Web app entry point; builds the template context and wires HTML partials together.
+- `werkly_orders.gs` — Order data loader: normalises sheet rows into rich order objects.
+- `werkly_warehouse.gs` — Warehouse logging API and Drive/sheet orchestration (prefixed `WERKLY_…` config variables to avoid collisions).
+- `werkly_utils.gs` — Shared helpers for formatting, date/time handling, and Drive utilities.
+- `werkly_index.html` — Base layout that includes other HTML fragments at render time.
+- `werkly_styles.html` — CSS token definitions and layout styling.
+- `werkly_body.html` — Markup for the dashboard, tables, modal, and controls.
+- `werkly_scripts.html` — Client-side logic, translations, and Apps Script calls.
 
 ## Data Sources
 - Orders come from the active spreadsheet tab named `Order`.
-  - Column usage (0‑based indices from `werklyoms.gs`):
+  - Column usage (0‑based indices from `werkly_orders.gs`):
     - `0` Order Number
     - `4` Location
     - `6` Customer Name
@@ -30,9 +36,9 @@ This guide documents how the Werkly Order Management view works in this folder, 
     - `27` Sheel Time
 
 ## Rendering Flow
-1. `doGet()` in `werklyoms.gs` reads the `Order` sheet and normalizes rows into order objects with a `products` array (one order may span multiple rows/products).
+1. `doGet()` in `werkly_app.gs` reads the `Order` sheet via `loadOrderDataset_()` (in `werkly_orders.gs`) and normalizes rows into order objects with a `products` array (one order may span multiple rows/products).
 2. Maintenance orders are detected (product name includes "Maintenance"/"صيانة") and enriched with a date range.
-3. The template `werklytemp.html` is evaluated with these injected JSON blobs:
+3. The template `werkly_index.html` (which includes `werkly_body.html` and `werkly_scripts.html`) is evaluated with these injected JSON blobs:
    - `allOrders` — all non‑maintenance and maintenance orders (deduped by order number).
    - `maintenanceOrders` — subset flagged as maintenance.
 4. The frontend defaults the date to today, then filters `allOrders` by selected date (tarkeeb or sheel date) and optional text query.
@@ -41,13 +47,13 @@ This guide documents how the Werkly Order Management view works in this folder, 
 Goal: For each product on an order, capture a photo when it leaves the warehouse (outbound) and when it returns (inbound). Persist these with operator/timestamp, and surface quick status back into the orders tables.
 
 ### Backend (Apps Script)
-Implemented in `werklyoms.gs`:
+Implemented in `werkly_warehouse.gs`:
 
 - Configuration constants:
-  - `WAREHOUSE_SHEET_NAME = 'WarehouseLog'`
-  - `WAREHOUSE_ROOT_FOLDER_NAME = 'OMS Warehouse Photos'`
-  - `WAREHOUSE_ROOT_FOLDER_ID = ''` (optional override; blank creates/finds by name in My Drive)
-  - `WAREHOUSE_SHARE_PUBLIC = false` (set true to share files as Anyone‑with‑link → Viewer)
+  - `WERKLY_WAREHOUSE_SHEET_NAME = 'WarehouseLog'`
+  - `WERKLY_WAREHOUSE_ROOT_NAME = 'OMS Warehouse Photos'`
+  - `WERKLY_WAREHOUSE_ROOT_ID = ''` (optional override; blank creates/finds by name in My Drive)
+  - `WERKLY_WAREHOUSE_SHARE_PUBLIC = false` (set true to share files as Anyone‑with‑link → Viewer)
 
 - Persistence model:
   - Drive folder hierarchy: `OMS Warehouse Photos/<OrderNumber>/outbound` and `.../inbound`.
@@ -65,7 +71,7 @@ Implemented in `werklyoms.gs`:
   - `getOrCreateWarehouseRootFolder_()`, `getOrCreateWarehouseOrderFolder_(orderNumber, direction)` manage Drive folders.
 
 ### Frontend (HTML/JS)
-Implemented in `werklytemp.html`:
+Implemented across `werkly_body.html` and `werkly_scripts.html`:
 
 - Tables:
   - Tarkeeb/Sheel tables include a `Warehouse` column.
@@ -108,8 +114,8 @@ Implemented in `werklytemp.html`:
 - The per-item tabs reuse the same latest-log logic to show outbound/inbound status chips; the reporting tab considers items overdue when the scheduled sheel date/time has passed but no inbound log exists before the selected “as-of” timestamp.
 
 ## Configuring Behavior
-- Make photos public: set `WAREHOUSE_SHARE_PUBLIC = true` in `werklyoms.gs` if images need to be viewable without auth.
-- Use a specific Drive folder: set `WAREHOUSE_ROOT_FOLDER_ID` to a folder ID you control; otherwise a folder by name is created at My Drive root.
+- Make photos public: set `WERKLY_WAREHOUSE_SHARE_PUBLIC = true` in `werkly_warehouse.gs` if images need to be viewable without auth.
+- Use a specific Drive folder: set `WERKLY_WAREHOUSE_ROOT_ID` to a folder ID you control; otherwise a folder by name is created at My Drive root.
 
 ## Deployment
 - Publish the Apps Script as a web app (execute as you; access within your organization per policy).
@@ -129,11 +135,11 @@ Implemented in `werklytemp.html`:
 
 ## Troubleshooting
 - Empty tables: check date selection; open browser console for errors (syntax errors can block rendering).
-- No status: ensure `WarehouseLog` tab exists or attempt an upload to create it; verify Drive folder permissions if `WAREHOUSE_SHARE_PUBLIC` is true.
+- No status: ensure `WarehouseLog` tab exists or attempt an upload to create it; verify Drive folder permissions if `WERKLY_WAREHOUSE_SHARE_PUBLIC` is true.
 - Slow uploads: consider adding client‑side image compression if warehouse network is constrained.
 
 ## Contribution Guidelines (folder scope)
 - Don’t block order rendering with tracking failures: UI must render orders first, then layer tracking.
 - Keep frontend JS compatible (avoid modern features that break on older devices used in the warehouse).
-- When modifying logging schema, update both `werklyoms.gs` and all places in `werklytemp.html` that consume log entries.
+- When modifying logging schema, update both `werkly_warehouse.gs` and the script logic in `werkly_scripts.html` that consumes log entries.
 - Keep Drive paths stable: changing folder naming affects existing links—migrate carefully if needed.
